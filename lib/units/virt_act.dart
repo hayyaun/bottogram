@@ -5,7 +5,6 @@ enum VirtActTypes { reply }
 class VirtAct {
   VirtActTypes type;
   String text;
-  List<VirtAct> acts = [];
 
   VirtAct({this.type = VirtActTypes.reply, required this.text});
 
@@ -15,5 +14,13 @@ class VirtAct {
         await ctx.reply(text);
         break;
     }
+  }
+
+  Map<String, dynamic> toJSON() {
+    return {"type": type, "text": text};
+  }
+
+  factory VirtAct.fromJSON(json) {
+    return VirtAct(text: json["text"], type: json["type"]);
   }
 }

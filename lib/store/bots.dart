@@ -1,4 +1,5 @@
 import 'package:bottogram/units/virt_bot.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 
@@ -14,18 +15,18 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   // Initialize Hive box
   Future<void> _initBox() async {
     _box = await Hive.openBox(boxName);
-    List<dynamic>? boxJSON = _box?.get('bots');
+    List<dynamic>? boxJSON = _box?.values.toList();
     if (boxJSON == null) return; // nothing
-    print(boxJSON);
+    if (kDebugMode) print('--> bots: ${boxJSON.length}');
     var bots = boxJSON.toList().cast<VirtBot>();
     emit(bots); // Emit the saved value to Cubit's state
   }
 
   // Add a bot to the list and persist it
-  void addBot(VirtBot bot) {
+  void addBot(VirtBot bot) async {
     final updatedList = List<VirtBot>.from(state)..add(bot);
     emit(updatedList);
-    _box?.put('bots', updatedList); // Persist the updated list
+    await _box?.add(bot); // Persist the updated list
   }
 
   // Remove a bot from the list and persist it
@@ -33,19 +34,19 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     await bot.stop();
     final updatedList = List<VirtBot>.from(state)..remove(bot);
     emit(updatedList);
-    _box?.put('bots', updatedList); // Persist the updated list
+    final index = _box?.values.toList().cast<VirtBot>().indexOf(bot);
+    if (index != null) await _box?.deleteAt(index); // Persist the updated list
   }
 
   // Update the list and persist it
   void update() {
     final updatedList = List<VirtBot>.from(state);
     emit(updatedList);
-    _box?.put('bots', updatedList); // Clear the saved list
   }
 
   // Reset the list and persist it
   void reset() {
     emit([]);
-    _box?.put('bots', []); // Clear the saved list
+    _box?.clear();
   }
 }

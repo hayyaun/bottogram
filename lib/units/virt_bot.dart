@@ -1,9 +1,9 @@
 import 'package:bottogram/units/virt_event.dart';
+import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
-part 'user.freezed.dart';
-part 'user.g.dart';
+part 'virt_bot.g.dart';
 
 @HiveType(typeId: 0)
 class VirtBot extends HiveObject {
@@ -22,30 +22,29 @@ class VirtBot extends HiveObject {
 
   bool get active => _active;
 
-  void start() async {
-    if (_active) stop(); // stop before restart
+  Future<void> start() async {
+    if (_active) await stop(); // stop before restart
     for (var ev in events) {
       ev.add(bot);
     }
-    await bot.start();
+    bot.onError((err) {
+      if (kDebugMode) print('--> bot error: $err');
+    });
+    bot.start();
     _active = true;
   }
 
   Future<void> stop() async {
     await bot.stop();
+    bot = Bot(token);
+    _active = false;
   }
 
-  Map<String, dynamic> toJSON() {
-    return {
-      "name": name,
-      "token": token,
-      "events": events.map((ev) => ev.toJSON()),
-    };
-  }
-
-  factory VirtBot.fromJSON(Map<String, dynamic> json) {
-    var vbot = VirtBot(json["name"], json["token"]);
-    vbot.events = json["events"].map((evJSON) => VirtEvent.fromJSON(evJSON));
-    return vbot;
+  Future<void> toggle() async {
+    if (_active) {
+      await stop();
+    } else {
+      await start();
+    }
   }
 }

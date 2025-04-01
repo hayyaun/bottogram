@@ -2,10 +2,7 @@ import 'package:bottogram/units/virt_act.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
-part 'user.freezed.dart';
-part 'user.g.dart';
-
-enum VirtEventType { command }
+part 'virt_event.g.dart';
 
 @HiveType(typeId: 1)
 class VirtEvent extends HiveObject {
@@ -32,21 +29,22 @@ class VirtEvent extends HiveObject {
         return bot.command(query, callback);
     }
   }
+}
 
-  Map<String, dynamic> toJSON() {
-    return {
-      "type": VirtEventType.command.index,
-      "query": query,
-      "acts": acts.map((act) => act.toJSON()),
-    };
+enum VirtEventType { command }
+
+class VirtEventTypeAdapter extends TypeAdapter<VirtEventType> {
+  @override
+  final typeId = 11;
+
+  @override
+  VirtEventType read(BinaryReader reader) {
+    int index = reader.readByte();
+    return VirtEventType.values[index];
   }
 
-  factory VirtEvent.fromJSON(json) {
-    var vev = VirtEvent(
-      query: json["query"],
-      type: VirtEventType.values[json["type"]],
-    );
-    vev.acts = json["acts"].map((actJSON) => VirtAct.fromJSON(actJSON));
-    return vev;
+  @override
+  void write(BinaryWriter writer, VirtEventType obj) {
+    writer.writeByte(obj.index);
   }
 }

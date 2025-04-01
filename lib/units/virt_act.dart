@@ -1,10 +1,7 @@
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
-part 'user.freezed.dart';
-part 'user.g.dart';
-
-enum VirtActTypes { reply }
+part 'virt_act.g.dart';
 
 @HiveType(typeId: 2)
 class VirtAct {
@@ -22,12 +19,22 @@ class VirtAct {
         break;
     }
   }
+}
 
-  Map<String, dynamic> toJSON() {
-    return {"type": type.index, "text": text};
+enum VirtActTypes { reply }
+
+class VirtActTypeAdapter extends TypeAdapter<VirtActTypes> {
+  @override
+  final typeId = 21;
+
+  @override
+  VirtActTypes read(BinaryReader reader) {
+    int index = reader.readByte();
+    return VirtActTypes.values[index];
   }
 
-  factory VirtAct.fromJSON(json) {
-    return VirtAct(text: json["text"], type: VirtActTypes.values[json["type"]]);
+  @override
+  void write(BinaryWriter writer, VirtActTypes obj) {
+    writer.writeByte(obj.index);
   }
 }

@@ -8,7 +8,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   Box? _box;
 
   BotsCubit() : super([]) {
-    // _initBox();
+    _initBox();
   }
 
   // Initialize Hive box
@@ -16,8 +16,8 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     _box = await Hive.openBox(boxName);
     List<dynamic>? boxJSON = _box?.get('bots');
     if (boxJSON == null) return; // nothing
-    var bots =
-        boxJSON.map((boxItemJSON) => VirtBot.fromJSON(boxItemJSON)).toList();
+    print(boxJSON);
+    var bots = boxJSON.toList().cast<VirtBot>();
     emit(bots); // Emit the saved value to Cubit's state
   }
 

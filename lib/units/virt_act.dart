@@ -1,9 +1,13 @@
+import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
 enum VirtActTypes { reply }
 
+@HiveType(typeId: 2)
 class VirtAct {
+  @HiveField(0)
   VirtActTypes type;
+  @HiveField(1)
   String text;
 
   VirtAct({this.type = VirtActTypes.reply, required this.text});
@@ -17,10 +21,10 @@ class VirtAct {
   }
 
   Map<String, dynamic> toJSON() {
-    return {"type": type, "text": text};
+    return {"type": type.index, "text": text};
   }
 
   factory VirtAct.fromJSON(json) {
-    return VirtAct(text: json["text"], type: json["type"]);
+    return VirtAct(text: json["text"], type: VirtActTypes.values[json["type"]]);
   }
 }

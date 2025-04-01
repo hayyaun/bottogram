@@ -2,13 +2,13 @@ import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Hive and open the box
-  Hive.init(null);
+  await Hive.initFlutter();
 
   runApp(const MyApp());
 }
@@ -80,6 +80,9 @@ class _MyHomePageState extends State<MyHomePage> {
                 final name = ctrlName.text;
                 final token = ctrlToken.text;
                 if (name.isEmpty || token.isEmpty) return;
+                final bots = context.read<BotsCubit>();
+                // TODO error msg duplicate
+                if (bots.state.any((bot) => bot.token == token)) return;
                 context.read<BotsCubit>().addBot(VirtBot(name, token));
                 Navigator.of(context).pop(); // Close the dialog
               },

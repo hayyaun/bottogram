@@ -8,17 +8,9 @@ class VirtEvent {
 
   VirtEventType type;
   String query;
-  List<VirtAct> acts;
+  List<VirtAct> acts = [VirtAct(text: "Hello!", type: VirtActTypes.reply)];
 
-  VirtEvent({
-    this.type = VirtEventType.command,
-    required this.query,
-    this.acts = const [],
-  }) {
-    if (acts.isEmpty) {
-      acts.add(VirtAct(text: "Hello!", type: VirtActTypes.reply));
-    }
-  }
+  VirtEvent({this.type = VirtEventType.command, required this.query});
 
   Future<void> callback(Context ctx) async {
     for (var act in acts) {
@@ -42,10 +34,8 @@ class VirtEvent {
   }
 
   factory VirtEvent.fromJSON(json) {
-    return VirtEvent(
-      query: json["query"],
-      type: json["type"],
-      acts: json["acts"].map((actJSON) => VirtAct.fromJSON(actJSON)),
-    );
+    var vev = VirtEvent(query: json["query"], type: json["type"]);
+    vev.acts = json["acts"].map((actJSON) => VirtAct.fromJSON(actJSON));
+    return vev;
   }
 }

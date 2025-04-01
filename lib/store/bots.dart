@@ -8,15 +8,16 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   Box? _box;
 
   BotsCubit() : super([]) {
-    _initBox();
+    // _initBox();
   }
 
   // Initialize Hive box
   Future<void> _initBox() async {
     _box = await Hive.openBox(boxName);
-    var boxJSON = _box?.get('bots');
+    List<dynamic>? boxJSON = _box?.get('bots');
     if (boxJSON == null) return; // nothing
-    var bots = boxJSON.map((boxItemJSON) => VirtBot.fromJSON(boxItemJSON));
+    var bots =
+        boxJSON.map((boxItemJSON) => VirtBot.fromJSON(boxItemJSON)).toList();
     emit(bots); // Emit the saved value to Cubit's state
   }
 
@@ -28,14 +29,22 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   }
 
   // Remove a bot from the list and persist it
-  void removeBot(VirtBot bot) {
+  void removeBot(VirtBot bot) async {
+    await bot.stop();
     final updatedList = List<VirtBot>.from(state)..remove(bot);
     emit(updatedList);
     _box?.put('bots', updatedList); // Persist the updated list
   }
 
+  // Update the list and persist it
+  void update() {
+    final updatedList = List<VirtBot>.from(state);
+    emit(updatedList);
+    _box?.put('bots', updatedList); // Clear the saved list
+  }
+
   // Reset the list and persist it
-  void resetList() {
+  void reset() {
     emit([]);
     _box?.put('bots', []); // Clear the saved list
   }

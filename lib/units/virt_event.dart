@@ -13,7 +13,7 @@ class VirtEvent extends HiveObject {
   @HiveField(1)
   String query;
   @HiveField(2)
-  List<VirtAct> acts = [VirtAct(text: "Hello!", type: VirtActTypes.reply)];
+  List<VirtAct> acts = [VirtAct(text: "Hello!", type: VirtActType.reply)];
 
   VirtEvent({this.type = VirtEventType.command, required this.query});
 
@@ -27,11 +27,13 @@ class VirtEvent extends HiveObject {
     switch (type) {
       case VirtEventType.command:
         return bot.command(query, callback);
+      case VirtEventType.text:
+        return bot.text(query, callback);
     }
   }
 }
 
-enum VirtEventType { command }
+enum VirtEventType { command, text }
 
 class VirtEventTypeAdapter extends TypeAdapter<VirtEventType> {
   @override

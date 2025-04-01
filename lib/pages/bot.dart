@@ -22,6 +22,7 @@ class _BotPageState extends State<BotPage> {
 
   void _addEvent() {
     final ctrlQuery = TextEditingController();
+    var type = VirtEventType.command;
     showDialog(
       context: context,
       builder: (context) {
@@ -29,7 +30,25 @@ class _BotPageState extends State<BotPage> {
           title: Text('Add an Event'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              DropdownButton<String>(
+                value: type.name, // Initial value
+                items:
+                    VirtEventType.values.map((type) {
+                      return DropdownMenuItem<String>(
+                        value: type.name,
+                        child: Text(type.name),
+                      );
+                    }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    type = VirtEventType.values.firstWhere(
+                      (v) => v.name == newValue!,
+                    );
+                  });
+                },
+              ),
               TextField(
                 controller: ctrlQuery,
                 decoration: InputDecoration(hintText: 'Query'),
@@ -50,9 +69,7 @@ class _BotPageState extends State<BotPage> {
                 final events = widget.bot.events;
                 // TODO error msg duplicate
                 if (events.any((ev) => ev.query == query)) return;
-                widget.bot.events.add(
-                  VirtEvent(query: query, type: VirtEventType.command),
-                );
+                widget.bot.events.add(VirtEvent(query: query, type: type));
                 context.read<BotsCubit>().update();
                 Navigator.of(context).pop(); // Close the dialog
               },

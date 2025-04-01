@@ -6,35 +6,37 @@ part 'virt_act.g.dart';
 @HiveType(typeId: 2)
 class VirtAct {
   @HiveField(0)
-  VirtActTypes type;
+  VirtActType type;
   @HiveField(1)
   String text;
 
-  VirtAct({this.type = VirtActTypes.reply, required this.text});
+  VirtAct({this.type = VirtActType.reply, required this.text});
 
   Future<void> run(Context ctx) async {
     switch (type) {
-      case VirtActTypes.reply:
+      case VirtActType.reply:
         await ctx.reply(text);
         break;
+      case VirtActType.dice:
+        await ctx.replyWithDice();
     }
   }
 }
 
-enum VirtActTypes { reply }
+enum VirtActType { reply, dice }
 
-class VirtActTypeAdapter extends TypeAdapter<VirtActTypes> {
+class VirtActTypeAdapter extends TypeAdapter<VirtActType> {
   @override
   final typeId = 21;
 
   @override
-  VirtActTypes read(BinaryReader reader) {
+  VirtActType read(BinaryReader reader) {
     int index = reader.readByte();
-    return VirtActTypes.values[index];
+    return VirtActType.values[index];
   }
 
   @override
-  void write(BinaryWriter writer, VirtActTypes obj) {
+  void write(BinaryWriter writer, VirtActType obj) {
     writer.writeByte(obj.index);
   }
 }

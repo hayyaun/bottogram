@@ -16,7 +16,7 @@ class VirtActAdapter extends TypeAdapter<VirtAct> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return VirtAct(type: fields[0] as VirtActTypes, text: fields[1] as String);
+    return VirtAct(type: fields[0] as VirtActType, text: fields[1] as String);
   }
 
   @override

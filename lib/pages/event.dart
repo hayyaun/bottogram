@@ -22,6 +22,7 @@ class _EventPageState extends State<EventPage> {
 
   void _addAction() {
     final ctrlAction = TextEditingController();
+    var type = VirtActType.reply;
     showDialog(
       context: context,
       builder: (context) {
@@ -29,7 +30,25 @@ class _EventPageState extends State<EventPage> {
           title: Text('Add an Action'),
           content: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              DropdownButton<String>(
+                value: type.name, // Initial value
+                items:
+                    VirtActType.values.map((type) {
+                      return DropdownMenuItem<String>(
+                        value: type.name,
+                        child: Text(type.name.toUpperCase()),
+                      );
+                    }).toList(),
+                onChanged: (String? newValue) {
+                  setState(() {
+                    type = VirtActType.values.firstWhere(
+                      (v) => v.name == newValue!,
+                    );
+                  });
+                },
+              ),
               TextField(
                 controller: ctrlAction,
                 decoration: InputDecoration(hintText: 'Action'),
@@ -47,9 +66,7 @@ class _EventPageState extends State<EventPage> {
               onPressed: () {
                 final action = ctrlAction.text;
                 if (action.isEmpty) return;
-                widget.ev.acts.add(
-                  VirtAct(text: action, type: VirtActTypes.reply),
-                );
+                widget.ev.acts.add(VirtAct(text: action, type: type));
                 context.read<BotsCubit>().update();
                 Navigator.of(context).pop(); // Close the dialog
               },

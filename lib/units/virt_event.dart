@@ -2,6 +2,9 @@ import 'package:bottogram/units/virt_act.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
+part 'user.freezed.dart';
+part 'user.g.dart';
+
 enum VirtEventType { command }
 
 @HiveType(typeId: 1)

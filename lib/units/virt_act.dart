@@ -1,6 +1,9 @@
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
+part 'user.freezed.dart';
+part 'user.g.dart';
+
 enum VirtActTypes { reply }
 
 @HiveType(typeId: 2)

@@ -10,6 +10,9 @@ void main() async {
   // Initialize Hive and open the box
   await Hive.initFlutter();
 
+  // Register the User adapter
+  Hive.registerAdapter(VirtBotAdapter());
+
   runApp(const MyApp());
 }
 

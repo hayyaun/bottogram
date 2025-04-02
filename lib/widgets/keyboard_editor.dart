@@ -1,5 +1,6 @@
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_rmu.dart';
+import 'package:bottogram/utils/list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -18,7 +19,7 @@ class _KeyboardState extends State<KeyboardEditor> {
   @override
   Widget build(BuildContext context) {
     final items = widget.rmu.items;
-    final List<List<String>> matrix = splitListByNull(items);
+    final matrix = splitListByNull(items);
     return Column(
       spacing: 8,
       mainAxisSize: MainAxisSize.min,
@@ -97,26 +98,4 @@ class _KeyboardState extends State<KeyboardEditor> {
       ],
     );
   }
-}
-
-List<List<String>> splitListByNull(List<String?> input) {
-  List<List<String>> output = [];
-  List<String> temp = [];
-
-  for (var item in input) {
-    if (item == null) {
-      if (temp.isNotEmpty) {
-        output.add(List.from(temp));
-        temp.clear();
-      }
-    } else {
-      temp.add(item);
-    }
-  }
-
-  if (temp.isNotEmpty) {
-    output.add(temp);
-  }
-
-  return output;
 }

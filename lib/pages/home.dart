@@ -75,16 +75,20 @@ class _HomePageState extends State<HomePage> {
         centerTitle: true,
       ),
       body: SingleChildScrollView(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          spacing: 24,
-          children: <Widget>[
-            Text('Bots:'),
-            buildBots(),
-            SizedBox(height: 24),
-            Text('Markups:'),
-            buildBots(),
-          ],
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 12,
+            children: <Widget>[
+              Text('Bots:'),
+              buildBots(),
+              SizedBox(height: 48),
+              Text('Markups:'),
+              buildBots(),
+              SizedBox(height: 48),
+            ],
+          ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
@@ -106,6 +110,7 @@ class _HomePageState extends State<HomePage> {
           );
         }
         return ListView.builder(
+          shrinkWrap: true,
           itemCount: bots.length,
           itemBuilder: (context, index) {
             final bot = bots[index];

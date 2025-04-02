@@ -11,7 +11,7 @@ abstract class VirtRMU {
 
 enum VirtRMUType { none, keyboard, inlineKeyboard }
 
-@HiveType(typeId: 301)
+@HiveType(typeId: 41)
 class VirtRMUKeyboard implements VirtRMU {
   @HiveField(0)
   List<String?> items = [];
@@ -33,7 +33,7 @@ class VirtRMUKeyboard implements VirtRMU {
   }
 }
 
-@HiveType(typeId: 302)
+@HiveType(typeId: 42)
 class VirtRMUInlineKeyboard implements VirtRMU {
   @HiveField(0)
   List<MapEntry<String, String>?> items = [];

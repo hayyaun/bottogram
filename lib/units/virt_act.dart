@@ -4,7 +4,7 @@ import 'package:televerse/televerse.dart';
 
 part 'virt_act.g.dart';
 
-@HiveType(typeId: 300)
+@HiveType(typeId: 30)
 class VirtAct {
   @HiveField(0)
   VirtActType type;
@@ -30,7 +30,7 @@ enum VirtActType { reply, dice }
 
 class VirtActTypeAdapter extends TypeAdapter<VirtActType> {
   @override
-  final typeId = 301;
+  final typeId = 31;
 
   @override
   VirtActType read(BinaryReader reader) {

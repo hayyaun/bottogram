@@ -8,7 +8,7 @@ part of 'virt_act.dart';
 
 class VirtActAdapter extends TypeAdapter<VirtAct> {
   @override
-  final int typeId = 300;
+  final int typeId = 30;
 
   @override
   VirtAct read(BinaryReader reader) {

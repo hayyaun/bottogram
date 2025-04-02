@@ -8,7 +8,7 @@ part of 'virt_rmu.dart';
 
 class VirtRMUKeyboardAdapter extends TypeAdapter<VirtRMUKeyboard> {
   @override
-  final int typeId = 301;
+  final int typeId = 41;
 
   @override
   VirtRMUKeyboard read(BinaryReader reader) {
@@ -40,7 +40,7 @@ class VirtRMUKeyboardAdapter extends TypeAdapter<VirtRMUKeyboard> {
 
 class VirtRMUInlineKeyboardAdapter extends TypeAdapter<VirtRMUInlineKeyboard> {
   @override
-  final int typeId = 302;
+  final int typeId = 42;
 
   @override
   VirtRMUInlineKeyboard read(BinaryReader reader) {

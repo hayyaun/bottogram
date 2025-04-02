@@ -4,7 +4,7 @@ import 'package:televerse/televerse.dart';
 
 part 'virt_event.g.dart';
 
-@HiveType(typeId: 200)
+@HiveType(typeId: 20)
 class VirtEvent extends HiveObject {
   static List<String> get commonCommands => ['start', 'help'];
 
@@ -37,7 +37,7 @@ enum VirtEventType { command, text }
 
 class VirtEventTypeAdapter extends TypeAdapter<VirtEventType> {
   @override
-  final typeId = 201;
+  final typeId = 21;
 
   @override
   VirtEventType read(BinaryReader reader) {

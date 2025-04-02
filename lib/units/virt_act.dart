@@ -1,3 +1,4 @@
+import 'package:bottogram/units/virt_rmu.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
@@ -9,13 +10,15 @@ class VirtAct {
   VirtActType type;
   @HiveField(1)
   String text;
+  @HiveField(2)
+  VirtRmu? rmu;
 
   VirtAct({this.type = VirtActType.reply, required this.text});
 
   Future<void> run(Context ctx) async {
     switch (type) {
       case VirtActType.reply:
-        await ctx.reply(text);
+        await ctx.reply(text, replyMarkup: rmu?.hydrate());
         break;
       case VirtActType.dice:
         await ctx.replyWithDice();

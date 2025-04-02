@@ -1,3 +1,6 @@
+import 'dart:math';
+
+import 'package:bottogram/pages/act.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -22,7 +25,7 @@ class _EventPageState extends State<EventPage> {
 
   void _addAction() {
     final ctrlAction = TextEditingController();
-    var type = VirtActType.reply;
+    final selectedType = ValueNotifier(VirtActType.reply);
     showDialog(
       context: context,
       builder: (context) {
@@ -32,22 +35,22 @@ class _EventPageState extends State<EventPage> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              DropdownButton<String>(
-                value: type.name, // Initial value
-                items:
-                    VirtActType.values.map((type) {
-                      return DropdownMenuItem<String>(
-                        value: type.name,
-                        child: Text(type.name.toUpperCase()),
-                      );
-                    }).toList(),
-                onChanged: (String? newValue) {
-                  setState(() {
-                    type = VirtActType.values.firstWhere(
-                      (v) => v.name == newValue!,
-                    );
-                  });
-                },
+              ValueListenableBuilder(
+                valueListenable: selectedType,
+                builder:
+                    (ctx, v, _) => DropdownButton<VirtActType>(
+                      value: v, // Initial value
+                      items:
+                          VirtActType.values.map((type) {
+                            return DropdownMenuItem(
+                              value: type,
+                              child: Text(type.name.toUpperCase()),
+                            );
+                          }).toList(),
+                      onChanged: (newValue) {
+                        selectedType.value = newValue!;
+                      },
+                    ),
               ),
               TextField(
                 controller: ctrlAction,
@@ -66,7 +69,9 @@ class _EventPageState extends State<EventPage> {
               onPressed: () {
                 final action = ctrlAction.text;
                 if (action.isEmpty) return;
-                widget.ev.acts.add(VirtAct(text: action, type: type));
+                widget.ev.acts.add(
+                  VirtAct(text: action, type: selectedType.value),
+                );
                 context.read<BotsCubit>().update();
                 Navigator.of(context).pop(); // Close the dialog
               },
@@ -102,7 +107,17 @@ class _EventPageState extends State<EventPage> {
                   itemBuilder: (context, index) {
                     final act = acts[index];
                     return ListTile(
-                      title: Text('${act.type.name}/${act.text}'),
+                      title: Text(
+                        '${act.type.name}/${act.text.substring(0, min(act.text.length, 8))}',
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ActPage(act: act),
+                          ),
+                        );
+                      },
                       trailing: IconButton(
                         icon: Icon(Icons.delete),
                         onPressed: () {

@@ -6,7 +6,7 @@ part 'virt_event.g.dart';
 
 @HiveType(typeId: 1)
 class VirtEvent extends HiveObject {
-  static get commonCommands => ['start', 'help'];
+  static List<String> get commonCommands => ['start', 'help'];
 
   @HiveField(0)
   VirtEventType type;

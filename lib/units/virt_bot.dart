@@ -14,9 +14,10 @@ class VirtBot extends HiveObject {
   @HiveField(1)
   String token;
   @HiveField(2)
-  List<VirtEvent> events = VirtEvent.commonCommands.map(
-    (c) => VirtEvent(query: c, type: VirtEventType.command),
-  );
+  List<VirtEvent> events =
+      VirtEvent.commonCommands
+          .map((c) => VirtEvent(query: c, type: VirtEventType.command))
+          .toList();
 
   VirtBot(this.name, this.token) : bot = Bot(token);
 

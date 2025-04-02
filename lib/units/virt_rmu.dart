@@ -1,3 +1,4 @@
+import 'package:bottogram/utils/valid.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/telegram.dart';
 import 'package:televerse/televerse.dart';
@@ -55,9 +56,4 @@ class VirtRMUInlineKeyboard implements VirtRMU {
     }
     return rmu;
   }
-}
-
-bool isValidUrl(String url) {
-  Uri? uri = Uri.tryParse(url);
-  return uri != null && uri.hasScheme && uri.hasAuthority;
 }

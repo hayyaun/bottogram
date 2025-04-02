@@ -8,7 +8,7 @@ part of 'virt_event.dart';
 
 class VirtEventAdapter extends TypeAdapter<VirtEvent> {
   @override
-  final int typeId = 1;
+  final int typeId = 200;
 
   @override
   VirtEvent read(BinaryReader reader) {

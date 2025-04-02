@@ -8,7 +8,7 @@ part of 'virt_bot.dart';
 
 class VirtBotAdapter extends TypeAdapter<VirtBot> {
   @override
-  final int typeId = 0;
+  final int typeId = 100;
 
   @override
   VirtBot read(BinaryReader reader) {

@@ -4,14 +4,14 @@ import 'package:televerse/televerse.dart';
 
 part 'virt_act.g.dart';
 
-@HiveType(typeId: 2)
+@HiveType(typeId: 300)
 class VirtAct {
   @HiveField(0)
   VirtActType type;
   @HiveField(1)
   String text;
   @HiveField(2)
-  VirtRmu? rmu;
+  VirtRMU? rmu;
 
   VirtAct({this.type = VirtActType.reply, required this.text});
 
@@ -30,7 +30,7 @@ enum VirtActType { reply, dice }
 
 class VirtActTypeAdapter extends TypeAdapter<VirtActType> {
   @override
-  final typeId = 21;
+  final typeId = 301;
 
   @override
   VirtActType read(BinaryReader reader) {

@@ -1,5 +1,6 @@
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 
@@ -8,7 +9,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   static const String boxName = 'botsBox';
   Box? _box;
 
-  BotsCubit() : super([]) {
+  BotsCubit(BuildContext ctx) : super([]) {
     _initBox();
   }
 
@@ -23,14 +24,14 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   }
 
   // Add a bot to the list and persist it
-  void addBot(VirtBot bot) async {
+  void add(VirtBot bot) async {
     final updatedList = List<VirtBot>.from(state)..add(bot);
     emit(updatedList);
     await _box?.add(bot); // Persist the updated list
   }
 
   // Remove a bot from the list and persist it
-  void removeBot(VirtBot bot) async {
+  void remove(VirtBot bot) async {
     await bot.stop();
     final updatedList = List<VirtBot>.from(state)..remove(bot);
     emit(updatedList);

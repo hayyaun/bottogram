@@ -4,48 +4,60 @@ import 'package:televerse/televerse.dart';
 
 part 'virt_rmu.g.dart';
 
-@HiveType(typeId: 3)
-class VirtRmu {
+abstract class VirtRMU {
+  ReplyMarkup hydrate();
+  VirtRMUType get type;
+}
+
+enum VirtRMUType { none, keyboard, inlineKeyboard }
+
+@HiveType(typeId: 301)
+class VirtRMUKeyboard implements VirtRMU {
   @HiveField(0)
   List<String?> items = [];
-  @HiveField(1)
-  var type = VirtRMUType.keyboard;
 
+  @override
+  get type => VirtRMUType.keyboard;
+
+  @override
   ReplyMarkup hydrate() {
-    switch (type) {
-      case VirtRMUType.keyboard:
-        var rmu = Keyboard();
-        for (final item in items) {
-          if (item == null) {
-            rmu = rmu.row();
-            continue;
-          }
-          rmu = rmu.text(item);
-        }
-        return rmu;
-
-      case VirtRMUType.inlineKeyboard:
-        var rmu = InlineKeyboard();
-        // TODO
-        return rmu;
+    var rmu = Keyboard();
+    for (final item in items) {
+      if (item == null) {
+        rmu = rmu.row();
+        continue;
+      }
+      rmu = rmu.text(item);
     }
+    return rmu;
   }
 }
 
-enum VirtRMUType { keyboard, inlineKeyboard }
+@HiveType(typeId: 302)
+class VirtRMUInlineKeyboard implements VirtRMU {
+  @HiveField(0)
+  List<MapEntry<String, String>?> items = [];
 
-class VirtRMUTypeAdapter extends TypeAdapter<VirtRMUType> {
   @override
-  final typeId = 31;
+  get type => VirtRMUType.inlineKeyboard;
 
   @override
-  VirtRMUType read(BinaryReader reader) {
-    int index = reader.readByte();
-    return VirtRMUType.values[index];
+  ReplyMarkup hydrate() {
+    var rmu = InlineKeyboard();
+    for (final item in items) {
+      if (item == null) {
+        rmu = rmu.row();
+      } else if (isValidUrl(item.value)) {
+        rmu = rmu.addUrl(item.key, item.value);
+      } else {
+        rmu = rmu.add(item.key, item.value);
+      }
+    }
+    return rmu;
   }
+}
 
-  @override
-  void write(BinaryWriter writer, VirtRMUType obj) {
-    writer.writeByte(obj.index);
-  }
+bool isValidUrl(String url) {
+  Uri? uri = Uri.tryParse(url);
+  return uri != null && uri.hasScheme && uri.hasAuthority;
 }

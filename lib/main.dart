@@ -1,8 +1,10 @@
 import 'package:bottogram/pages/home.dart';
 import 'package:bottogram/store/bots.dart';
+import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
+import 'package:bottogram/units/virt_rmu.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive_flutter/hive_flutter.dart';
@@ -13,12 +15,14 @@ void main() async {
   // Initialize Hive and open the box
   await Hive.initFlutter();
 
-  // Register the User adapter
+  // Register adapters
   Hive.registerAdapter(VirtBotAdapter());
   Hive.registerAdapter(VirtEventAdapter());
   Hive.registerAdapter(VirtEventTypeAdapter());
   Hive.registerAdapter(VirtActAdapter());
   Hive.registerAdapter(VirtActTypeAdapter());
+  Hive.registerAdapter(VirtRMUKeyboardAdapter());
+  Hive.registerAdapter(VirtRMUInlineKeyboardAdapter());
 
   runApp(const MyApp());
 }
@@ -30,7 +34,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
-      providers: [BlocProvider<BotsCubit>(create: (context) => BotsCubit())],
+      providers: [
+        BlocProvider(create: (context) => RMUsCubit()),
+        BlocProvider(create: (context) => BotsCubit(context)),
+      ],
       child: MaterialApp(
         title: 'Bottogram',
         theme: ThemeData(

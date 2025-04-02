@@ -55,7 +55,7 @@ class _HomePageState extends State<HomePage> {
                 final bots = context.read<BotsCubit>();
                 // TODO error msg duplicate
                 if (bots.state.any((bot) => bot.token == token)) return;
-                context.read<BotsCubit>().addBot(VirtBot(name, token));
+                context.read<BotsCubit>().add(VirtBot(name, token));
                 Navigator.of(context).pop(); // Close the dialog
               },
               child: Text('Add'),
@@ -74,67 +74,73 @@ class _HomePageState extends State<HomePage> {
         title: Text(widget.title),
         centerTitle: true,
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          // list of bots
-          BlocBuilder<BotsCubit, List<VirtBot>>(
-            builder: (context, bots) {
-              if (bots.isEmpty) {
-                return Center(child: Text('List empty! create a bot'));
-              }
-              return Expanded(
-                child: ListView.builder(
-                  itemCount: bots.length,
-                  itemBuilder: (context, index) {
-                    final bot = bots[index];
-                    return ListTile(
-                      title: Text(
-                        '${bot.name} (${bot.active ? 'active' : 'offline'})',
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => BotPage(bot: bot),
-                          ),
-                        );
-                      },
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        spacing: 4,
-                        children: [
-                          IconButton(
-                            icon: Icon(
-                              bot.active ? Icons.pause : Icons.play_arrow,
-                            ),
-                            onPressed: () async {
-                              await bot.toggle();
-                              // ignore: use_build_context_synchronously
-                              context.read<BotsCubit>().update();
-                            },
-                          ),
-                          IconButton(
-                            icon: Icon(Icons.delete),
-                            onPressed: () {
-                              context.read<BotsCubit>().removeBot(bot);
-                            },
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              );
-            },
-          ),
-        ],
+      body: SingleChildScrollView(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          spacing: 24,
+          children: <Widget>[
+            Text('Bots:'),
+            buildBots(),
+            SizedBox(height: 24),
+            Text('Markups:'),
+            buildBots(),
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addBot,
         tooltip: 'Add a Bot',
         child: const Icon(Icons.add),
       ),
+    );
+  }
+
+  Widget buildBots() {
+    return BlocBuilder<BotsCubit, List<VirtBot>>(
+      builder: (context, bots) {
+        if (bots.isEmpty) {
+          return Container(
+            padding: EdgeInsets.all(24),
+            alignment: Alignment.center,
+            child: Text('List empty! create a bot'),
+          );
+        }
+        return ListView.builder(
+          itemCount: bots.length,
+          itemBuilder: (context, index) {
+            final bot = bots[index];
+            return ListTile(
+              title: Text('${bot.name} (${bot.active ? 'active' : 'offline'})'),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => BotPage(bot: bot)),
+                );
+              },
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                spacing: 4,
+                children: [
+                  IconButton(
+                    icon: Icon(bot.active ? Icons.pause : Icons.play_arrow),
+                    onPressed: () async {
+                      await bot.toggle();
+                      // ignore: use_build_context_synchronously
+                      context.read<BotsCubit>().update();
+                    },
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.delete),
+                    onPressed: () {
+                      context.read<BotsCubit>().remove(bot);
+                    },
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
     );
   }
 }

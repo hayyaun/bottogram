@@ -5,7 +5,7 @@ import 'package:televerse/televerse.dart';
 
 part 'virt_bot.g.dart';
 
-@HiveType(typeId: 0)
+@HiveType(typeId: 100)
 class VirtBot extends HiveObject {
   bool _active = false;
   Bot bot;

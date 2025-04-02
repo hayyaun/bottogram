@@ -8,7 +8,7 @@ part of 'virt_act.dart';
 
 class VirtActAdapter extends TypeAdapter<VirtAct> {
   @override
-  final int typeId = 2;
+  final int typeId = 300;
 
   @override
   VirtAct read(BinaryReader reader) {
@@ -17,7 +17,7 @@ class VirtActAdapter extends TypeAdapter<VirtAct> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return VirtAct(type: fields[0] as VirtActType, text: fields[1] as String)
-      ..rmu = fields[2] as VirtRmu?;
+      ..rmu = fields[2] as VirtRMU?;
   }
 
   @override

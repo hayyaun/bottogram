@@ -58,6 +58,7 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
   Widget buildKeyboardItemAdd() {
     final primary = Theme.of(context).primaryColor;
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 8,
       children: [
         Row(
@@ -104,17 +105,13 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
             ),
           ],
         ),
-        Expanded(
-          child: TextField(
-            controller: _ctrlKBtnValue,
-            decoration: InputDecoration(
-              hintText: 'Button Query',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
-              ),
-            ),
-            keyboardType: TextInputType.text,
+        TextField(
+          controller: _ctrlKBtnValue,
+          decoration: InputDecoration(
+            hintText: 'Button Query',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(28)),
           ),
+          keyboardType: TextInputType.text,
         ),
       ],
     );

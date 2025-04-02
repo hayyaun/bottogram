@@ -76,18 +76,11 @@ class _HomePageState extends State<HomePage> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+          padding: EdgeInsets.all(0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 12,
-            children: <Widget>[
-              Text('Bots:'),
-              buildBots(),
-              SizedBox(height: 48),
-              Text('Markups:'),
-              buildBots(),
-              SizedBox(height: 48),
-            ],
+            children: <Widget>[buildBots(), SizedBox(height: 48)],
           ),
         ),
       ),

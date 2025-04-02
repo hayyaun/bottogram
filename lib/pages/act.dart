@@ -38,9 +38,9 @@ class _ActPageState extends State<ActPage> {
         title: Text(widget.act.text),
         centerTitle: true,
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 18),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.start,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -96,7 +96,8 @@ class _ActPageState extends State<ActPage> {
         spacing: 8,
         children:
             VirtRMUType.values.map((option) {
-              final selected = widget.act.rmu?.type == option;
+              final selected =
+                  (widget.act.rmu?.type ?? VirtRMUType.none) == option;
               return ChoiceChip(
                 label: Text(option.name.toUpperCase()),
                 selected: selected,

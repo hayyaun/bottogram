@@ -48,4 +48,9 @@ class VirtBot extends HiveObject {
       await start();
     }
   }
+
+  void addEvent(VirtEvent ev) {
+    events.add(ev); // push
+    ev.add(bot); // listen event
+  }
 }

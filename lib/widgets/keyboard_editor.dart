@@ -41,11 +41,9 @@ class _KeyboardState extends State<KeyboardEditor> {
                       setState(() {});
                     },
                     style: ButtonStyle(
-                      backgroundColor: WidgetStatePropertyAll(
-                        Colors.blue.shade100,
-                      ),
+                      backgroundColor: WidgetStatePropertyAll(Colors.blue),
                     ),
-                    child: Text(btn),
+                    child: Text(btn, style: TextStyle(color: Colors.white)),
                   ),
                 ),
             ],
@@ -55,7 +53,7 @@ class _KeyboardState extends State<KeyboardEditor> {
   }
 
   Widget buildKeyboardItemAdd() {
-    final primary = Theme.of(context).primaryColor;
+    final primary = Theme.of(context).colorScheme.primaryContainer;
     return Row(
       spacing: 8,
       children: [
@@ -78,10 +76,8 @@ class _KeyboardState extends State<KeyboardEditor> {
             context.read<BotsCubit>().update();
             setState(() {});
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStatePropertyAll(primary.withAlpha(60)),
-          ),
-          child: Icon(Icons.add),
+          style: ButtonStyle(backgroundColor: WidgetStatePropertyAll(primary)),
+          child: Icon(Icons.add, color: Colors.white),
         ),
         TextButton(
           onPressed: () {
@@ -91,9 +87,9 @@ class _KeyboardState extends State<KeyboardEditor> {
             setState(() {});
           },
           style: ButtonStyle(
-            backgroundColor: WidgetStatePropertyAll(Colors.green.shade100),
+            backgroundColor: WidgetStatePropertyAll(Colors.green),
           ),
-          child: Icon(Icons.keyboard_return),
+          child: Icon(Icons.keyboard_return, color: Colors.white),
         ),
       ],
     );

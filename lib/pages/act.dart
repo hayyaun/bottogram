@@ -103,9 +103,7 @@ class _ActPageState extends State<ActPage> {
                 selected: selected,
                 onSelected: (_) => selectOption(option),
                 selectedColor: Colors.blue,
-                labelStyle: TextStyle(
-                  color: selected ? Colors.white : Colors.black,
-                ),
+                labelStyle: TextStyle(color: selected ? Colors.white : null),
               );
             }).toList(),
       ),

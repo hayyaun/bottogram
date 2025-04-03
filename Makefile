@@ -11,7 +11,7 @@ linux: icon gen
 	flutter build linux --release
 
 gen:
-	dart run build_runner --delete-conflicting-outputs
+	dart run build_runner build --delete-conflicting-outputs
 
 icon:
 	flutter pub run flutter_launcher_icons

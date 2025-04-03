@@ -17,10 +17,10 @@ enum VirtRMUType { none, keyboard, inlineKeyboard }
 @HiveType(typeId: 41)
 class VirtRMUKeyboard implements VirtRMU {
   @HiveField(0)
-  List<String?> items = [];
-  @HiveField(1)
   @override
   String? name;
+  @HiveField(1)
+  List<String?> items = [];
 
   @override
   get type => VirtRMUType.keyboard;
@@ -50,10 +50,10 @@ class VirtRMUKeyboard implements VirtRMU {
 @HiveType(typeId: 42)
 class VirtRMUInlineKeyboard implements VirtRMU {
   @HiveField(0)
-  List<MapEntry<String, String>?> items = [];
-  @HiveField(1)
   @override
   String? name;
+  @HiveField(1)
+  List<MapEntry<String, String>?> items = [];
 
   @override
   get type => VirtRMUType.inlineKeyboard;

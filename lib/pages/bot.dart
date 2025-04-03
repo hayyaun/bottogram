@@ -98,7 +98,7 @@ class _BotPageState extends State<BotPage> {
             builder: (context, bots) {
               final events = widget.bot.events;
               if (events.isEmpty) {
-                return Center(child: Text('List empty! create a event'));
+                return Center(child: Text('List empty! create an event'));
               }
               return Expanded(
                 child: ListView.builder(
@@ -107,8 +107,7 @@ class _BotPageState extends State<BotPage> {
                     final ev = events[index];
                     return ListTile(
                       onTap: () {
-                        Navigator.push(
-                          context,
+                        Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) => EventPage(ev: ev),
                           ),

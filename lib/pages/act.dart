@@ -1,4 +1,6 @@
+import 'package:bottogram/pages/templates.dart';
 import 'package:bottogram/store/bots.dart';
+import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/widgets/inline_keyboard_editor.dart';
@@ -53,14 +55,8 @@ class _ActPageState extends State<ActPage> {
                 maxLines: 8,
               ),
               SizedBox(height: 32),
-              // TODO move everything below to rmu_editor
-              _buildRMUOptions(), // Select an Option
-              if (widget.act.rmu.runtimeType == VirtRMUKeyboard)
-                KeyboardEditor(rmu: widget.act.rmu as VirtRMUKeyboard)
-              else if (widget.act.rmu.runtimeType == VirtRMUInlineKeyboard)
-                InlineKeyboardEditor(
-                  rmu: widget.act.rmu as VirtRMUInlineKeyboard,
-                ),
+              buildRMUEditor(),
+              SizedBox(height: 72),
             ],
           ),
         ),
@@ -70,6 +66,49 @@ class _ActPageState extends State<ActPage> {
         tooltip: 'Save',
         child: const Icon(Icons.check),
       ),
+    );
+  }
+
+  // TODO move everything below to rmu_editor
+  Widget buildRMUEditor() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      spacing: 12,
+      children: [
+        Row(
+          spacing: 8,
+          children: [
+            Expanded(child: Text('Reply Markup:')),
+            TextButton(
+              onPressed: () async {
+                final selectedRMU = await Navigator.of(context).push<VirtRMU>(
+                  MaterialPageRoute(
+                    builder: (context) => TemplatesPage(selectMode: true),
+                  ),
+                );
+                widget.act.rmu = selectedRMU;
+                setState(() {});
+              },
+              child: Text("SELECT"),
+            ),
+          ],
+        ),
+        _buildRMUOptions(), // Select an Option
+        if (widget.act.rmu.runtimeType == VirtRMUKeyboard)
+          KeyboardEditor(rmu: widget.act.rmu as VirtRMUKeyboard)
+        else if (widget.act.rmu.runtimeType == VirtRMUInlineKeyboard)
+          InlineKeyboardEditor(rmu: widget.act.rmu as VirtRMUInlineKeyboard),
+        TextButton(
+          onPressed: () {
+            final ctx = context.read<RMUsCubit>();
+            final rmu = widget.act.rmu?.copy('RMU-${ctx.state.length}');
+            if (rmu == null) return;
+            ctx.add(rmu);
+          },
+          child: Text('+ Add to Templates'),
+        ),
+      ],
     );
   }
 

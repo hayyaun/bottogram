@@ -18,8 +18,11 @@ class EventPage extends StatefulWidget {
 }
 
 class _EventPageState extends State<EventPage> {
+  final ctrlQuery = TextEditingController();
+
   @override
   void initState() {
+    ctrlQuery.text = widget.ev.query;
     super.initState();
   }
 
@@ -93,13 +96,48 @@ class _EventPageState extends State<EventPage> {
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        spacing: 8,
         children: <Widget>[
+          SizedBox(height: 24),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: ctrlQuery,
+                    decoration: InputDecoration(
+                      hintText: 'Query',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () {
+                    // update query
+                    if (ctrlQuery.text.isEmpty) return;
+                    widget.ev.query = ctrlQuery.text;
+                    context.read<BotsCubit>().update();
+                    setState(() {});
+                  },
+                  icon: Icon(Icons.check),
+                  color: Colors.black,
+                  style: ButtonStyle(
+                    backgroundColor: WidgetStatePropertyAll(Colors.greenAccent),
+                  ),
+                ),
+              ],
+            ),
+          ),
           // list of bots
           BlocBuilder<BotsCubit, List<VirtBot>>(
             builder: (context, bots) {
               final acts = widget.ev.acts;
               if (acts.isEmpty) {
-                return Center(child: Text('List empty! create a action'));
+                return Center(child: Text('List empty! create an action'));
               }
               return Expanded(
                 child: ListView.builder(

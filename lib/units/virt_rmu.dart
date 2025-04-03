@@ -6,8 +6,10 @@ import 'package:televerse/televerse.dart';
 part 'virt_rmu.g.dart';
 
 abstract class VirtRMU {
+  String? name;
   ReplyMarkup hydrate();
   VirtRMUType get type;
+  VirtRMU copy(String name);
 }
 
 enum VirtRMUType { none, keyboard, inlineKeyboard }
@@ -16,6 +18,9 @@ enum VirtRMUType { none, keyboard, inlineKeyboard }
 class VirtRMUKeyboard implements VirtRMU {
   @HiveField(0)
   List<String?> items = [];
+  @HiveField(1)
+  @override
+  String? name;
 
   @override
   get type => VirtRMUType.keyboard;
@@ -32,12 +37,23 @@ class VirtRMUKeyboard implements VirtRMU {
     }
     return rmu;
   }
+
+  @override
+  VirtRMU copy(String name) {
+    final rmu = VirtRMUKeyboard();
+    rmu.items = items;
+    rmu.name = name;
+    return rmu;
+  }
 }
 
 @HiveType(typeId: 42)
 class VirtRMUInlineKeyboard implements VirtRMU {
   @HiveField(0)
   List<MapEntry<String, String>?> items = [];
+  @HiveField(1)
+  @override
+  String? name;
 
   @override
   get type => VirtRMUType.inlineKeyboard;
@@ -54,6 +70,14 @@ class VirtRMUInlineKeyboard implements VirtRMU {
         rmu = rmu.add(item.key, item.value);
       }
     }
+    return rmu;
+  }
+
+  @override
+  VirtRMU copy(String name) {
+    final rmu = VirtRMUInlineKeyboard();
+    rmu.items = items;
+    rmu.name = name;
     return rmu;
   }
 }

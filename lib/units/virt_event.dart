@@ -29,11 +29,13 @@ class VirtEvent extends HiveObject {
         return bot.command(query, callback);
       case VirtEventType.text:
         return bot.text(query, callback);
+      case VirtEventType.callbackQuery:
+        return bot.callbackQuery(query, callback);
     }
   }
 }
 
-enum VirtEventType { command, text }
+enum VirtEventType { command, text, callbackQuery }
 
 class VirtEventTypeAdapter extends TypeAdapter<VirtEventType> {
   @override

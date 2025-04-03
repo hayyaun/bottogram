@@ -42,6 +42,7 @@ class MyApp extends StatelessWidget {
         title: 'Bottogram',
         theme: ThemeData(
           colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+          scaffoldBackgroundColor: Colors.black,
         ),
         darkTheme: ThemeData.dark(),
         home: const HomePage(title: 'Bottogram'),

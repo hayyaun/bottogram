@@ -17,8 +17,8 @@ class VirtRMUKeyboardAdapter extends TypeAdapter<VirtRMUKeyboard> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return VirtRMUKeyboard()
-      ..items = (fields[0] as List).cast<String?>()
-      ..name = fields[1] as String?;
+      ..name = fields[0] as String?
+      ..items = (fields[1] as List).cast<String?>();
   }
 
   @override
@@ -26,9 +26,9 @@ class VirtRMUKeyboardAdapter extends TypeAdapter<VirtRMUKeyboard> {
     writer
       ..writeByte(2)
       ..writeByte(0)
-      ..write(obj.items)
+      ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.name);
+      ..write(obj.items);
   }
 
   @override
@@ -53,8 +53,8 @@ class VirtRMUInlineKeyboardAdapter extends TypeAdapter<VirtRMUInlineKeyboard> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return VirtRMUInlineKeyboard()
-      ..items = (fields[0] as List).cast<MapEntry<String, String>?>()
-      ..name = fields[1] as String?;
+      ..name = fields[0] as String?
+      ..items = (fields[1] as List).cast<MapEntry<String, String>?>();
   }
 
   @override
@@ -62,9 +62,9 @@ class VirtRMUInlineKeyboardAdapter extends TypeAdapter<VirtRMUInlineKeyboard> {
     writer
       ..writeByte(2)
       ..writeByte(0)
-      ..write(obj.items)
+      ..write(obj.name)
       ..writeByte(1)
-      ..write(obj.name);
+      ..write(obj.items);
   }
 
   @override

@@ -48,7 +48,7 @@ class _ActPageState extends State<ActPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             spacing: 12,
             children: <Widget>[
-              Text('Reply Text'),
+              Text('Reply Message'),
               TextField(
                 controller: ctrlText,
                 keyboardType: TextInputType.multiline,

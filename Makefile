@@ -1,17 +1,17 @@
-runner:
-	dart run build_runner watch --delete-conflicting-outputs
-
-run: icon
+run: icon gen
 	flutter run
 
-apk: icon
+apk: icon gen
 	flutter build apk --split-per-abi
 
-apk-clean: clean pub icon
+apk-clean: clean pub icon gen
 	flutter build apk --split-per-abi
 
-linux: icon
+linux: icon gen
 	flutter build linux --release
+
+gen:
+	dart run build_runner --delete-conflicting-outputs
 
 icon:
 	flutter pub run flutter_launcher_icons

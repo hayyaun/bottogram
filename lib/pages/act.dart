@@ -69,7 +69,49 @@ class _ActPageState extends State<ActPage> {
     );
   }
 
-  // TODO move everything below to rmu_editor
+  /// TODO move everything below to rmu_editor
+
+  void _saveTemplate() {
+    final ctx = context.read<RMUsCubit>();
+    final ctrlName = TextEditingController(text: 'RMU-${ctx.state.length}');
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text('Add to Templates'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              TextField(
+                controller: ctrlName,
+                decoration: InputDecoration(hintText: 'Name'),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final rmuName = ctrlName.text;
+                if (rmuName.isEmpty) return;
+                final rmu = widget.act.rmu;
+                if (rmu == null) return;
+                ctx.add(rmu.copy(rmuName));
+              },
+              child: Text('Add'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget buildRMUEditor() {
     return Column(
       mainAxisAlignment: MainAxisAlignment.start,
@@ -87,7 +129,8 @@ class _ActPageState extends State<ActPage> {
                     builder: (context) => TemplatesPage(selectMode: true),
                   ),
                 );
-                widget.act.rmu = selectedRMU; // bring it - no copy
+                if (selectedRMU == null) return;
+                widget.act.rmu = selectedRMU.copy(selectedRMU.name!);
                 setState(() {});
               },
               child: Text("SELECT"),
@@ -99,15 +142,7 @@ class _ActPageState extends State<ActPage> {
           KeyboardEditor(rmu: widget.act.rmu as VirtRMUKeyboard)
         else if (widget.act.rmu.runtimeType == VirtRMUInlineKeyboard)
           InlineKeyboardEditor(rmu: widget.act.rmu as VirtRMUInlineKeyboard),
-        TextButton(
-          onPressed: () {
-            final ctx = context.read<RMUsCubit>();
-            final rmu = widget.act.rmu?.copy('RMU-${ctx.state.length}');
-            if (rmu == null) return;
-            ctx.add(rmu);
-          },
-          child: Text('+ Add to Templates'),
-        ),
+        TextButton(onPressed: _saveTemplate, child: Text('+ Add to Templates')),
       ],
     );
   }

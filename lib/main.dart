@@ -23,6 +23,7 @@ void main() async {
   Hive.registerAdapter(VirtActTypeAdapter());
   Hive.registerAdapter(VirtRMUKeyboardAdapter());
   Hive.registerAdapter(VirtRMUInlineKeyboardAdapter());
+  Hive.registerAdapter(KeyValueAdapter());
 
   runApp(const MyApp());
 }

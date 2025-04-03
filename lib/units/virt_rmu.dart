@@ -19,6 +19,7 @@ class VirtRMUKeyboard implements VirtRMU {
   @HiveField(0)
   @override
   String? name;
+
   @HiveField(1)
   List<String?> items = [];
 
@@ -52,8 +53,9 @@ class VirtRMUInlineKeyboard implements VirtRMU {
   @HiveField(0)
   @override
   String? name;
+
   @HiveField(1)
-  List<MapEntry<String, String>?> items = [];
+  List<KeyValue?> items = [];
 
   @override
   get type => VirtRMUType.inlineKeyboard;
@@ -80,4 +82,15 @@ class VirtRMUInlineKeyboard implements VirtRMU {
     rmu.name = name;
     return rmu;
   }
+}
+
+@HiveType(typeId: 43)
+class KeyValue {
+  @HiveField(0)
+  String key;
+
+  @HiveField(1)
+  String value;
+
+  KeyValue(this.key, this.value);
 }

@@ -79,7 +79,7 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
                 if (_ctrlKBtnKey.text.isEmpty) return;
                 if (_ctrlKBtnValue.text.isEmpty) return;
                 widget.rmu.items.add(
-                  MapEntry(_ctrlKBtnKey.text, _ctrlKBtnValue.text),
+                  KeyValue(_ctrlKBtnKey.text, _ctrlKBtnValue.text),
                 );
                 context.read<BotsCubit>().update();
                 setState(() {});

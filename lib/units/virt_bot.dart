@@ -1,4 +1,6 @@
+import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_event.dart';
+import 'package:bottogram/units/virt_rmu.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
@@ -14,12 +16,37 @@ class VirtBot extends HiveObject {
   @HiveField(1)
   String token;
   @HiveField(2)
-  List<VirtEvent> events =
-      VirtEvent.commonCommands
-          .map((c) => VirtEvent(query: c, type: VirtEventType.command))
-          .toList();
+  List<VirtEvent> events = [];
 
-  VirtBot(this.name, this.token) : bot = Bot(token);
+  VirtBot(this.name, this.token) : bot = Bot(token) {
+    // Sample Events/Actions
+    final evStart = VirtEvent(query: 'start', type: VirtEventType.command);
+    final actChooseDice = VirtAct(
+      text: 'Roll a Dice!',
+      type: VirtActType.reply,
+    );
+    actChooseDice.rmu =
+        VirtRMUInlineKeyboard()
+          ..items = [
+            KeyValue('Dice', 'dice'),
+            KeyValue('Dice', 'dice'),
+            KeyValue('Dice', 'dice'),
+            null,
+            KeyValue('Dice', 'dice'),
+            KeyValue('Dice', 'dice'),
+            null,
+            KeyValue('Dice', 'dice'),
+          ];
+    evStart.acts.add(actChooseDice);
+    final evDice = VirtEvent(query: 'dice', type: VirtEventType.callbackQuery);
+    evDice.acts.add(VirtAct(text: '', type: VirtActType.dice));
+    final evHi = VirtEvent(query: 'hi', type: VirtEventType.text);
+    evHi.acts.add(VirtAct(text: 'Hello!', type: VirtActType.reply));
+    events
+      ..add(evStart)
+      ..add(evDice)
+      ..add(evHi);
+  }
 
   bool get active => _active;
 

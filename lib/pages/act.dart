@@ -87,7 +87,7 @@ class _ActPageState extends State<ActPage> {
                     builder: (context) => TemplatesPage(selectMode: true),
                   ),
                 );
-                widget.act.rmu = selectedRMU;
+                widget.act.rmu = selectedRMU; // bring it - no copy
                 setState(() {});
               },
               child: Text("SELECT"),

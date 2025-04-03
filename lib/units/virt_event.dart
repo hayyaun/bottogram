@@ -13,7 +13,7 @@ class VirtEvent extends HiveObject {
   @HiveField(1)
   String query;
   @HiveField(2)
-  List<VirtAct> acts = [VirtAct(text: "Hello!", type: VirtActType.reply)];
+  List<VirtAct> acts = [];
 
   VirtEvent({this.type = VirtEventType.command, required this.query});
 

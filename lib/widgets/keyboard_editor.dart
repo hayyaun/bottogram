@@ -1,3 +1,4 @@
+import 'package:bottogram/decorations/input.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/utils/list.dart';
@@ -60,12 +61,9 @@ class _KeyboardState extends State<KeyboardEditor> {
         Expanded(
           child: TextField(
             controller: ctrlKBtn,
-            decoration: InputDecoration(
-              hintText: 'Button Text',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(28),
-              ),
-            ),
+            decoration: inputDecorationCommon(
+              context,
+            ).copyWith(hintText: 'Button Text'),
             keyboardType: TextInputType.text,
           ),
         ),

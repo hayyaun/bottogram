@@ -19,3 +19,13 @@ List<List<T>> splitListByNull<T>(List<T?> input) {
 
   return output;
 }
+
+mixin Addable {
+  dynamic operator +(dynamic other);
+}
+
+extension SumOnIterable on Iterable<int> {
+  int sum() {
+    return reduce((a, b) => a + b);
+  }
+}

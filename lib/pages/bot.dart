@@ -86,9 +86,22 @@ class _BotPageState extends State<BotPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
         title: Text(widget.bot.name),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.delete),
+            onPressed: () {
+              context.read<BotsCubit>().remove(widget.bot);
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addEvent,
+        tooltip: 'Add an Event',
+        child: const Icon(Icons.add),
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -109,18 +122,12 @@ class _BotPageState extends State<BotPage> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => EventPage(ev: ev),
+                            builder:
+                                (context) => EventPage(ev: ev, bot: widget.bot),
                           ),
                         );
                       },
                       title: Text('${ev.type.name}/${ev.query}'),
-                      trailing: IconButton(
-                        icon: Icon(Icons.delete),
-                        onPressed: () {
-                          widget.bot.events.remove(ev);
-                          context.read<BotsCubit>().update();
-                        },
-                      ),
                     );
                   },
                 ),
@@ -128,11 +135,6 @@ class _BotPageState extends State<BotPage> {
             },
           ),
         ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addEvent,
-        tooltip: 'Add an Event',
-        child: const Icon(Icons.add),
       ),
     );
   }

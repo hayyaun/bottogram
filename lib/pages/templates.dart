@@ -23,11 +23,7 @@ class _BotPageState extends State<TemplatesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text("Templates"),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: Text("Templates"), centerTitle: true),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: <Widget>[

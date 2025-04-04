@@ -41,11 +41,14 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Bottogram',
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        darkTheme: ThemeData.dark().copyWith(
+          colorScheme: ColorScheme.dark(
+            primary: Colors.deepPurpleAccent,
+            onPrimary: Colors.white,
+          ),
+          primaryColorDark: Colors.deepPurpleAccent,
           scaffoldBackgroundColor: Colors.black,
         ),
-        darkTheme: ThemeData.dark(),
         home: const HomePage(title: 'Bottogram'),
       ),
     );

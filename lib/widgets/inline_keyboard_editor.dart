@@ -1,3 +1,4 @@
+import 'package:bottogram/decorations/input.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/utils/list.dart';
@@ -65,31 +66,32 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
             Expanded(
               child: TextField(
                 controller: _ctrlKBtnKey,
-                decoration: InputDecoration(
+                decoration: inputDecorationCommon(context).copyWith(
                   hintText: 'Button Text',
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(28),
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      if (_ctrlKBtnKey.text.isEmpty) return;
+                      if (_ctrlKBtnValue.text.isEmpty) return;
+                      widget.rmu.items.add(
+                        KeyValue(_ctrlKBtnKey.text, _ctrlKBtnValue.text),
+                      );
+                      context.read<BotsCubit>().update();
+                      setState(() {});
+                    },
+                    color: Colors.black,
+                    style: ButtonStyle(
+                      backgroundColor: WidgetStatePropertyAll(
+                        Colors.greenAccent,
+                      ),
+                    ),
+                    icon: Icon(Icons.add),
                   ),
                 ),
                 keyboardType: TextInputType.text,
               ),
             ),
-            TextButton(
-              onPressed: () {
-                if (_ctrlKBtnKey.text.isEmpty) return;
-                if (_ctrlKBtnValue.text.isEmpty) return;
-                widget.rmu.items.add(
-                  KeyValue(_ctrlKBtnKey.text, _ctrlKBtnValue.text),
-                );
-                context.read<BotsCubit>().update();
-                setState(() {});
-              },
-              style: ButtonStyle(
-                backgroundColor: WidgetStatePropertyAll(primary),
-              ),
-              child: Icon(Icons.add, color: Colors.white),
-            ),
-            TextButton(
+            IconButton(
+              padding: EdgeInsets.all(12),
               onPressed: () {
                 if (widget.rmu.items.isEmpty) return;
                 widget.rmu.items.add(null);
@@ -97,18 +99,17 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
                 setState(() {});
               },
               style: ButtonStyle(
-                backgroundColor: WidgetStatePropertyAll(Colors.green),
+                backgroundColor: WidgetStatePropertyAll(primary),
               ),
-              child: Icon(Icons.keyboard_return, color: Colors.white),
+              icon: Icon(Icons.keyboard_return, color: Colors.white),
             ),
           ],
         ),
         TextField(
           controller: _ctrlKBtnValue,
-          decoration: InputDecoration(
-            hintText: 'Button Query',
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(28)),
-          ),
+          decoration: inputDecorationCommon(
+            context,
+          ).copyWith(hintText: 'Button Query'),
           keyboardType: TextInputType.text,
         ),
       ],

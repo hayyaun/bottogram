@@ -89,9 +89,15 @@ class _EventPageState extends State<EventPage> {
 
   @override
   Widget build(BuildContext context) {
+    final prefix =
+        widget.ev.type == VirtEventType.command
+            ? '/'
+            : widget.ev.type == VirtEventType.text
+            ? ''
+            : ':';
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.ev.query),
+        title: Text('on $prefix${widget.ev.query}'),
         centerTitle: true,
         actions: [
           IconButton(
@@ -133,10 +139,12 @@ class _EventPageState extends State<EventPage> {
                           setState(() {});
                         },
                         icon: Icon(Icons.check),
-                        color: Colors.black,
+                        color: Colors.greenAccent,
                         style: ButtonStyle(
                           backgroundColor: WidgetStatePropertyAll(
-                            Colors.greenAccent,
+                            Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(25),
                           ),
                         ),
                       ),
@@ -159,7 +167,9 @@ class _EventPageState extends State<EventPage> {
                   itemBuilder: (context, index) {
                     final act = acts[index];
                     return ListTile(
-                      title: Text('${act.type.name}/${act.text.ellipsize(20)}'),
+                      title: Text(
+                        '${index + 1}. ${act.type.name}/${act.text.ellipsize(20)}',
+                      ),
                       onTap: () {
                         Navigator.push(
                           context,

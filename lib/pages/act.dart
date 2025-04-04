@@ -116,6 +116,7 @@ class _ActPageState extends State<ActPage> {
                 final rmu = widget.act.rmu;
                 if (rmu == null) return;
                 ctx.add(rmu.copy(rmuName));
+                Navigator.of(context).pop();
               },
               child: Text('Add'),
             ),

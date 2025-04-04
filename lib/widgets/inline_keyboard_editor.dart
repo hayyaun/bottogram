@@ -55,7 +55,6 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
   }
 
   Widget buildKeyboardItemAdd() {
-    final primary = Theme.of(context).colorScheme.primaryContainer;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       spacing: 8,
@@ -78,10 +77,10 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
                       context.read<BotsCubit>().update();
                       setState(() {});
                     },
-                    color: Colors.black,
+                    color: Colors.greenAccent,
                     style: ButtonStyle(
                       backgroundColor: WidgetStatePropertyAll(
-                        Colors.greenAccent,
+                        Theme.of(context).colorScheme.onSurface.withAlpha(25),
                       ),
                     ),
                     icon: Icon(Icons.add),
@@ -98,10 +97,7 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
                 context.read<BotsCubit>().update();
                 setState(() {});
               },
-              style: ButtonStyle(
-                backgroundColor: WidgetStatePropertyAll(primary),
-              ),
-              icon: Icon(Icons.keyboard_return, color: Colors.white),
+              icon: Icon(Icons.keyboard_return),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:bottogram/decorations/input.dart';
 import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -15,8 +16,11 @@ class BotPage extends StatefulWidget {
 }
 
 class _BotPageState extends State<BotPage> {
+  final ctrlName = TextEditingController();
+
   @override
   void initState() {
+    ctrlName.text = widget.bot.name;
     super.initState();
   }
 
@@ -105,7 +109,43 @@ class _BotPageState extends State<BotPage> {
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
+        spacing: 8,
         children: <Widget>[
+          SizedBox(height: 24),
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8),
+            child: Row(
+              spacing: 12,
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: ctrlName,
+                    decoration: inputDecorationCommon(context).copyWith(
+                      hintText: 'Bot Name',
+                      suffixIcon: IconButton(
+                        onPressed: () {
+                          // update query
+                          if (ctrlName.text.isEmpty) return;
+                          widget.bot.name = ctrlName.text;
+                          context.read<BotsCubit>().update();
+                          setState(() {});
+                        },
+                        icon: Icon(Icons.check),
+                        color: Colors.greenAccent,
+                        style: ButtonStyle(
+                          backgroundColor: WidgetStatePropertyAll(
+                            Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withAlpha(25),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
           // list of bots
           BlocBuilder<BotsCubit, List<VirtBot>>(
             builder: (context, bots) {

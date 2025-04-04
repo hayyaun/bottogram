@@ -54,40 +54,43 @@ class _KeyboardState extends State<KeyboardEditor> {
   }
 
   Widget buildKeyboardItemAdd() {
-    final primary = Theme.of(context).colorScheme.primaryContainer;
     return Row(
       spacing: 8,
       children: [
         Expanded(
           child: TextField(
             controller: ctrlKBtn,
-            decoration: inputDecorationCommon(
-              context,
-            ).copyWith(hintText: 'Button Text'),
+            decoration: inputDecorationCommon(context).copyWith(
+              hintText: 'Button Text',
+              suffixIcon: IconButton(
+                onPressed: () {
+                  if (ctrlKBtn.text.isEmpty) return;
+                  widget.rmu.items.add(ctrlKBtn.text);
+                  context.read<BotsCubit>().update();
+                  setState(() {});
+                },
+                icon: Icon(Icons.add, color: Colors.white),
+                color: Colors.greenAccent,
+                style: ButtonStyle(
+                  backgroundColor: WidgetStatePropertyAll(
+                    Theme.of(context).colorScheme.onSurface.withAlpha(25),
+                  ),
+                ),
+              ),
+            ),
             keyboardType: TextInputType.text,
           ),
         ),
-        TextButton(
-          onPressed: () {
-            if (ctrlKBtn.text.isEmpty) return;
-            widget.rmu.items.add(ctrlKBtn.text);
-            context.read<BotsCubit>().update();
-            setState(() {});
-          },
-          style: ButtonStyle(backgroundColor: WidgetStatePropertyAll(primary)),
-          child: Icon(Icons.add, color: Colors.white),
-        ),
-        TextButton(
+
+        IconButton(
+          padding: EdgeInsets.all(12),
           onPressed: () {
             if (widget.rmu.items.isEmpty) return;
             widget.rmu.items.add(null);
             context.read<BotsCubit>().update();
             setState(() {});
           },
-          style: ButtonStyle(
-            backgroundColor: WidgetStatePropertyAll(Colors.green),
-          ),
-          child: Icon(Icons.keyboard_return, color: Colors.white),
+          icon: Icon(Icons.keyboard_return),
         ),
       ],
     );

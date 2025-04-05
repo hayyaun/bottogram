@@ -1,4 +1,5 @@
 import 'package:bottogram/decorations/input.dart';
+import 'package:bottogram/pages/act.dart';
 import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -167,6 +168,24 @@ class _BotPageState extends State<BotPage> {
                         );
                       },
                       title: Text('${ev.type.name}/${ev.query}'),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (ev.repliesToAct != null)
+                            IconButton(
+                              tooltip: 'Link to Action',
+                              onPressed: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (_) => ActPage(act: ev.repliesToAct!),
+                                  ),
+                                );
+                              },
+                              icon: Icon(Icons.link),
+                            ),
+                        ],
+                      ),
                     );
                   },
                 ),

@@ -17,11 +17,14 @@ class VirtEvent extends HiveObject {
   String query;
   @HiveField(3)
   List<VirtAct> acts = [];
+  @HiveField(4)
+  VirtAct? repliesToAct;
 
   VirtEvent({
     this.type = VirtEventType.command,
     required this.query,
     required this.bot,
+    this.repliesToAct,
   });
 
   Future<void> callback(Context ctx) async {

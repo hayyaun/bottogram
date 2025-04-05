@@ -41,6 +41,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         title: 'Bottogram',
+        themeMode: ThemeMode.dark,
         darkTheme: ThemeData.dark().copyWith(
           colorScheme: ColorScheme.dark(
             primary: Colors.deepPurpleAccent,

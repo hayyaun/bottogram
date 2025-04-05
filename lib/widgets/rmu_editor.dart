@@ -20,9 +20,11 @@ class _RmuEditorState extends State<RMUEditor> {
   final Map<VirtRMUType, VirtRMU?> buffer = {};
   late VirtRMUType current;
 
-  void loadRMUIntoBuffer(VirtRMU rmu) {
-    current = rmu.type;
-    buffer[current] = rmu;
+  VirtRMU? get rmu => buffer[current];
+
+  void loadRMUIntoBuffer(VirtRMU newRMU) {
+    current = newRMU.type;
+    buffer[current] = newRMU;
   }
 
   @override
@@ -62,9 +64,8 @@ class _RmuEditorState extends State<RMUEditor> {
               onPressed: () {
                 final rmuName = ctrlName.text;
                 if (rmuName.isEmpty) return;
-                final rmu = buffer[current];
                 if (rmu == null) return;
-                ctx.add(rmu.copy(rmuName));
+                ctx.add(rmu!.copy(rmuName));
                 Navigator.of(context).pop();
               },
               child: Text('Add'),
@@ -94,8 +95,8 @@ class _RmuEditorState extends State<RMUEditor> {
                   ),
                 );
                 if (selectedRMU == null) return;
-                final rmu = selectedRMU.copy(selectedRMU.name!);
-                loadRMUIntoBuffer(rmu);
+                final newRMU = selectedRMU.copy(selectedRMU.name!);
+                loadRMUIntoBuffer(newRMU);
                 setState(() {});
               },
               style: ButtonStyle(
@@ -110,40 +111,47 @@ class _RmuEditorState extends State<RMUEditor> {
 
         // ...
         _buildRMUOptions(), // Select an Option
-        if (buffer[current].runtimeType == VirtRMUKeyboard)
-          KeyboardEditor(rmu: buffer[current] as VirtRMUKeyboard)
-        else if (buffer[current].runtimeType == VirtRMUInlineKeyboard)
-          InlineKeyboardEditor(rmu: buffer[current] as VirtRMUInlineKeyboard),
+        _buildEditor(),
 
         // ...
-        TextButton(
-          onPressed: _saveTemplate,
-          style: ButtonStyle(
-            foregroundColor: WidgetStatePropertyAll(
-              Theme.of(context).colorScheme.onSurface.withAlpha(150),
+        if (rmu != null)
+          TextButton(
+            onPressed: _saveTemplate,
+            style: ButtonStyle(
+              foregroundColor: WidgetStatePropertyAll(
+                Theme.of(context).colorScheme.onSurface.withAlpha(150),
+              ),
             ),
+            child: Text('+ Add to Templates'),
           ),
-          child: Text('+ Add to Templates'),
-        ),
       ],
     );
   }
 
+  Widget _buildEditor() {
+    switch (current) {
+      case VirtRMUType.none:
+        return SizedBox();
+      case VirtRMUType.keyboard:
+        return KeyboardEditor(rmu: rmu as VirtRMUKeyboard);
+      case VirtRMUType.inlineKeyboard:
+        return InlineKeyboardEditor(rmu: rmu as VirtRMUInlineKeyboard);
+    }
+  }
+
   void selectOption(VirtRMUType option) {
-    // Replace RMU with new one
-    if (buffer[option] != null) return;
     switch (option) {
       case VirtRMUType.none:
-        buffer[option] = null;
+        current = VirtRMUType.none;
         break;
       case VirtRMUType.keyboard:
-        buffer[option] = VirtRMUKeyboard();
+        loadRMUIntoBuffer(buffer[option] ?? VirtRMUKeyboard());
         break;
       case VirtRMUType.inlineKeyboard:
-        buffer[option] = VirtRMUInlineKeyboard();
+        loadRMUIntoBuffer(buffer[option] ?? VirtRMUInlineKeyboard());
         break;
     }
-    // add new item from buffer to act.rmu
+    // update act.rmu to selected rmu
     widget.act.rmu = buffer[option];
     setState(() {});
   }

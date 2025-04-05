@@ -30,8 +30,8 @@ class _RmuEditorState extends State<RMUEditor> {
   @override
   void initState() {
     // load current rmu into buffer
-    final rmu = widget.act.rmu;
-    if (rmu != null) loadRMUIntoBuffer(rmu);
+    final defaultRMU = widget.act.rmu;
+    if (defaultRMU != null) loadRMUIntoBuffer(defaultRMU);
     super.initState();
   }
 
@@ -109,11 +109,9 @@ class _RmuEditorState extends State<RMUEditor> {
           ],
         ),
 
-        // ...
         _buildRMUOptions(), // Select an Option
         _buildEditor(),
 
-        // ...
         if (rmu != null)
           TextButton(
             onPressed: _saveTemplate,

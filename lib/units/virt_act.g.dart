@@ -16,19 +16,24 @@ class VirtActAdapter extends TypeAdapter<VirtAct> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
-    return VirtAct(type: fields[0] as VirtActType, text: fields[1] as String)
-      ..rmu = fields[2] as VirtRMU?;
+    return VirtAct(
+      type: fields[1] as VirtActType,
+      text: fields[2] as String,
+      ev: fields[0] as VirtEvent,
+    )..rmu = fields[3] as VirtRMU?;
   }
 
   @override
   void write(BinaryWriter writer, VirtAct obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
-      ..write(obj.type)
+      ..write(obj.ev)
       ..writeByte(1)
-      ..write(obj.text)
+      ..write(obj.type)
       ..writeByte(2)
+      ..write(obj.text)
+      ..writeByte(3)
       ..write(obj.rmu);
   }
 

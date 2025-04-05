@@ -73,7 +73,7 @@ class _BotPageState extends State<BotPage> {
                 final events = widget.bot.events;
                 // TODO error msg duplicate
                 if (events.any((ev) => ev.query == query)) return;
-                final ev = VirtEvent(query: query, type: type);
+                final ev = VirtEvent(query: query, type: type, bot: widget.bot);
                 widget.bot.addEvent(ev);
                 context.read<BotsCubit>().update();
                 Navigator.of(context).pop(); // Close the dialog
@@ -162,8 +162,7 @@ class _BotPageState extends State<BotPage> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder:
-                                (context) => EventPage(ev: ev, bot: widget.bot),
+                            builder: (context) => EventPage(ev: ev),
                           ),
                         );
                       },

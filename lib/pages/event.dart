@@ -9,10 +9,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class EventPage extends StatefulWidget {
-  const EventPage({super.key, required this.ev, required this.bot});
+  const EventPage({super.key, required this.ev});
 
   final VirtEvent ev;
-  final VirtBot bot;
 
   @override
   State<EventPage> createState() => _EventPageState();
@@ -74,7 +73,11 @@ class _EventPageState extends State<EventPage> {
                 final action = ctrlAction.text;
                 if (action.isEmpty) return;
                 widget.ev.acts.add(
-                  VirtAct(text: action, type: selectedType.value),
+                  VirtAct(
+                    text: action,
+                    type: selectedType.value,
+                    ev: widget.ev,
+                  ),
                 );
                 context.read<BotsCubit>().update();
                 Navigator.of(context).pop(); // Close the dialog
@@ -103,7 +106,7 @@ class _EventPageState extends State<EventPage> {
           IconButton(
             icon: Icon(Icons.delete),
             onPressed: () {
-              widget.bot.events.remove(widget.ev);
+              widget.ev.bot.events.remove(widget.ev);
               context.read<BotsCubit>().update();
               Navigator.of(context).pop();
             },
@@ -174,8 +177,7 @@ class _EventPageState extends State<EventPage> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder:
-                                (context) => ActPage(act: act, ev: widget.ev),
+                            builder: (context) => ActPage(act: act),
                           ),
                         );
                       },

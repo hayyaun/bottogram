@@ -20,20 +20,29 @@ class VirtBot extends HiveObject {
 
   VirtBot(this.name, this.token) : bot = Bot(token) {
     // Sample Events/Actions
-    final evStart = VirtEvent(query: 'start', type: VirtEventType.command);
+    final evStart = VirtEvent(
+      query: 'start',
+      type: VirtEventType.command,
+      bot: this,
+    );
     final actChooseDice = VirtAct(
       text: 'Roll a Dice! 🎲',
       type: VirtActType.reply,
+      ev: evStart,
     );
     final btn = KeyValue('Dice 🎲', 'dice');
     actChooseDice.rmu =
         VirtRMUInlineKeyboard()
           ..items = [btn, btn, btn, null, btn, btn, null, btn];
     evStart.acts.add(actChooseDice);
-    final evDice = VirtEvent(query: 'dice', type: VirtEventType.callbackQuery);
-    evDice.acts.add(VirtAct(text: '1', type: VirtActType.dice));
-    final evHi = VirtEvent(query: 'hi', type: VirtEventType.text);
-    evHi.acts.add(VirtAct(text: 'Hello!', type: VirtActType.reply));
+    final evDice = VirtEvent(
+      query: 'dice',
+      type: VirtEventType.callbackQuery,
+      bot: this,
+    );
+    evDice.acts.add(VirtAct(text: '1', type: VirtActType.dice, ev: evDice));
+    final evHi = VirtEvent(query: 'hi', type: VirtEventType.text, bot: this);
+    evHi.acts.add(VirtAct(text: 'Hello!', type: VirtActType.reply, ev: evHi));
     events
       ..add(evStart)
       ..add(evDice)

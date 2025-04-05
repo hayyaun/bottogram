@@ -1,4 +1,5 @@
 import 'package:bottogram/units/virt_act.dart';
+import 'package:bottogram/units/virt_bot.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
@@ -9,13 +10,19 @@ class VirtEvent extends HiveObject {
   static List<String> get commonCommands => ['start', 'help'];
 
   @HiveField(0)
-  VirtEventType type;
+  VirtBot bot;
   @HiveField(1)
-  String query;
+  VirtEventType type;
   @HiveField(2)
+  String query;
+  @HiveField(3)
   List<VirtAct> acts = [];
 
-  VirtEvent({this.type = VirtEventType.command, required this.query});
+  VirtEvent({
+    this.type = VirtEventType.command,
+    required this.query,
+    required this.bot,
+  });
 
   Future<void> callback(Context ctx) async {
     for (var act in acts) {
@@ -30,7 +37,10 @@ class VirtEvent extends HiveObject {
       case VirtEventType.text:
         return bot.text(query, callback);
       case VirtEventType.callbackQuery:
-        return bot.callbackQuery(query, callback);
+        return bot.callbackQuery(query, (ctx) async {
+          ctx.answerCallbackQuery(); // no await
+          return await callback(ctx);
+        });
       case VirtEventType.inlineQuery:
         return bot.inlineQuery(query, callback);
     }

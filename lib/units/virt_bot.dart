@@ -11,6 +11,7 @@ part 'virt_bot.g.dart';
 class VirtBot extends HiveObject {
   bool _active = false;
   Bot bot;
+
   @HiveField(0)
   String name;
   @HiveField(1)
@@ -20,33 +21,26 @@ class VirtBot extends HiveObject {
 
   VirtBot(this.name, this.token) : bot = Bot(token) {
     // Sample Events/Actions
-    final evStart = VirtEvent(
-      query: 'start',
-      type: VirtEventType.command,
-      bot: this,
-    );
-    final actChooseDice = VirtAct(
-      text: 'Roll a Dice! 🎲',
-      type: VirtActType.reply,
-      ev: evStart,
-    );
     final btn = KeyValue('Dice 🎲', 'dice');
-    actChooseDice.rmu =
+    final keyboard =
         VirtRMUInlineKeyboard()
           ..items = [btn, btn, btn, null, btn, btn, null, btn];
-    evStart.acts.add(actChooseDice);
-    final evDice = VirtEvent(
-      query: 'dice',
-      type: VirtEventType.callbackQuery,
-      bot: this,
-    );
-    evDice.acts.add(VirtAct(text: '1', type: VirtActType.dice, ev: evDice));
-    final evHi = VirtEvent(query: 'hi', type: VirtEventType.text, bot: this);
-    evHi.acts.add(VirtAct(text: 'Hello!', type: VirtActType.reply, ev: evHi));
     events
-      ..add(evStart)
-      ..add(evDice)
-      ..add(evHi);
+      ..add(
+        VirtEvent(query: 'start', type: VirtEventType.command)
+          ..acts.add(
+            VirtAct(text: 'Roll a Dice! 🎲', type: VirtActType.reply)
+              ..rmu = keyboard,
+          ),
+      )
+      ..add(
+        VirtEvent(query: 'dice', type: VirtEventType.callbackQuery)
+          ..acts.add(VirtAct(text: '1', type: VirtActType.dice)),
+      )
+      ..add(
+        VirtEvent(query: 'hi', type: VirtEventType.text)
+          ..acts.add(VirtAct(text: 'Hello!', type: VirtActType.reply)),
+      );
   }
 
   bool get active => _active;

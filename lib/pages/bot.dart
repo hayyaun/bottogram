@@ -1,5 +1,4 @@
 import 'package:bottogram/decorations/input.dart';
-import 'package:bottogram/pages/act.dart';
 import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -74,7 +73,7 @@ class _BotPageState extends State<BotPage> {
                 final events = widget.bot.events;
                 // TODO error msg duplicate
                 if (events.any((ev) => ev.query == query)) return;
-                final ev = VirtEvent(query: query, type: type, bot: widget.bot);
+                final ev = VirtEvent(query: query, type: type);
                 widget.bot.addEvent(ev);
                 context.read<BotsCubit>().update();
                 Navigator.of(context).pop(); // Close the dialog
@@ -163,7 +162,8 @@ class _BotPageState extends State<BotPage> {
                       onTap: () {
                         Navigator.of(context).push(
                           MaterialPageRoute(
-                            builder: (context) => EventPage(ev: ev),
+                            builder:
+                                (context) => EventPage(ev: ev, bot: widget.bot),
                           ),
                         );
                       },
@@ -171,19 +171,7 @@ class _BotPageState extends State<BotPage> {
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (ev.repliesToAct != null)
-                            IconButton(
-                              tooltip: 'Link to Action',
-                              onPressed: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder:
-                                        (_) => ActPage(act: ev.repliesToAct!),
-                                  ),
-                                );
-                              },
-                              icon: Icon(Icons.link),
-                            ),
+                          // TODO number of uses
                         ],
                       ),
                     );

@@ -88,7 +88,6 @@ class VirtRMUInlineKeyboard implements VirtRMU {
 class KeyValue {
   @HiveField(0)
   String key;
-
   @HiveField(1)
   String value;
 

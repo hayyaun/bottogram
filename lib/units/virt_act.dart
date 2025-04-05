@@ -1,4 +1,3 @@
-import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
@@ -8,19 +7,13 @@ part 'virt_act.g.dart';
 @HiveType(typeId: 30)
 class VirtAct {
   @HiveField(0)
-  VirtEvent ev;
-  @HiveField(1)
   VirtActType type;
-  @HiveField(2)
+  @HiveField(1)
   String text;
-  @HiveField(3)
+  @HiveField(2)
   VirtRMU? rmu;
 
-  VirtAct({
-    this.type = VirtActType.reply,
-    required this.text,
-    required this.ev,
-  });
+  VirtAct({required this.type, required this.text});
 
   Future<void> run(Context ctx) async {
     switch (type) {

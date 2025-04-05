@@ -17,23 +17,20 @@ class VirtEventAdapter extends TypeAdapter<VirtEvent> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return VirtEvent(
-      type: fields[1] as VirtEventType,
-      query: fields[2] as String,
-      bot: fields[0] as VirtBot,
-    )..acts = (fields[3] as List).cast<VirtAct>();
+      type: fields[0] as VirtEventType,
+      query: fields[1] as String,
+    )..acts = (fields[2] as List).cast<VirtAct>();
   }
 
   @override
   void write(BinaryWriter writer, VirtEvent obj) {
     writer
-      ..writeByte(4)
-      ..writeByte(0)
-      ..write(obj.bot)
-      ..writeByte(1)
-      ..write(obj.type)
-      ..writeByte(2)
-      ..write(obj.query)
       ..writeByte(3)
+      ..writeByte(0)
+      ..write(obj.type)
+      ..writeByte(1)
+      ..write(obj.query)
+      ..writeByte(2)
       ..write(obj.acts);
   }
 

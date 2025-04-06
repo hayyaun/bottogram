@@ -1,3 +1,6 @@
+// ignore_for_file: use_build_context_synchronously
+
+import 'package:bottogram/dialogs/share_dialog.dart';
 import 'package:bottogram/pages/bot.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -28,7 +31,19 @@ class _HomePageState extends State<HomePage> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: Text('Add a Bot'),
+          title: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Add a Bot'),
+              IconButton(
+                onPressed: () async {
+                  await context.read<BotsCubit>().import();
+                  Navigator.of(context).pop(); // Close the dialog
+                },
+                icon: Icon(Icons.upload_file),
+              ),
+            ],
+          ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -68,6 +83,10 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+  void _showShareDialog() async {
+    showDialog(context: context, builder: (context) => ShareDialog());
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -75,6 +94,9 @@ class _HomePageState extends State<HomePage> {
         backgroundColor: Colors.transparent,
         title: Text(widget.title),
         centerTitle: true,
+        actions: [
+          IconButton(icon: Icon(Icons.share), onPressed: _showShareDialog),
+        ],
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: _addBot,
@@ -93,11 +115,7 @@ class _HomePageState extends State<HomePage> {
     return BlocBuilder<BotsCubit, List<VirtBot>>(
       builder: (context, bots) {
         if (bots.isEmpty) {
-          return Container(
-            padding: EdgeInsets.all(24),
-            alignment: Alignment.center,
-            child: Text('List empty! create a bot'),
-          );
+          return Center(child: Text('List empty! create a bot'));
         }
         return GridView.builder(
           padding: EdgeInsets.symmetric(horizontal: 16, vertical: 32),
@@ -178,7 +196,6 @@ class _HomePageState extends State<HomePage> {
                                   ),
                                   onPressed: () async {
                                     await bot.toggle();
-                                    // ignore: use_build_context_synchronously
                                     context.read<BotsCubit>().update();
                                   },
                                 ),

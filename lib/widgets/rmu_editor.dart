@@ -157,7 +157,7 @@ class _RmuEditorState extends State<RMUEditor> {
   Widget _buildRMUOptions() {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      child: Wrap(
+      child: Row(
         spacing: 8,
         children:
             VirtRMUType.values.map((option) {

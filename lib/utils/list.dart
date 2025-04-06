@@ -29,3 +29,7 @@ extension SumOnIterable on Iterable<int> {
     return reduce((a, b) => a + b);
   }
 }
+
+extension MapToList<T> on Iterable<T> {
+  List<U> mapToList<U>(U Function(T) toElement) => map<U>(toElement).toList();
+}

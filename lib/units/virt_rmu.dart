@@ -1,3 +1,4 @@
+import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/utils/valid.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/telegram.dart';
@@ -10,6 +11,7 @@ abstract class VirtRMU {
   ReplyMarkup hydrate();
   VirtRMUType get type;
   VirtRMU copy(String name);
+  int callsEvent(VirtEvent ev);
 }
 
 enum VirtRMUType { none, keyboard, inlineKeyboard }
@@ -41,10 +43,19 @@ class VirtRMUKeyboard implements VirtRMU {
 
   @override
   VirtRMU copy(String name) {
-    final rmu = VirtRMUKeyboard();
-    rmu.items = items;
-    rmu.name = name;
-    return rmu;
+    return VirtRMUKeyboard()
+      ..items = items
+      ..name = name;
+  }
+
+  @override
+  int callsEvent(VirtEvent ev) {
+    int count = 0;
+    if (ev.type != VirtEventType.text) return count;
+    for (final item in items) {
+      if (item == ev.query) count++;
+    }
+    return count;
   }
 }
 
@@ -77,10 +88,19 @@ class VirtRMUInlineKeyboard implements VirtRMU {
 
   @override
   VirtRMU copy(String name) {
-    final rmu = VirtRMUInlineKeyboard();
-    rmu.items = items;
-    rmu.name = name;
-    return rmu;
+    return VirtRMUInlineKeyboard()
+      ..items = items
+      ..name = name;
+  }
+
+  @override
+  int callsEvent(VirtEvent ev) {
+    int count = 0;
+    if (ev.type != VirtEventType.callbackQuery) return count;
+    for (final item in items) {
+      if (item?.value == ev.query) count++;
+    }
+    return count;
   }
 }
 

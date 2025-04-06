@@ -50,6 +50,7 @@ class MyApp extends StatelessWidget {
           primaryColorDark: Colors.deepPurpleAccent,
           scaffoldBackgroundColor: Colors.black,
         ),
+        debugShowCheckedModeBanner: false,
         home: const HomePage(title: 'Bottogram'),
       ),
     );

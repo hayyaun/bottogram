@@ -51,7 +51,7 @@ class VirtBot extends HiveObject {
       ev.add(bot);
     }
     bot.onError((err) {
-      if (kDebugMode) print('--> bot error: $err');
+       debugPrint('--> bot error: $err');
     });
     bot.start();
     _active = true;

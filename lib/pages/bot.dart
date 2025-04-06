@@ -151,7 +151,9 @@ class _BotPageState extends State<BotPage> {
             builder: (context, bots) {
               final events = widget.bot.events;
               if (events.isEmpty) {
-                return Center(child: Text('List empty! create an event'));
+                return Expanded(
+                  child: Center(child: Text('List empty! create an event')),
+                );
               }
               return Expanded(
                 child: ListView.builder(
@@ -170,9 +172,7 @@ class _BotPageState extends State<BotPage> {
                       title: Text('${ev.type.name}/${ev.query}'),
                       trailing: Row(
                         mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // TODO number of uses
-                        ],
+                        children: [Text('${_countEventBindings(ev)} bindings')],
                       ),
                     );
                   },
@@ -183,5 +183,15 @@ class _BotPageState extends State<BotPage> {
         ],
       ),
     );
+  }
+
+  int _countEventBindings(VirtEvent evToCount) {
+    int count = 0;
+    for (final ev in widget.bot.events) {
+      for (final act in ev.acts) {
+        count += act.rmu?.callsEvent(evToCount) ?? 0;
+      }
+    }
+    return count;
   }
 }

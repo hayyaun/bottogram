@@ -17,7 +17,7 @@ class RMUsCubit extends Cubit<List<VirtRMU>> {
     _box = await Hive.openBox(boxName);
     List<dynamic>? boxJSON = _box?.values.toList();
     if (boxJSON == null) return; // nothing
-    if (kDebugMode) print('--> rmus: ${boxJSON.length}');
+     debugPrint('--> rmus: ${boxJSON.length}');
     var rmus = boxJSON.toList().cast<VirtRMU>();
     emit(rmus); // Emit the saved value to Cubit's state
   }

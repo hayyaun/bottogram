@@ -159,7 +159,9 @@ class _EventPageState extends State<EventPage> {
             builder: (context, bots) {
               final acts = widget.ev.acts;
               if (acts.isEmpty) {
-                return Center(child: Text('List empty! create an action'));
+                return Expanded(
+                  child: Center(child: Text('List empty! create an action')),
+                );
               }
               return Expanded(
                 child: ListView.builder(

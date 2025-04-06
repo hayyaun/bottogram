@@ -77,7 +77,7 @@ class _ActPageState extends State<ActPage> {
 
     if (newEvs.isNotEmpty) {
       final evNames = newEvs.mapToList((ev) => '${ev.type.name}/${ev.query}');
-      context.showSnackBar('Added new event: $evNames');
+      context.showSnackBar('Added new event: ${evNames.join(', ')}');
     }
   }
 

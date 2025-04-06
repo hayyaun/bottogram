@@ -2,6 +2,7 @@ import 'package:bottogram/pages/templates.dart';
 import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_rmu.dart';
+import 'package:bottogram/utils/context.dart';
 import 'package:bottogram/widgets/inline_keyboard_editor.dart';
 import 'package:bottogram/widgets/keyboard_editor.dart';
 import 'package:flutter/material.dart';
@@ -101,7 +102,7 @@ class _RmuEditorState extends State<RMUEditor> {
               },
               style: ButtonStyle(
                 foregroundColor: WidgetStatePropertyAll(
-                  Theme.of(context).colorScheme.inversePrimary,
+                  context.colors.inversePrimary,
                 ),
               ),
               child: Text("SELECT"),
@@ -117,7 +118,7 @@ class _RmuEditorState extends State<RMUEditor> {
             onPressed: _saveTemplate,
             style: ButtonStyle(
               foregroundColor: WidgetStatePropertyAll(
-                Theme.of(context).colorScheme.onSurface.withAlpha(150),
+                context.colors.onSurface.withAlpha(150),
               ),
             ),
             child: Text('+ Add to Templates'),
@@ -166,14 +167,12 @@ class _RmuEditorState extends State<RMUEditor> {
                 label: Text(option.name.toUpperCase()),
                 selected: selected,
                 onSelected: (_) => selectOption(option),
-                checkmarkColor: Theme.of(context).colorScheme.onSurface,
+                checkmarkColor: context.colors.onSurface,
                 backgroundColor: Theme.of(
                   context,
                 ).colorScheme.onSurface.withAlpha(18),
-                selectedColor: Theme.of(context).colorScheme.primary,
-                labelStyle: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                ),
+                selectedColor: context.colors.primary,
+                labelStyle: TextStyle(color: context.colors.onSurface),
                 side: BorderSide.none,
               );
             }).toList(),

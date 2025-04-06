@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
 import 'package:bottogram/store/bots.dart';
+import 'package:bottogram/utils/context.dart';
 import 'package:bottogram/utils/list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -49,14 +50,12 @@ class _ShareDialogState extends State<ShareDialog> {
               }
               setState(() {});
             },
-            checkmarkColor: Theme.of(context).colorScheme.onSurface,
+            checkmarkColor: context.colors.onSurface,
             backgroundColor: Theme.of(
               context,
             ).colorScheme.onSurface.withAlpha(18),
-            selectedColor: Theme.of(context).colorScheme.primary,
-            labelStyle: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-            ),
+            selectedColor: context.colors.primary,
+            labelStyle: TextStyle(color: context.colors.onSurface),
             side: BorderSide.none,
           );
         }),

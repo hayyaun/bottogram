@@ -1,6 +1,7 @@
 import 'package:bottogram/decorations/input.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_rmu.dart';
+import 'package:bottogram/utils/context.dart';
 import 'package:bottogram/utils/list.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -80,7 +81,7 @@ class _KeyboardState extends State<InlineKeyboardEditor> {
                     color: Colors.greenAccent,
                     style: ButtonStyle(
                       backgroundColor: WidgetStatePropertyAll(
-                        Theme.of(context).colorScheme.onSurface.withAlpha(25),
+                        context.colors.onSurface.withAlpha(25),
                       ),
                     ),
                     icon: Icon(Icons.add),

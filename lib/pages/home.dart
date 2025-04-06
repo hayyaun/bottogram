@@ -4,6 +4,7 @@ import 'package:bottogram/dialogs/share_dialog.dart';
 import 'package:bottogram/pages/bot.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
+import 'package:bottogram/utils/context.dart';
 import 'package:bottogram/utils/list.dart';
 import 'package:bottogram/utils/string.dart';
 import 'package:flutter/material.dart';
@@ -70,8 +71,10 @@ class _HomePageState extends State<HomePage> {
                 final token = ctrlToken.text;
                 if (name.isEmpty || token.isEmpty) return;
                 final bots = context.read<BotsCubit>();
-                // TODO error msg duplicate
-                if (bots.state.any((bot) => bot.token == token)) return;
+                if (bots.state.any((bot) => bot.token == token)) {
+                  context.showSnackBar('Duplicate Item!');
+                  return;
+                }
                 context.read<BotsCubit>().add(VirtBot(name, token));
                 Navigator.of(context).pop(); // Close the dialog
               },
@@ -166,9 +169,7 @@ class _HomePageState extends State<HomePage> {
                               ),
                             ),
                             SizedBox(height: 12),
-                            Text(
-                              bot.active ? 'ACTIVE' : 'INACTIVE',
-                            ), // TODO active hours
+                            Text(bot.active ? 'ACTIVE' : 'INACTIVE'),
                             Row(
                               children: [
                                 Expanded(

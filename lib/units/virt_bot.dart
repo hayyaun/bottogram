@@ -9,7 +9,7 @@ part 'virt_bot.g.dart';
 
 @HiveType(typeId: 10)
 class VirtBot extends HiveObject {
-  bool _active = false;
+  bool _active = false; // TODO change it to (Date? activeSince)
   Bot bot;
 
   @HiveField(0)
@@ -51,7 +51,7 @@ class VirtBot extends HiveObject {
       ev.add(bot);
     }
     bot.onError((err) {
-       debugPrint('--> bot error: $err');
+      debugPrint('❌ bot error: $err');
     });
     bot.start();
     _active = true;

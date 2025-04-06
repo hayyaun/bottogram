@@ -6,6 +6,8 @@ import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
+import 'package:bottogram/utils/context.dart';
+import 'package:bottogram/utils/list.dart';
 import 'package:bottogram/widgets/rmu_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -39,6 +41,7 @@ class _ActPageState extends State<ActPage> {
     final rmu = widget.act.rmu;
     if (rmu == null) return;
     final bot = widget.bot;
+    final newEvs = <VirtEvent>[];
     switch (rmu.type) {
       case VirtRMUType.none:
         break;
@@ -51,6 +54,7 @@ class _ActPageState extends State<ActPage> {
           if (duplicate) continue;
           final newEv = VirtEvent(type: VirtEventType.text, query: btn);
           bot.events.add(newEv);
+          newEvs.add(newEv);
         }
         break;
       case VirtRMUType.inlineKeyboard:
@@ -66,8 +70,14 @@ class _ActPageState extends State<ActPage> {
             query: btn.value,
           );
           bot.events.add(newEv);
+          newEvs.add(newEv);
         }
         break;
+    }
+
+    if (newEvs.isNotEmpty) {
+      final evNames = newEvs.mapToList((ev) => '${ev.type.name}/${ev.query}');
+      context.showSnackBar('Added new event: $evNames');
     }
   }
 

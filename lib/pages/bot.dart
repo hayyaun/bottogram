@@ -3,6 +3,7 @@ import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
+import 'package:bottogram/utils/context.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -71,8 +72,10 @@ class _BotPageState extends State<BotPage> {
                 final query = ctrlQuery.text;
                 if (query.isEmpty) return;
                 final events = widget.bot.events;
-                // TODO error msg duplicate
-                if (events.any((ev) => ev.query == query)) return;
+                if (events.any((ev) => ev.query == query)) {
+                  context.showSnackBar('Duplicate Item!');
+                  return;
+                }
                 final ev = VirtEvent(query: query, type: type);
                 widget.bot.addEvent(ev);
                 context.read<BotsCubit>().update();

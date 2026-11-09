@@ -58,8 +58,17 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get --enforce-lockfile
-      - name: Build universal release APK
-        run: flutter build apk --release --no-pub
+      - name: Build permanently signed release APK
+        if: github.event_name != 'pull_request'
+        env:
+          BOTTOGRAM_KEYSTORE_BASE64: ${{ secrets.BOTTOGRAM_KEYSTORE_BASE64 }}
+          BOTTOGRAM_KEYSTORE_PASSWORD: ${{ secrets.BOTTOGRAM_KEYSTORE_PASSWORD }}
+          BOTTOGRAM_KEY_ALIAS: ${{ secrets.BOTTOGRAM_KEY_ALIAS }}
+          BOTTOGRAM_KEY_PASSWORD: ${{ secrets.BOTTOGRAM_KEY_PASSWORD }}
+        run: bash tool/ci/build_android.sh trusted
+      - name: Build release-mode APK with a temporary PR validation key
+        if: github.event_name == 'pull_request'
+        run: bash tool/ci/build_android.sh pull-request
       - name: Verify release APK is not debuggable
         run: test "$(apkanalyzer manifest debuggable build/app/outputs/flutter-apk/app-release.apk)" = 'false'
       - name: Prepare artifact
@@ -70,7 +79,7 @@ jobs:
           sha256sum bottogram-android-release.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: bottogram-android-release
+          name: ${{ github.event_name == 'pull_request' && 'bottogram-android-pr-validation' || 'bottogram-android-release' }}
           path: dist/*
           if-no-files-found: error
           retention-days: 14

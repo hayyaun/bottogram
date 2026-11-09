@@ -7,6 +7,17 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Release signing is supplied by the local developer or CI process, never Git.
+val signingStore = providers.environmentVariable("BOTTOGRAM_KEYSTORE_PATH").orNull
+val signingPassword = providers.environmentVariable("BOTTOGRAM_KEYSTORE_PASSWORD").orNull
+val signingAlias = providers.environmentVariable("BOTTOGRAM_KEY_ALIAS").orNull
+val signingKeyPassword = providers.environmentVariable("BOTTOGRAM_KEY_PASSWORD").orNull
+val signingInputs = listOf(signingStore, signingPassword, signingAlias, signingKeyPassword)
+val signingConfigured = signingInputs.all { !it.isNullOrBlank() }
+if (signingInputs.any { !it.isNullOrBlank() } && !signingConfigured) {
+    throw GradleException("Supply all four BOTTOGRAM signing environment variables.")
+}
+
 android {
     namespace = "com.hayyaun.bottogram.bottogram"
     compileSdk = 36
@@ -28,11 +39,21 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (signingConfigured) {
+            create("release") {
+                storeFile = file(signingStore!!)
+                storeType = "PKCS12"
+                storePassword = signingPassword
+                keyAlias = signingAlias
+                keyPassword = signingKeyPassword
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (signingConfigured) signingConfigs.getByName("release") else null
         }
     }
 }

@@ -51,9 +51,11 @@ choose a successful run, and download its artifact. GitHub may ask you to sign i
   the included executable. A desktop keyring is needed for plugin API keys.
 
 These are testing artifacts, retained for 14 days, without store publishing or
-GitHub Releases. Android uses release build mode with the project's current
-development signing certificate; production signing is not configured. Updating
-between CI runs may require a different installation. See [build details and platform requirements](docs/BUILD_ARTIFACTS.md).
+GitHub Releases. Trusted Android builds use a dedicated, permanent app-signing
+key for updates across GitHub downloads. PR validation artifacts use a separate
+temporary certificate. Older debug-signed installations cannot be updated
+directly to this new identity; uninstalling them removes local data. See
+[Android signing](docs/ANDROID_SIGNING.md) and [build details](docs/BUILD_ARTIFACTS.md).
 
 ## Get started
 

@@ -61,7 +61,7 @@ trigger/action capabilities instead of adding Inshopa conditions to the runtime.
 
 ## Later, before the first public release
 
-- Stable Android signing, Windows signing/installer choice, upgrade testing,
+- Independent backup of the Android signing identity, Windows signing/installer choice, upgrade testing,
   version/build-number policy and final app metadata.
 - Privacy/documentation review, practical shop onboarding, support instructions,
   and the applicable distribution review for Android foreground execution.

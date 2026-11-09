@@ -9,11 +9,11 @@ Outputs, retained for 14 days in the workflow run's **Artifacts** section:
 
 - Android: universal `bottogram-android-release.apk` with a SHA-256 checksum.
   Built with `flutter build apk --release`; CI checks that the APK is not
-  debuggable. Build mode and signing identity are separate: the project's
-  existing release signing configuration still uses the debug certificate.
-  Ephemeral runner debug keys can differ
-  between runs, so Android may refuse an in-place update from another run.
-  A stable signing identity and its secure CI storage are future release work.
+  debuggable. Trusted builds use Bottogram's permanent signing identity, whose
+  public certificate is pinned in the repository. PR artifacts are named
+  `bottogram-android-pr-validation` and use a temporary validation key.
+  Earlier debug-signed APKs cannot be updated directly to the permanent identity.
+  See [Android signing and key backup requirements](ANDROID_SIGNING.md).
 - Windows x64: `bottogram-windows-x64.zip`, containing `bottogram.exe`, DLLs,
   and data, plus a checksum. Extract the whole folder before running the EXE.
   This is unsigned, without an installer; a clean Windows machine may need the
@@ -25,8 +25,8 @@ Outputs, retained for 14 days in the workflow run's **Artifacts** section:
   runtime requires FUSE. Test desktop integration and keyring access on a clean
   distribution before treating the package as ready for users.
 
-The workflow uses read-only repository permissions, no publishing/signing
-secrets, no tags, no release jobs, and no store uploads. “Release” in Flutter
+The workflow uses read-only repository permissions, private Android signing
+secrets only in the trusted build step, no tags, no release jobs, and no store uploads. “Release” in Flutter
 Flutter build commands means optimized compilation, not a published release.
 
 Flutter is pinned to the locally verified 3.29.1 version; Android uses JDK 17,

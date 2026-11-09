@@ -34,6 +34,12 @@ migrate_working_dir/
 /build/
 /dist/
 
+# Private Android signing material
+*.keystore
+*.jks
+*.p12
+*.pfx
+
 # Symbolication related
 app.*.symbols
 

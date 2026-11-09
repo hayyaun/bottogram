@@ -58,17 +58,19 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get --enforce-lockfile
-      - name: Build universal test APK
-        run: flutter build apk --debug --no-pub
+      - name: Build universal release APK
+        run: flutter build apk --release --no-pub
+      - name: Verify release APK is not debuggable
+        run: test "$(apkanalyzer manifest debuggable build/app/outputs/flutter-apk/app-release.apk)" = 'false'
       - name: Prepare artifact
         run: |
           mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-debug.apk dist/bottogram-android-debug.apk
+          cp build/app/outputs/flutter-apk/app-release.apk dist/bottogram-android-release.apk
           cd dist
-          sha256sum bottogram-android-debug.apk > SHA256SUMS.txt
+          sha256sum bottogram-android-release.apk > SHA256SUMS.txt
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
-          name: bottogram-android-debug
+          name: bottogram-android-release
           path: dist/*
           if-no-files-found: error
           retention-days: 14

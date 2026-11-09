@@ -41,27 +41,28 @@ Your device still needs a network connection to Telegram and any connected servi
 
 ## Try a build
 
-🟣 Open [GitHub Actions](https://github.com/hayyaun/bottogram/actions/workflows/build.yml),
+Open [GitHub Actions](https://github.com/hayyaun/bottogram/actions/workflows/build.yml),
 choose a successful run, and download its artifact. GitHub may ask you to sign in.
 
-- **Android:** `bottogram-android-debug` — a universal test APK.
+- **Android:** `bottogram-android-release` — a universal, optimized release-mode APK.
 - **Windows x64:** `bottogram-windows-x64` — extract the complete ZIP and run
   `bottogram.exe` alongside its DLLs and data.
 - **Linux x86_64:** `bottogram-linux-x86_64` — extract the AppImage tarball and run
   the included executable. A desktop keyring is needed for plugin API keys.
 
 These are testing artifacts, retained for 14 days, without store publishing or
-GitHub Releases. Android artifacts use temporary debug signing; updating between
-runs may require a different installation. See [build details and platform requirements](docs/BUILD_ARTIFACTS.md).
+GitHub Releases. Android uses release build mode with the project's current
+development signing certificate; production signing is not configured. Updating
+between CI runs may require a different installation. See [build details and platform requirements](docs/BUILD_ARTIFACTS.md).
 
 ## Get started
 
-1. 🟣 Create a Telegram bot with [@BotFather](https://t.me/BotFather) and keep its token private.
-2. 🟣 In Bottogram, choose **Create bot** — the centered **+** on mobile.
-3. 🟣 Enter a name, the bot token, and your numeric Telegram admin ID. Choose
+1. Create a Telegram bot with [@BotFather](https://t.me/BotFather) and keep its token private.
+2. In Bottogram, choose **Create bot** — the centered **+** on mobile.
+3. Enter a name, the bot token, and your numeric Telegram admin ID. Choose
    **Manual** or a plugin; its additional fields appear in the same form.
-4. 🟣 Open your bot in Telegram and send `/start`, so it can message your account.
-5. 🟣 Start the bot in Bottogram. On Android, follow **Keep bots running** to check
+4. Open your bot in Telegram and send `/start`, so it can message your account.
+5. Start the bot in Bottogram. On Android, follow **Keep bots running** to check
    battery/background and notification settings.
 
 Tap a bot card to open its **users and inbox**. The card's **Settings** gear opens
@@ -75,7 +76,7 @@ fields, and automations. The host executes registered **triggers → actions**;
 packages do not download or execute arbitrary Dart code. Adding a new host
 capability requires an application update.
 
-🟣 To install an additional package, open **Plugins → Install from file** and review
+To install an additional package, open **Plugins → Install from file** and review
 its declared API destinations and capabilities before installing it.
 
 ### First integration: Inshopa
@@ -103,7 +104,7 @@ See [plugin architecture and recovery behavior](docs/PLUGIN_RUNTIME.md),
 
 - Bots run on your device. Android/OEM termination and network outages can
   interrupt them; battery exemption does not guarantee delivery.
-- 🟣 After Android force-stop, process death, or reboot, reopen Bottogram and start
+- After Android force-stop, process death, or reboot, reopen Bottogram and start
   the bots again. Saved automation progress remains available.
 - Plugin API keys use platform secure storage. Bot tokens are part of local bot
   configuration; treat application data and configuration exports as private.
@@ -125,7 +126,7 @@ flutter analyze --no-pub
 flutter test --no-pub
 ```
 
-🟣 Choose a configured target, then run `flutter run -d <device-id>`. For native
+Choose a configured target, then run `flutter run -d <device-id>`. For native
 SDK requirements and test packaging, see [Build artifacts](docs/BUILD_ARTIFACTS.md).
 Live Inshopa and Android background integration tests are separate, opt-in checks;
 ordinary CI does not require real Telegram tokens or shop keys.

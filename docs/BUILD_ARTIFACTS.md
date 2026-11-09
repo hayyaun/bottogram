@@ -7,8 +7,11 @@ tests stay opt-in and never receive customer credentials in CI.
 
 Outputs, retained for 14 days in the workflow run's **Artifacts** section:
 
-- Android: universal `bottogram-android-debug.apk` with a SHA-256 checksum.
-  This is a debug-signed testing build. Ephemeral runner debug keys can differ
+- Android: universal `bottogram-android-release.apk` with a SHA-256 checksum.
+  Built with `flutter build apk --release`; CI checks that the APK is not
+  debuggable. Build mode and signing identity are separate: the project's
+  existing release signing configuration still uses the debug certificate.
+  Ephemeral runner debug keys can differ
   between runs, so Android may refuse an in-place update from another run.
   A stable signing identity and its secure CI storage are future release work.
 - Windows x64: `bottogram-windows-x64.zip`, containing `bottogram.exe`, DLLs,
@@ -23,7 +26,7 @@ Outputs, retained for 14 days in the workflow run's **Artifacts** section:
   distribution before treating the package as ready for users.
 
 The workflow uses read-only repository permissions, no publishing/signing
-secrets, no tags, no release jobs, and no store uploads. “Release” in desktop
+secrets, no tags, no release jobs, and no store uploads. “Release” in Flutter
 Flutter build commands means optimized compilation, not a published release.
 
 Flutter is pinned to the locally verified 3.29.1 version; Android uses JDK 17,
@@ -43,7 +46,7 @@ a fresh `build/appimage/AppDir`. Outputs remain ignored by Git. The script retai
 Flutter's executable-relative data/library layout and asks linuxdeploy to collect
 dependencies of the executable and its dynamically loaded plugin libraries.
 
-🟣 After the workflow is pushed, inspect its first GitHub run and download/test
+After the workflow is pushed, inspect its first GitHub run and download/test
 all three artifacts. A syntax check or an existing Android APK build does not
 prove that the new hosted Windows/AppImage jobs passed.
 

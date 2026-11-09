@@ -1,0 +1,143 @@
+name: Build test artifacts
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.29.1'
+
+jobs:
+  checks:
+    name: Analyze and test
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter analyze --no-pub
+      # Live/native integration tests require separate opt-in environments.
+      - run: flutter test --no-pub
+
+  android:
+    name: Android APK
+    needs: checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+      - name: Install project Android SDK packages
+        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.0.12077973'
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - name: Build universal test APK
+        run: flutter build apk --debug --no-pub
+      - name: Prepare artifact
+        run: |
+          mkdir -p dist
+          cp build/app/outputs/flutter-apk/app-debug.apk dist/bottogram-android-debug.apk
+          cd dist
+          sha256sum bottogram-android-debug.apk > SHA256SUMS.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bottogram-android-debug
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  windows:
+    name: Windows EXE bundle
+    needs: checks
+    runs-on: windows-2022
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter config --enable-windows-desktop
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter build windows --release --no-pub
+      - name: Package EXE with its runtime files
+        shell: pwsh
+        run: |
+          $bundle = 'build/windows/x64/runner/Release'
+          if (!(Test-Path "$bundle/bottogram.exe")) { throw 'Windows executable is missing.' }
+          New-Item -ItemType Directory -Path dist -Force | Out-Null
+          Compress-Archive -Path "$bundle/*" -DestinationPath dist/bottogram-windows-x64.zip
+          $digest = (Get-FileHash dist/bottogram-windows-x64.zip -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$digest  bottogram-windows-x64.zip" | Set-Content dist/SHA256SUMS.txt -Encoding ascii
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bottogram-windows-x64
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  linux:
+    name: Linux AppImage
+    needs: checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Install Linux build and packaging dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev libjsoncpp-dev libfuse2 patchelf desktop-file-utils
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter config --enable-linux-desktop
+      - run: flutter pub get --enforce-lockfile
+      - run: flutter build linux --release --no-pub
+      - name: Package AppImage
+        run: bash tool/ci/package_appimage.sh
+      # tar preserves the executable bit through Actions' ZIP artifact storage.
+      - name: Preserve AppImage permissions and record checksum
+        run: |
+          cd dist
+          sha256sum bottogram-linux-x86_64.AppImage > SHA256SUMS.txt
+          tar -czf bottogram-linux-x86_64.AppImage.tar.gz bottogram-linux-x86_64.AppImage SHA256SUMS.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bottogram-linux-x86_64
+          path: dist/bottogram-linux-x86_64.AppImage.tar.gz
+          if-no-files-found: error
+          retention-days: 14

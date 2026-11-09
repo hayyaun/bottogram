@@ -1,128 +1,145 @@
-# bottogram
+<div align="center">
 
-A new Flutter project.
+![Bottogram — Telegram bots, on your own device](docs/assets/banner.svg)
 
-## Plugins and bot creation
+**Build a Telegram bot. Keep it on your device.**
 
-JSON file installation, bundled plugins, and the shared creation form are implemented.
-Inshopa is included by default. Version 2 plugins can execute registered triggers and actions.
-The bundled Inshopa 0.5.0 plugin provides `/products` to all users and paid-order
-alerts to the configured admin using Inshopa’s existing order-summary API.
+Create replies, install integrations, and answer conversations from one app.
 
-- Inshopa appears in **Plugins** and the creation dropdown without a file import.
-- 🟣 Tap any bot card to open its users and inbox. Use the card's **Bot settings**
-  gear for configuration; this works the same for manual and plugin bots.
-- 🟣 On mobile, the centered **+** in the rounded bottom navigation opens bot creation.
-- 🟣 For additional packages, open **Plugins** using the puzzle icon, choose
-  **Install from file**, and review a `.bottogram-plugin.json` package.
-- 🟣 Create a bot with its name, Telegram token, and your numeric admin ID from
-  UserInfo. Select **Manual** or an installed plugin in the same form.
-- The plugin adds **Inshopa API key** and **Storefront URL**. The key identifies one shop;
-  there is no shop ID input. Keys are saved in platform secure storage.
-- Already installed [Inshopa setup packages](examples/plugins/inshopa.bottogram-plugin.json)
-  at version 0.2.0 remain **Setup only**. Existing bots are never automatically upgraded.
-- 🟣 Select **Inshopa · 0.5.0**, enter its key and registered storefront origin,
-  then start the new bot. Anyone can send `/products` or `/products 2` to see
-  catalog pages. It calls `https://api.inshopa.ir/v1/storefront/products`.
-  The key must be registered in that environment and its backend must support
-  website-key access. Local-key catalog replies and Telegram delivery are verified;
-  registered production-key access has not been verified in this project.
-- 🟣 In Inshopa’s **Shop Settings → API Keys**, explicitly enable `shop:orders:read`
-  alongside `storefront:read` for paid-order alerts. No buyer or seller session is needed.
-- For the local WSL backend, the optional [0.5.0 development package](examples/plugins/inshopa.sales.local.bottogram-plugin.json)
-  uses `127.0.0.1:8080` and can be imported separately for the Linux preview.
-  Linux secure storage also requires a running, unlocked desktop keyring and D-Bus
-  session. The opt-in [local preview launcher](tool/run_inshopa_local_preview.sh)
-  configures a test bot through the app's normal services, sends a connection test,
-  then opens the normal app with hot reload. Its only argument is a private JSON
-  connection-file path; credentials must never be passed as command-line values.
-- 🟣 Use **Bot settings** to edit its schema-defined **Plugin settings**, then save.
-  Inshopa's purchase-notification switch defaults to enabled. This preference is
-  separate from the creation API key. The initial complete scan skips paid history;
-  subsequent scans notify the admin once per newly observed paid order.
-- 🟣 In bot settings, choose **Edit parameters** on the plugin summary card to
-  edit the admin ID and plugin inputs on a separate page. Leave a saved secret
-  blank to keep it. Saving changed parameters restarts a running bot, preserves
-  its plugin preferences, and resets automation progress. For Inshopa the first
-  scan of the updated connection establishes a new baseline without old alerts.
-- Order polling resolves the shop ID with `/v1/storefront`, scans 100 summaries per
-  page with two seconds between pages, then waits 60 seconds before the next scan.
-  It catches delayed payments on older orders by revisiting the full list. This
-  current-state API cannot guarantee that every payment transition is observed.
-- Settings support strings, booleans, bounded integers/numbers, and enum choices.
-  Each bot keeps its own values. Bundled versions seed once without overwriting
-  installed definitions; an ordinary uninstall persists across restart.
-- Installed versions are immutable and retained while referenced by bots.
-  🟣 Delete the dependent bots before uninstalling a referenced version.
+[![Build test artifacts](https://github.com/hayyaun/bottogram/actions/workflows/build.yml/badge.svg)](https://github.com/hayyaun/bottogram/actions/workflows/build.yml)
+![Flutter 3.29.1](https://img.shields.io/badge/Flutter-3.29.1-02569B?logo=flutter&logoColor=white)
+![Android 6.0+](https://img.shields.io/badge/Android-6.0%2B-3DDC84?logo=android&logoColor=white)
+![Status: experimental](https://img.shields.io/badge/status-experimental-8B5CF6)
 
-Android now requires **6.0 / API 23 or later**, as approved for secure storage.
-Device-bound secure-storage files are excluded from automatic backups; restoring
-on another device requires re-entering plugin keys. Existing bot Hive adapters
-remain unchanged; common admin/plugin settings use separate versioned boxes.
-Legacy Hive configuration import/export covers manual bot definitions only;
-plugin-bot export is explicitly unavailable rather than silently losing settings.
+[Try a build](#try-a-build) · [Get started](#get-started) · [Plugins](#plugins) · [Development](#development) · [Roadmap](docs/REMAINING_WORK.md)
 
-See the [implementation plan](docs/PLUGIN_IMPLEMENTATION_PLAN.md) for the accepted
-setup-only history. See [Plugin runtime](docs/PLUGIN_RUNTIME.md) for executable
-manifests, architecture, recovery behavior and deployment requirements. The new
-Inshopa permission is activated locally; production rollout remains with Inshopa.
+</div>
 
-## Background execution on Android
+---
 
-Started bots use a foreground service with an ongoing notification and **Stop bots**.
-The UI and service share one cached Flutter engine. Stop/Delete release execution
-when no bots remain. Background setup is checked on every opening.
+Bottogram is a Flutter app that runs Telegram bots locally. Configure a bot by
+hand or choose an installed plugin, start it, and let your device handle Telegram
+updates and API requests. Bot execution does not need a separate Bottogram server.
+Your device still needs a network connection to Telegram and any connected service.
 
-- 🟣 Follow **Keep bots running** to allow battery/background activity and notifications.
-  Skipping lasts only for this opening; **Read instructions** remains pinned until setup is ready.
-- 🟣 After force-stop, process death or reboot, reopen Bottogram and start bots again.
-  Automation checkpoints remain saved. Background operation uses battery and data;
-  Android/OEM termination and network loss can still interrupt it.
+> **Work in progress.** Test builds are available through GitHub Actions once a
+> successful build completes. Public releases are deferred while the Inshopa
+> integration and real-device verification develop. See the [current roadmap](docs/REMAINING_WORK.md).
 
-## Local bot inbox
+## What you can do
 
-The inbox runs on the phone alongside the bot. No hosting account is needed.
+- **Build without writing code.** Configure command, text, callback and inline-query
+  events, replies, dice actions, and reusable reply/inline keyboards.
+- **Install integrations.** Import a declarative JSON plugin and fill in its
+  generated setup form. Plugin versions stay pinned to the bots that use them.
+- **Answer from the inbox.** Open a bot's users, read retained conversations,
+  reply manually, and open attachments on demand.
+- **Keep started bots running on Android.** A foreground service, ongoing Stop
+  notification, and battery-settings guide support execution while the UI is away.
+- **Use your desktop too.** Windows and Linux builds run bots while the application
+  remains running. They share the same configuration and plugin concepts.
 
-- 🟣 Open a bot and select the people icon to browse known users, 25 per page,
-  ordered by their latest incoming message or private-chat button interaction.
-- 🟣 Open a user to review up to 20 retained messages and reply as the bot.
-  Automatic responses appear in the same conversation. Photos open in the app;
-  other attachments use the phone's registered viewer or player.
-- 🟣 Open Inbox settings to change that bot's message-cache limit (1–512 MiB,
-  default 10 MiB) or clear its messages and downloaded attachments.
+## Try a build
 
-Attachments download only when tapped. The limit includes message storage and
-downloaded files; least-recently-opened attachments are evicted before old
-messages. The minimal user directory and settings are retained separately and
-their storage is shown in settings. Writes and compaction can briefly need extra
-disk space. Each conversation and its in-memory view stay limited to 20 messages.
+🟣 Open [GitHub Actions](https://github.com/hayyaun/bottogram/actions/workflows/build.yml),
+choose a successful run, and download its artifact. GitHub may ask you to sign in.
 
-Collection begins when the updated bot runs. It does not recover older consumed
-Telegram messages or indicate whether a user is online. Clearing or eviction is
-permanent for message content. The existing polling runtime must remain active;
-this feature does not add a background service. Telegram keeps undelivered updates
-for at most 24 hours. Configuration exports do not include conversations.
+- **Android:** `bottogram-android-debug` — a universal test APK.
+- **Windows x64:** `bottogram-windows-x64` — extract the complete ZIP and run
+  `bottogram.exe` alongside its DLLs and data.
+- **Linux x86_64:** `bottogram-linux-x86_64` — extract the AppImage tarball and run
+  the included executable. A desktop keyring is needed for plugin API keys.
 
-## Getting Started
+These are testing artifacts, retained for 14 days, without store publishing or
+GitHub Releases. Android artifacts use temporary debug signing; updating between
+runs may require a different installation. See [build details and platform requirements](docs/BUILD_ARTIFACTS.md).
 
-This project is a starting point for a Flutter application.
+## Get started
 
-A few resources to get you started if this is your first Flutter project:
+1. 🟣 Create a Telegram bot with [@BotFather](https://t.me/BotFather) and keep its token private.
+2. 🟣 In Bottogram, choose **Create bot** — the centered **+** on mobile.
+3. 🟣 Enter a name, the bot token, and your numeric Telegram admin ID. Choose
+   **Manual** or a plugin; its additional fields appear in the same form.
+4. 🟣 Open your bot in Telegram and send `/start`, so it can message your account.
+5. 🟣 Start the bot in Bottogram. On Android, follow **Keep bots running** to check
+   battery/background and notification settings.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+Tap a bot card to open its **users and inbox**. The card's **Settings** gear opens
+configuration. Plugin setup values have a separate **Edit parameters** page;
+leaving a saved API key blank keeps its current value.
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Plugins
 
-## ADB WSL Issue Fix
+Plugins are `.bottogram-plugin.json` files containing validated configuration,
+fields, and automations. The host executes registered **triggers → actions**;
+packages do not download or execute arbitrary Dart code. Adding a new host
+capability requires an application update.
 
-1. Phone: Revoke - Connect USB
-1. Windows: taskkill /F /IM adb.exe && adb devices && adb tcpip 5555
-1. WSL: adb connect
+🟣 To install an additional package, open **Plugins → Install from file** and review
+its declared API destinations and capabilities before installing it.
 
-if the above didn't work... please forcefully disconnect 5037
+### First integration: Inshopa
 
-1. netstat -ano | findstr :5037
-1. taskkill /PID <PID> /F
+The bundled **Inshopa 0.5.0** plugin connects one shop using its API key and
+registered storefront URL. A separate shop ID is not required.
+
+- `/products` and `/products 2` show catalog pages to any Telegram user.
+- Paid-order polling sends alerts only to the configured admin.
+- The first complete scan establishes a baseline without historical alerts.
+- Purchase alerts can be disabled in that bot's plugin preferences.
+
+The key needs `storefront:read` for products and `shop:orders:read` for order
+alerts. Purchases currently happen on the shop website, not inside Telegram.
+
+**Verification so far:** the local catalog command and admin connection message
+were confirmed end to end. A newly paid order alert, production-key access, and
+physical-device delivery remain unverified. Current-state order polling is
+best effort; it is not a durable payment event feed.
+
+See [plugin architecture and recovery behavior](docs/PLUGIN_RUNTIME.md),
+[example packages](examples/plugins), and the [remaining integration work](docs/REMAINING_WORK.md).
+
+## Runtime and local data
+
+- Bots run on your device. Android/OEM termination and network outages can
+  interrupt them; battery exemption does not guarantee delivery.
+- 🟣 After Android force-stop, process death, or reboot, reopen Bottogram and start
+  the bots again. Saved automation progress remains available.
+- Plugin API keys use platform secure storage. Bot tokens are part of local bot
+  configuration; treat application data and configuration exports as private.
+- The inbox keeps up to 20 messages per conversation and has a configurable
+  cache limit. Clearing or evicting messages removes their local content.
+- Manual bot definitions support configuration sharing. Plugin-bot exports are
+  not implemented. Credentials and conversation histories are not plugin packages.
+
+## Development
+
+The current build toolchain uses **Flutter 3.29.1**, **Dart 3.7**, and **JDK 17**.
+Android requires **API 23+**; native build tools are needed for desktop targets.
+
+```sh
+git clone https://github.com/hayyaun/bottogram.git
+cd bottogram
+flutter pub get --enforce-lockfile
+flutter analyze --no-pub
+flutter test --no-pub
+```
+
+🟣 Choose a configured target, then run `flutter run -d <device-id>`. For native
+SDK requirements and test packaging, see [Build artifacts](docs/BUILD_ARTIFACTS.md).
+Live Inshopa and Android background integration tests are separate, opt-in checks;
+ordinary CI does not require real Telegram tokens or shop keys.
+
+The project uses Cubit for UI state, Hive for local persistence, Televerse for
+Telegram, and a host-side automation registry for plugins.
+
+## Contributing
+
+Issues and focused pull requests are welcome. Describe the problem, platform,
+steps to reproduce, and expected behavior. Discuss larger plugin capabilities
+before implementing them so they fit the host's declarative architecture.
+
+Never include bot tokens, API keys, private exports, or customer data in an issue,
+pull request, screenshot, or build log.
+
+Start with the [roadmap](docs/REMAINING_WORK.md) and [runtime documentation](docs/PLUGIN_RUNTIME.md).

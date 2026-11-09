@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="440" viewBox="0 0 1280 440" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">Bottogram — Telegram bots, on your own device</title>
+  <desc id="desc">Bottogram's blue and purple mark, with a teal illustration of a bot card connected to a device and messages.</desc>
+  <defs>
+    <linearGradient id="brand" x1="80" y1="60" x2="160" y2="150" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#32A9F5"/><stop offset=".48" stop-color="#6961FF"/><stop offset="1" stop-color="#B700FA"/>
+    </linearGradient>
+    <linearGradient id="back" x1="0" y1="0" x2="1280" y2="440" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F0F6F3"/><stop offset="1" stop-color="#E3EDE9"/>
+    </linearGradient>
+    <pattern id="grid" width="28" height="28" patternUnits="userSpaceOnUse"><circle cx="2" cy="2" r="1" fill="#BCD0C7"/></pattern>
+  </defs>
+  <rect width="1280" height="440" rx="28" fill="url(#back)"/>
+  <rect x="718" width="562" height="440" rx="28" fill="url(#grid)" opacity=".55"/>
+  <g font-family="Arial, Helvetica, sans-serif">
+    <circle cx="116" cy="110" r="44" fill="url(#brand)"/>
+    <path d="M96 111a20 20 0 1 1 20 20h-16a4 4 0 0 1-4-4v-16Z" fill="white"/>
+    <text x="180" y="124" font-size="42" font-weight="700" letter-spacing="-1.5" fill="#06525C">bottogram</text>
+    <text x="72" y="221" font-size="51" font-weight="700" letter-spacing="-1.9" fill="#06525C">Your bots.</text>
+    <text x="72" y="282" font-size="51" font-weight="700" letter-spacing="-1.9" fill="#06525C">Your device.</text>
+    <text x="74" y="332" font-size="21" fill="#2F737D">Telegram automation, close to home.</text>
+    <rect x="74" y="365" width="120" height="30" rx="15" fill="#DCEAE3"/>
+    <text x="134" y="385" text-anchor="middle" font-size="13" font-weight="700" letter-spacing="1.1" fill="#06525C">ON DEVICE</text>
+    <text x="210" y="385" font-size="14" fill="#2F737D">Android · Windows · Linux</text>
+    <path d="M856 150h-68v146h-62M1020 294h90v-92h58" stroke="#A7C4B8" stroke-width="2" stroke-dasharray="6 8"/>
+    <rect x="856" y="47" width="212" height="346" rx="34" fill="#CEDFD6"/>
+    <rect x="848" y="39" width="212" height="346" rx="34" fill="#06525C"/>
+    <rect x="857" y="48" width="194" height="328" rx="26" fill="#F7F9F8"/>
+    <rect x="920" y="58" width="68" height="7" rx="3.5" fill="#C7D8CF"/>
+    <text x="876" y="103" font-size="17" font-weight="700" fill="#06525C">Your bots</text>
+    <rect x="875" y="121" width="158" height="134" rx="16" fill="white" stroke="#D5E1DC"/>
+    <rect x="888" y="135" width="34" height="34" rx="10" fill="#EBF0EE"/>
+    <g stroke="#06525C" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <rect x="894" y="145" width="22" height="15" rx="4"/>
+      <path d="M905 141v4m-4 8h0m8 0h0"/>
+    </g>
+    <rect x="982" y="139" width="37" height="18" rx="9" fill="#EDF6F0"/>
+    <circle cx="990" cy="148" r="2.5" fill="#276749"/>
+    <text x="997" y="151" font-size="8" fill="#276749">ON</text>
+    <text x="888" y="193" font-size="17" font-weight="700" fill="#06525C">My shop</text>
+    <text x="888" y="216" font-size="11" fill="#2F737D">Inshopa integration</text>
+    <path d="M888 233h76" stroke="#C5D8CD" stroke-width="5" stroke-linecap="round"/>
+    <rect x="875" y="267" width="158" height="42" rx="13" fill="white" stroke="#D5E1DC"/>
+    <circle cx="896" cy="288" r="9" fill="#EBF0EE"/>
+    <path d="M914 283h70m-70 10h46" stroke="#C5D8CD" stroke-width="4" stroke-linecap="round"/>
+    <rect x="875" y="325" width="158" height="37" rx="18.5" fill="white" stroke="#D5E1DC"/>
+    <circle cx="954" cy="343.5" r="14" fill="#06525C"/>
+    <path d="M954 337v13m-6.5-6.5h13" stroke="white" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="903" cy="343.5" r="4" fill="#AFC9BC"/><circle cx="1005" cy="343.5" r="4" fill="#AFC9BC"/>
+    <rect x="698" y="170" width="196" height="88" rx="18" fill="white" stroke="#C7DAD0"/>
+    <circle cx="725" cy="199" r="10" fill="#E8E8FF"/>
+    <path d="m721 199 3 3 5-6" stroke="#7864ED" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="744" y="204" font-size="14" font-weight="700" fill="#06525C">A reply, ready to go.</text>
+    <path d="M716 228h142m-142 10h102" stroke="#D9E6DF" stroke-width="4" stroke-linecap="round"/>
+    <rect x="1017" y="268" width="196" height="77" rx="18" fill="white" stroke="#C7DAD0"/>
+    <text x="1036" y="296" font-size="14" font-weight="700" fill="#06525C">Connected by plugins.</text>
+    <path d="M1036 316h153m-153 10h110" stroke="#D9E6DF" stroke-width="4" stroke-linecap="round"/>
+  </g>
+</svg>

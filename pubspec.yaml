@@ -37,6 +37,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   televerse: ^2.4.5
   flutter_bloc: ^9.1.0
+  provider: ^6.1.4
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   equatable: ^2.0.7
@@ -46,9 +47,13 @@ dependencies:
   path_provider: ^2.1.5
   file_picker: ^10.0.0
   path: ^1.9.1
-  fluttertoast: ^8.2.12
+  open_filex: 4.7.0
+  crypto: ^3.0.6
+  flutter_secure_storage: 10.3.4
 
 dev_dependencies:
+  integration_test:
+    sdk: flutter
   flutter_test:
     sdk: flutter
 
@@ -66,6 +71,22 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  assets:
+    - examples/plugins/inshopa.bottogram-plugin.json
+    - examples/plugins/inshopa.catalog.local.bottogram-plugin.json
+    - examples/plugins/inshopa.catalog.bottogram-plugin.json
+    - examples/plugins/inshopa.sales.bottogram-plugin.json
+    - examples/plugins/inshopa.sales.local.bottogram-plugin.json
+    - assets/icon/foreground.png
+    - assets/fonts/HostGrotesk-OFL.txt
+    - assets/fonts/NotoSansArabic-OFL.txt
+  fonts:
+    - family: Host Grotesk
+      fonts:
+        - asset: assets/fonts/HostGrotesk.ttf
+    - family: Noto Sans Arabic
+      fonts:
+        - asset: assets/fonts/NotoSansArabic.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

@@ -1,198 +1,186 @@
-import 'package:bottogram/decorations/input.dart';
 import 'package:bottogram/pages/act.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
-import 'package:bottogram/utils/string.dart';
+import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/ui/dialogs.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class EventPage extends StatefulWidget {
   const EventPage({super.key, required this.ev, required this.bot});
-
   final VirtEvent ev;
   final VirtBot bot;
-
   @override
   State<EventPage> createState() => _EventPageState();
 }
 
 class _EventPageState extends State<EventPage> {
-  final ctrlQuery = TextEditingController();
-
+  late final ctrlQuery = TextEditingController(text: widget.ev.query);
   @override
-  void initState() {
-    ctrlQuery.text = widget.ev.query;
-    super.initState();
+  void dispose() {
+    ctrlQuery.dispose();
+    super.dispose();
   }
 
-  void _addAction() {
-    final ctrlAction = TextEditingController();
-    final selectedType = ValueNotifier(VirtActType.reply);
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Add an Action'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ValueListenableBuilder(
-                valueListenable: selectedType,
-                builder:
-                    (ctx, v, _) => DropdownButton<VirtActType>(
-                      value: v, // Initial value
-                      items:
-                          VirtActType.values.map((type) {
-                            return DropdownMenuItem(
-                              value: type,
-                              child: Text(type.name.toUpperCase()),
-                            );
-                          }).toList(),
-                      onChanged: (newValue) {
-                        selectedType.value = newValue!;
-                      },
-                    ),
-              ),
-              TextField(
-                controller: ctrlAction,
-                decoration: InputDecoration(hintText: 'Action'),
-              ),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final action = ctrlAction.text;
-                if (action.isEmpty) return;
-                widget.ev.acts.add(
-                  VirtAct(text: action, type: selectedType.value),
-                );
-                context.read<BotsCubit>().update();
-                Navigator.of(context).pop(); // Close the dialog
-              },
-              child: Text('Add'),
-            ),
-          ],
-        );
+  Future<void> _addAction() async {
+    final result = await showBEntryDialog<VirtActType>(
+      context,
+      title: 'Add action',
+      fieldLabel: 'Action text',
+      initialType: VirtActType.reply,
+      types: const {
+        VirtActType.reply: 'Reply message',
+        VirtActType.dice: 'Send dice',
       },
+      action: 'Add action',
     );
+    if (result == null || !mounted) return;
+    widget.ev.acts.add(VirtAct(text: result.text, type: result.type));
+    context.read<BotsCubit>().update();
+  }
+
+  Future<void> _remove() async {
+    final accepted = await confirmRemoval(
+      context,
+      title: 'Delete event?',
+      message: 'Remove this event and all of its actions from the bot?',
+      action: 'Delete event',
+    );
+    if (!accepted || !mounted) return;
+    widget.bot.events.remove(widget.ev);
+    context.read<BotsCubit>().update();
+    Navigator.pop(context);
   }
 
   @override
-  Widget build(BuildContext context) {
-    final prefix =
-        widget.ev.type == VirtEventType.command
-            ? '/'
-            : widget.ev.type == VirtEventType.text
-            ? ''
-            : ':';
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('on $prefix${widget.ev.query}'),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () {
-              widget.bot.events.remove(widget.ev);
-              context.read<BotsCubit>().update();
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addAction,
-        tooltip: 'Add an Action',
-        child: const Icon(Icons.add),
-      ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        spacing: 8,
-        children: <Widget>[
-          SizedBox(height: 24),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              spacing: 12,
-              children: [
-                Expanded(
-                  child: TextField(
-                    controller: ctrlQuery,
-                    decoration: inputDecorationCommon(context).copyWith(
-                      hintText: 'Query',
-                      suffixIcon: IconButton(
-                        onPressed: () {
-                          // update query
-                          if (ctrlQuery.text.isEmpty) return;
-                          widget.ev.query = ctrlQuery.text;
-                          context.read<BotsCubit>().update();
-                          setState(() {});
-                        },
-                        icon: Icon(Icons.check),
-                        color: Colors.greenAccent,
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStatePropertyAll(
-                            Theme.of(
-                              context,
-                            ).colorScheme.onSurface.withAlpha(25),
-                          ),
-                        ),
-                      ),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Event'),
+      actions: [
+        IconButton(
+          tooltip: 'Delete event',
+          icon: const Icon(Icons.delete_outline),
+          onPressed: _remove,
+        ),
+      ],
+    ),
+    body: SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: BContent(
+        maxWidth: 840,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            BHeading(
+              title: widget.ev.query,
+              subtitle:
+                  'Actions run in the order shown when this event matches.',
+            ),
+            const SizedBox(height: 28),
+            BPanel(
+              child: BSection(
+                title: 'Trigger',
+                description: switch (widget.ev.type) {
+                  VirtEventType.command =>
+                    'A Telegram command, such as /start.',
+                  VirtEventType.text => 'A matching text message.',
+                  VirtEventType.callbackQuery =>
+                    'A callback from an inline keyboard button.',
+                  VirtEventType.inlineQuery => 'A matching inline query.',
+                },
+                child: TextField(
+                  controller: ctrlQuery,
+                  decoration: InputDecoration(
+                    labelText: 'Query',
+                    suffixIcon: IconButton(
+                      tooltip: 'Save query',
+                      icon: const Icon(Icons.check_rounded),
+                      onPressed: () {
+                        if (ctrlQuery.text.isEmpty) return;
+                        widget.ev.query = ctrlQuery.text;
+                        context.read<BotsCubit>().update();
+                        setState(() {});
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Query saved.')),
+                        );
+                      },
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
-          ),
-          // list of bots
-          BlocBuilder<BotsCubit, List<VirtBot>>(
-            builder: (context, bots) {
-              final acts = widget.ev.acts;
-              if (acts.isEmpty) {
-                return Expanded(
-                  child: Center(child: Text('List empty! create an action')),
-                );
-              }
-              return Expanded(
-                child: ListView.builder(
-                  itemCount: acts.length,
-                  itemBuilder: (context, index) {
-                    final act = acts[index];
-                    return ListTile(
-                      title: Text(
-                        '${index + 1}. ${act.type.name}/${act.text.ellipsize(20)}',
-                      ),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (_) => ActPage(
-                                  act: act,
-                                  ev: widget.ev,
-                                  bot: widget.bot,
-                                ),
-                          ),
-                        );
-                      },
+            const SizedBox(height: 32),
+            BSection(
+              title: 'Actions',
+              trailing: TextButton.icon(
+                onPressed: _addAction,
+                icon: const Icon(Icons.add, size: 18),
+                label: const Text('Add action'),
+              ),
+              child: BlocBuilder<BotsCubit, List<VirtBot>>(
+                builder: (context, _) {
+                  if (widget.ev.acts.isEmpty) {
+                    return const BEmptyState(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      title: 'What should happen next?',
+                      message: 'Add a reply message or send a dice animation.',
                     );
-                  },
-                ),
-              );
-            },
-          ),
-        ],
+                  }
+                  return Column(
+                    children: [
+                      for (final (index, act) in widget.ev.acts.indexed)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: BPanel(
+                            padding: EdgeInsets.zero,
+                            onTap:
+                                () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder:
+                                        (_) => ActPage(
+                                          act: act,
+                                          ev: widget.ev,
+                                          bot: widget.bot,
+                                        ),
+                                  ),
+                                ),
+                            child: ListTile(
+                              leading: Container(
+                                width: 36,
+                                height: 36,
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  color: BColors.subtle,
+                                  borderRadius: BottogramDesign.controlRadius,
+                                ),
+                                child: Text('${index + 1}'),
+                              ),
+                              title: Text(
+                                act.text,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              subtitle: Text(
+                                act.type == VirtActType.reply
+                                    ? 'Reply message'
+                                    : 'Send dice',
+                              ),
+                              trailing: const Icon(Icons.chevron_right_rounded),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 32),
+          ],
+        ),
       ),
-    );
-  }
+    ),
+  );
 }

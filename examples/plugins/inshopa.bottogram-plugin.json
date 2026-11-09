@@ -1,0 +1,29 @@
+{
+  "manifestVersion": 1,
+  "id": "bottogram-plugin-inshopa",
+  "name": "Inshopa",
+  "version": "0.2.0",
+  "hostApiMajor": 1,
+  "engine": "poll-to-telegram.v1",
+  "executionStatus": "setup-only",
+  "description": "Prepare successful-sale alerts for your shop. Live connection is pending the Inshopa API.",
+  "requiresBotFields": ["adminTelegramUserId"],
+  "settings": [
+    {
+      "key": "notifyNewSuccessfulPurchases",
+      "type": "boolean",
+      "label": "آگاه شدن از آخرین خرید های موفق",
+      "default": true,
+      "helpText": "Preference for the future purchase-alert feature. Live alerts are not available yet."
+    }
+  ],
+  "setupFields": [
+    {
+      "key": "apiKey",
+      "label": "Inshopa API key",
+      "type": "secret",
+      "required": true,
+      "helpText": "The API key identifies your shop. No separate shop ID is needed."
+    }
+  ]
+}

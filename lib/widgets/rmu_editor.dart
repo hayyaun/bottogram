@@ -2,7 +2,8 @@ import 'package:bottogram/pages/templates.dart';
 import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_rmu.dart';
-import 'package:bottogram/utils/context.dart';
+import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/ui/dialogs.dart';
 import 'package:bottogram/widgets/inline_keyboard_editor.dart';
 import 'package:bottogram/widgets/keyboard_editor.dart';
 import 'package:flutter/material.dart';
@@ -10,173 +11,140 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 
 class RMUEditor extends StatefulWidget {
   const RMUEditor({super.key, required this.act});
-
   final VirtAct act;
-
   @override
   State<RMUEditor> createState() => _RmuEditorState();
 }
 
 class _RmuEditorState extends State<RMUEditor> {
   final Map<VirtRMUType, VirtRMU?> buffer = {};
-  late VirtRMUType current;
-
+  VirtRMUType current = VirtRMUType.none;
   VirtRMU? get rmu => buffer[current];
 
-  void loadRMUIntoBuffer(VirtRMU newRMU) {
-    current = newRMU.type;
-    buffer[current] = newRMU;
+  void loadRMUIntoBuffer(VirtRMU value) {
+    current = value.type;
+    buffer[current] = value;
   }
 
   @override
   void initState() {
-    // load current rmu into buffer
-    final defaultRMU = widget.act.rmu;
-    if (defaultRMU != null) loadRMUIntoBuffer(defaultRMU);
     super.initState();
+    if (widget.act.rmu != null) loadRMUIntoBuffer(widget.act.rmu!);
   }
 
-  void _saveTemplate() {
-    final ctx = context.read<RMUsCubit>();
-    final ctrlName = TextEditingController(text: 'RMU-${ctx.state.length}');
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text('Add to Templates'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              TextField(
-                controller: ctrlName,
-                decoration: InputDecoration(hintText: 'Markup Name'),
-              ),
-            ],
+  Future<void> _saveTemplate() async {
+    final store = context.read<RMUsCubit>();
+    final result = await showBEntryDialog<String>(
+      context,
+      title: 'Save keyboard template',
+      fieldLabel: 'Template name',
+      initialType: '',
+      initialText: 'Keyboard ${store.state.length + 1}',
+      action: 'Save template',
+    );
+    if (result == null || !mounted || rmu == null) return;
+    try {
+      await store.add(rmu!.copy(result.text));
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Template saved.')));
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The template could not be saved. Try again.'),
           ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () {
-                final rmuName = ctrlName.text;
-                if (rmuName.isEmpty) return;
-                if (rmu == null) return;
-                ctx.add(rmu!.copy(rmuName));
-                Navigator.of(context).pop();
-              },
-              child: Text('Add'),
-            ),
-          ],
         );
-      },
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      spacing: 12,
-      children: [
-        Row(
-          spacing: 8,
-          children: [
-            Expanded(child: Text('Reply Markup:')),
-            TextButton(
-              onPressed: () async {
-                final selectedRMU = await Navigator.of(context).push<VirtRMU>(
-                  MaterialPageRoute(
-                    builder: (context) => TemplatesPage(selectMode: true),
-                  ),
-                );
-                if (selectedRMU == null) return;
-                final newRMU = selectedRMU.copy(selectedRMU.name!);
-                loadRMUIntoBuffer(newRMU);
-                setState(() {});
-              },
-              style: ButtonStyle(
-                foregroundColor: WidgetStatePropertyAll(
-                  context.colors.inversePrimary,
-                ),
-              ),
-              child: Text("SELECT"),
-            ),
-          ],
-        ),
-
-        _buildRMUOptions(), // Select an Option
-        _buildEditor(),
-
-        if (rmu != null)
-          TextButton(
-            onPressed: _saveTemplate,
-            style: ButtonStyle(
-              foregroundColor: WidgetStatePropertyAll(
-                context.colors.onSurface.withAlpha(150),
-              ),
-            ),
-            child: Text('+ Add to Templates'),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildEditor() {
-    switch (current) {
-      case VirtRMUType.none:
-        return SizedBox();
-      case VirtRMUType.keyboard:
-        return KeyboardEditor(rmu: rmu as VirtRMUKeyboard);
-      case VirtRMUType.inlineKeyboard:
-        return InlineKeyboardEditor(rmu: rmu as VirtRMUInlineKeyboard);
+      }
     }
+  }
+
+  Future<void> _chooseTemplate() async {
+    final selected = await Navigator.push<VirtRMU>(
+      context,
+      MaterialPageRoute(builder: (_) => const TemplatesPage(selectMode: true)),
+    );
+    if (selected == null || !mounted) return;
+    final copy = selected.copy(selected.name ?? 'Keyboard');
+    setState(() {
+      loadRMUIntoBuffer(copy);
+      widget.act.rmu = copy;
+    });
   }
 
   void selectOption(VirtRMUType option) {
-    switch (option) {
-      case VirtRMUType.none:
-        current = VirtRMUType.none;
-        break;
-      case VirtRMUType.keyboard:
-        loadRMUIntoBuffer(buffer[option] ?? VirtRMUKeyboard());
-        break;
-      case VirtRMUType.inlineKeyboard:
-        loadRMUIntoBuffer(buffer[option] ?? VirtRMUInlineKeyboard());
-        break;
-    }
-    // update act.rmu to selected rmu
-    widget.act.rmu = buffer[option];
-    setState(() {});
+    setState(() {
+      switch (option) {
+        case VirtRMUType.none:
+          current = option;
+        case VirtRMUType.keyboard:
+          loadRMUIntoBuffer(buffer[option] ?? VirtRMUKeyboard());
+        case VirtRMUType.inlineKeyboard:
+          loadRMUIntoBuffer(buffer[option] ?? VirtRMUInlineKeyboard());
+      }
+      widget.act.rmu = option == VirtRMUType.none ? null : buffer[option];
+    });
   }
 
-  Widget _buildRMUOptions() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        spacing: 8,
-        children:
-            VirtRMUType.values.map((option) {
-              final selected = current == option;
-              return ChoiceChip(
-                label: Text(option.name.toUpperCase()),
-                selected: selected,
+  @override
+  Widget build(BuildContext context) => BSection(
+    title: 'Keyboard',
+    description: 'Add buttons below your reply or alongside the message.',
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final option in VirtRMUType.values)
+              ChoiceChip(
+                label: Text(switch (option) {
+                  VirtRMUType.none => 'None',
+                  VirtRMUType.keyboard => 'Reply keyboard',
+                  VirtRMUType.inlineKeyboard => 'Inline keyboard',
+                }),
+                selected: current == option,
                 onSelected: (_) => selectOption(option),
-                checkmarkColor: context.colors.onSurface,
-                backgroundColor: Theme.of(
-                  context,
-                ).colorScheme.onSurface.withAlpha(18),
-                selectedColor: context.colors.primary,
-                labelStyle: TextStyle(color: context.colors.onSurface),
-                side: BorderSide.none,
-              );
-            }).toList(),
-      ),
-    );
-  }
+              ),
+          ],
+        ),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: TextButton.icon(
+            onPressed: _chooseTemplate,
+            icon: const Icon(Icons.bookmarks_outlined, size: 18),
+            label: const Text('Choose template'),
+          ),
+        ),
+        const SizedBox(height: 12),
+        switch (current) {
+          VirtRMUType.none => const BNotice(
+            icon: Icons.keyboard_hide_outlined,
+            message: 'This action has no keyboard.',
+          ),
+          VirtRMUType.keyboard => KeyboardEditor(
+            key: ObjectKey(rmu),
+            rmu: rmu as VirtRMUKeyboard,
+          ),
+          VirtRMUType.inlineKeyboard => InlineKeyboardEditor(
+            key: ObjectKey(rmu),
+            rmu: rmu as VirtRMUInlineKeyboard,
+          ),
+        },
+        if (rmu != null) ...[
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _saveTemplate,
+              icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+              label: const Text('Save as template'),
+            ),
+          ),
+        ],
+      ],
+    ),
+  );
 }

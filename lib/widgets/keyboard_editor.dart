@@ -1,99 +1,89 @@
-import 'package:bottogram/decorations/input.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_rmu.dart';
-import 'package:bottogram/utils/context.dart';
 import 'package:bottogram/utils/list.dart';
+import 'package:bottogram/widgets/keyboard_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class KeyboardEditor extends StatefulWidget {
   const KeyboardEditor({super.key, required this.rmu});
-
   final VirtRMUKeyboard rmu;
-
   @override
   State<KeyboardEditor> createState() => _KeyboardState();
 }
 
 class _KeyboardState extends State<KeyboardEditor> {
-  final ctrlKBtn = TextEditingController();
+  final _label = TextEditingController();
+  @override
+  void dispose() {
+    _label.dispose();
+    super.dispose();
+  }
+
+  void _update(VoidCallback change) {
+    setState(change);
+    context.read<BotsCubit>().update();
+  }
+
+  void _add() {
+    if (_label.text.isEmpty) return;
+    _update(() => widget.rmu.items.add(_label.text));
+    _label.clear();
+  }
 
   @override
-  Widget build(BuildContext context) {
-    final items = widget.rmu.items;
-    final matrix = splitListByNull(items);
-    return Column(
-      spacing: 8,
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text('Keyboard'),
-        buildKeyboardItemAdd(),
-        SizedBox(height: 12),
-        for (final row in matrix)
-          Row(
-            spacing: 8,
-            children: [
-              for (final btn in row)
-                Expanded(
-                  child: TextButton(
-                    onPressed: () {
-                      items.remove(btn);
-                      context.read<BotsCubit>().update();
-                      setState(() {});
-                    },
-                    style: ButtonStyle(
-                      backgroundColor: WidgetStatePropertyAll(Colors.blue),
-                    ),
-                    child: Text(btn, style: TextStyle(color: Colors.white)),
-                  ),
-                ),
-            ],
-          ),
-      ],
-    );
-  }
-
-  Widget buildKeyboardItemAdd() {
-    return Row(
-      spacing: 8,
-      children: [
-        Expanded(
-          child: TextField(
-            controller: ctrlKBtn,
-            decoration: inputDecorationCommon(context).copyWith(
-              hintText: 'Button Text',
-              suffixIcon: IconButton(
-                onPressed: () {
-                  if (ctrlKBtn.text.isEmpty) return;
-                  widget.rmu.items.add(ctrlKBtn.text);
-                  context.read<BotsCubit>().update();
-                  setState(() {});
-                },
-                icon: Icon(Icons.add, color: Colors.white),
-                color: Colors.greenAccent,
-                style: ButtonStyle(
-                  backgroundColor: WidgetStatePropertyAll(
-                    context.colors.onSurface.withAlpha(25),
-                  ),
-                ),
-              ),
-            ),
-            keyboardType: TextInputType.text,
-          ),
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      TextField(
+        controller: _label,
+        textInputAction: TextInputAction.done,
+        onSubmitted: (_) => _add(),
+        decoration: const InputDecoration(
+          labelText: 'Button text',
+          hintText: 'A message to send when tapped',
         ),
-
-        IconButton(
-          padding: EdgeInsets.all(12),
-          onPressed: () {
-            if (widget.rmu.items.isEmpty) return;
-            widget.rmu.items.add(null);
-            context.read<BotsCubit>().update();
-            setState(() {});
-          },
-          icon: Icon(Icons.keyboard_return),
+      ),
+      const SizedBox(height: 12),
+      Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          OutlinedButton.icon(
+            onPressed: _add,
+            icon: const Icon(Icons.add, size: 18),
+            label: const Text('Add button'),
+          ),
+          TextButton.icon(
+            onPressed:
+                widget.rmu.items.isEmpty
+                    ? null
+                    : () => _update(() => widget.rmu.items.add(null)),
+            icon: const Icon(Icons.keyboard_return_rounded, size: 18),
+            label: const Text('New row'),
+          ),
+        ],
+      ),
+      const SizedBox(height: 20),
+      if (widget.rmu.items.isNotEmpty)
+        KeyboardPreview(
+          rows: [
+            for (final row in splitListByNull(widget.rmu.items))
+              [
+                for (final label in row)
+                  KeyboardPreviewKey(
+                    label: label,
+                    onRemove:
+                        () => _update(() => widget.rmu.items.remove(label)),
+                  ),
+              ],
+          ],
+        )
+      else
+        Text(
+          'Add a button to preview your keyboard.',
+          style: Theme.of(context).textTheme.bodySmall,
         ),
-      ],
-    );
-  }
+    ],
+  );
 }

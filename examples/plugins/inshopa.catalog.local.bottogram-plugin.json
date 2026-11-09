@@ -1,0 +1,47 @@
+{
+  "manifestVersion": 2,
+  "hostApiMajor": 2,
+  "id": "bottogram-plugin-inshopa",
+  "name": "Inshopa (local development)",
+  "version": "0.3.0",
+  "executionStatus": "live",
+  "description": "The /products command lists this shop’s published catalog for anyone. Uses the verified local API at 127.0.0.1:8080, suitable for the WSL Linux preview. Purchase alerts are pending the sales API. Android needs a separate package version with a reachable HTTPS API URL.",
+  "requiresBotFields": ["adminTelegramUserId"],
+  "setupFields": [
+    {
+      "key": "apiKey", "label": "Inshopa API key", "type": "secret", "required": true,
+      "helpText": "A key with storefront:read permission for this shop."
+    },
+    {
+      "key": "storefrontUrl", "label": "Storefront URL", "type": "text", "required": true,
+      "helpText": "The exact registered shop origin including its scheme and development port. This supplies Origin and X-Storefront-Host."
+    }
+  ],
+  "automations": [
+    {
+      "id": "products",
+      "trigger": {"type": "telegram.command.v1", "config": {"command": "products", "arguments": "page"}},
+      "actions": [
+        {
+          "id": "load-products", "type": "http.get-json.v1",
+          "config": {
+            "request": {
+              "method": "GET", "url": "http://127.0.0.1:8080/v1/storefront/products",
+              "storefrontUrlField": "storefrontUrl",
+              "authentication": {"type": "bearer", "secretField": "apiKey"}
+            },
+            "pagination": {"pageSize": 10},
+            "resultKey": "catalog"
+          }
+        },
+        {
+          "id": "reply-products", "type": "telegram.reply.v1",
+          "config": {
+            "text": "Products · page {{event.page}}\nNext page: /products {{event.nextPage}}",
+            "list": {"itemsPath": "results.catalog.products", "itemText": "• {{item.title}}", "emptyText": "No products on this page."}
+          }
+        }
+      ]
+    }
+  ]
+}

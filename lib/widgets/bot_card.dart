@@ -1,91 +1,182 @@
 import 'package:bottogram/pages/bot.dart';
+import 'package:bottogram/inbox/users_page.dart';
+import 'package:bottogram/plugins/manifest.dart';
+import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
+import 'package:bottogram/ui/design.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/utils/context.dart';
-import 'package:bottogram/utils/list.dart';
-import 'package:bottogram/utils/string.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
-class BotCard extends StatelessWidget {
+class BotCard extends StatefulWidget {
   const BotCard({super.key, required this.bot});
-
   final VirtBot bot;
+  @override
+  State<BotCard> createState() => _BotCardState();
+}
+
+class _BotCardState extends State<BotCard> {
+  bool _busy = false;
+  void _open() => Navigator.push(
+    context,
+    MaterialPageRoute<void>(builder: (_) => InboxUsersPage(bot: widget.bot)),
+  );
+  void _settings() => Navigator.push(
+    context,
+    MaterialPageRoute<void>(builder: (_) => BotPage(bot: widget.bot)),
+  );
+  Future<void> _toggle() async {
+    if (_busy) return;
+    final store = context.read<BotsCubit>();
+    setState(() => _busy = true);
+    try {
+      await store.toggle(widget.bot);
+      store.update();
+    } catch (error) {
+      if (mounted) {
+        context.showSnackBar(
+          error is PluginException
+              ? error.message
+              : 'The bot could not be started or stopped. Check its connection.',
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    final acts = bot.events.map((ev) => ev.acts.length).sum();
-    final color =
-        bot.active ? Colors.greenAccent : context.colors.inversePrimary;
-    final borderRadius = BorderRadius.circular(12);
-    return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(borderRadius: borderRadius),
-      margin: EdgeInsets.all(0),
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => BotPage(bot: bot)),
-          );
-        },
-        child: Column(
-          children: [
-            Container(color: color, height: 8),
-            Expanded(
-              child: Padding(
-                padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+    final bot = widget.bot;
+    final plugin = bot.setup?.usesPlugin ?? false;
+    final setupOnly =
+        plugin &&
+        context.read<PluginRepository>().manifestFor(bot.setup)?.executable !=
+            true;
+    final error = bot.runtimeError;
+    final actions = bot.events.fold<int>(
+      0,
+      (count, event) => count + event.acts.length,
+    );
+    final status =
+        bot.setupError != null || error != null
+            ? const BStatus(
+              label: 'Needs attention',
+              color: BColors.error,
+              background: BColors.errorWash,
+            )
+            : setupOnly
+            ? const BStatus(
+              label: 'Setup only',
+              color: BColors.warning,
+              background: BColors.warningWash,
+            )
+            : bot.active
+            ? const BStatus(
+              label: 'Active',
+              color: BColors.success,
+              background: BColors.successWash,
+            )
+            : const BStatus(label: 'Stopped');
+    return BPanel(
+      onTap: _open,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                alignment: Alignment.center,
+                decoration: const BoxDecoration(
+                  color: BColors.subtle,
+                  borderRadius: BorderRadius.all(Radius.circular(12)),
+                ),
+                child: Icon(
+                  plugin ? Icons.extension_outlined : Icons.smart_toy_outlined,
+                  size: 24,
+                  color: BColors.ink,
+                ),
+              ),
+              Expanded(
+                child: Align(alignment: Alignment.centerRight, child: status),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: Tooltip(
+              message: bot.name,
+              excludeFromSemantics: true,
+              child: Text(
+                bot.name,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      bot.name.ellipsize(8),
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.w200,
-                      ),
+                      plugin
+                          ? bot.setup!.pluginName ?? 'Plugin bot'
+                          : 'Manual bot',
+                      style: Theme.of(context).textTheme.bodySmall,
                     ),
-                    SizedBox(height: 12),
-                    Text(bot.active ? 'ACTIVE' : 'INACTIVE'),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text('${bot.events.length} events'),
-                              Text('$acts actions'),
-                            ],
-                          ),
-                        ),
-                        IconButton.filled(
-                          style: ButtonStyle(
-                            backgroundColor: WidgetStatePropertyAll(
-                              bot.active ? Colors.greenAccent : Colors.black,
-                            ),
-                          ),
-                          color: bot.active ? Colors.black : Colors.white,
-                          icon: Icon(
-                            bot.active ? Icons.pause : Icons.play_arrow,
-                          ),
-                          onPressed: () async {
-                            await bot.toggle();
-                            // ignore: use_build_context_synchronously
-                            context.read<BotsCubit>().update();
-                          },
-                        ),
-                      ],
+                    const SizedBox(height: 4),
+                    Text(
+                      plugin
+                          ? 'Open users and inbox'
+                          : '${bot.events.length} ${bot.events.length == 1 ? 'event' : 'events'} · $actions ${actions == 1 ? 'action' : 'actions'}',
+                      style: BottogramDesign.text(13, color: BColors.muted),
                     ),
-                    SizedBox(height: 12),
                   ],
                 ),
               ),
-            ),
-          ],
-        ),
+              IconButton(
+                tooltip: 'Bot settings',
+                onPressed: _settings,
+                icon: const Icon(Icons.settings_outlined),
+              ),
+              IconButton.outlined(
+                tooltip:
+                    setupOnly
+                        ? 'Configure plugin'
+                        : bot.active
+                        ? 'Stop bot'
+                        : 'Start bot',
+                onPressed:
+                    _busy
+                        ? null
+                        : setupOnly
+                        ? _settings
+                        : _toggle,
+                icon:
+                    _busy
+                        ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                        : Icon(
+                          setupOnly
+                              ? Icons.tune_rounded
+                              : bot.active
+                              ? Icons.pause_rounded
+                              : Icons.play_arrow_rounded,
+                        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

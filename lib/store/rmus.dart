@@ -1,51 +1,65 @@
 import 'package:bottogram/units/virt_rmu.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:hive/hive.dart';
 
-// Cubit for managing state
 class RMUsCubit extends Cubit<List<VirtRMU>> {
   static const String boxName = 'rmusBox';
-  Box? _box;
+  Box<dynamic>? _box;
+  late final Future<void> _ready;
+  Future<void> get ready => _ready;
+  Future<void> _tail = Future.value();
+  String? lastError;
 
   RMUsCubit() : super([]) {
-    _initBox();
+    _ready = _initBox();
   }
 
-  // Initialize Hive box
   Future<void> _initBox() async {
-    _box = await Hive.openBox(boxName);
-    List<dynamic>? boxJSON = _box?.values.toList();
-    if (boxJSON == null) return; // nothing
-    debugPrint('✅ rmus: ${boxJSON.length}');
-    var rmus = boxJSON.toList().cast<VirtRMU>();
-    emit(rmus); // Emit the saved value to Cubit's state
+    try {
+      _box = await Hive.openBox(boxName);
+      emit(_box!.values.cast<VirtRMU>().toList());
+    } catch (_) {
+      lastError =
+          'Template storage could not be opened. Reopen Bottogram to try again.';
+      emit([]);
+    }
   }
 
-  // Add a rmu to the list and persist it
-  void add(VirtRMU rmu) async {
-    final updatedList = List<VirtRMU>.from(state)..add(rmu);
-    emit(updatedList);
-    await _box?.add(rmu); // Persist the updated list
+  Future<void> _mutate(Future<void> Function() action) {
+    final operation = _tail.then((_) async {
+      await ready;
+      if (_box == null || lastError != null) {
+        throw StateError(lastError ?? 'Template storage is unavailable.');
+      }
+      await action();
+    });
+    _tail = operation.then((_) {}, onError: (Object _, StackTrace _) {});
+    return operation;
   }
 
-  // Remove a rmu from the list and persist it
-  void remove(VirtRMU rmu) async {
-    final updatedList = List<VirtRMU>.from(state)..remove(rmu);
-    emit(updatedList);
-    final index = _box?.values.toList().cast<VirtRMU>().indexOf(rmu);
-    if (index != null) await _box?.deleteAt(index); // Persist the updated list
-  }
+  Future<void> add(VirtRMU rmu) => _mutate(() async {
+    await _box!.add(rmu);
+    emit([...state, rmu]);
+  });
 
-  // Update the list and persist it
-  void update() {
-    final updatedList = List<VirtRMU>.from(state);
-    emit(updatedList);
-  }
+  Future<void> remove(VirtRMU rmu) => _mutate(() async {
+    final index = _box!.values.toList().indexOf(rmu);
+    if (index < 0) return;
+    await _box!.deleteAt(index);
+    emit(state.where((item) => item != rmu).toList());
+  });
 
-  // Reset the list and persist it
-  void reset() {
+  void update() => emit(List.of(state));
+
+  Future<void> reset() => _mutate(() async {
+    await _box!.clear();
     emit([]);
-    _box?.clear();
+  });
+
+  @override
+  Future<void> close() async {
+    await ready;
+    await _tail;
+    await super.close();
   }
 }

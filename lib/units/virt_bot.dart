@@ -1,3 +1,9 @@
+import 'dart:async';
+
+import 'package:bottogram/inbox/repository.dart';
+import 'package:bottogram/inbox/transformer.dart';
+import 'package:bottogram/plugins/bot_setup.dart';
+import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
@@ -11,6 +17,17 @@ part 'virt_bot.g.dart';
 class VirtBot extends HiveObject {
   bool _active = false; // TODO change it to (Date? activeSince)
   Bot bot;
+  // Stored separately; existing Hive field IDs and legacy bot records stay intact.
+  BotSetup? setup;
+  String? setupError;
+  String? runtimeError;
+  VoidCallback? onRunningChanged;
+  int _runGeneration = 0;
+  Future<InboxRepository> get inbox => InboxRepository.forToken(token);
+
+  void _attachInbox() {
+    bot.api.use(InboxTransformer(() => inbox));
+  }
 
   @HiveField(0)
   String name;
@@ -19,7 +36,9 @@ class VirtBot extends HiveObject {
   @HiveField(2)
   List<VirtEvent> events = [];
 
-  VirtBot(this.name, this.token) : bot = Bot(token) {
+  VirtBot(this.name, this.token, {bool addSamples = true}) : bot = Bot(token) {
+    _attachInbox();
+    if (!addSamples) return;
     // Sample Events/Actions
     final btn = KeyValue('Dice 🎲', 'dice');
     final keyboard =
@@ -45,22 +64,47 @@ class VirtBot extends HiveObject {
 
   bool get active => _active;
 
-  Future<void> start() async {
+  Future<void> start({bool pluginRuntime = false}) async {
+    if (setupError != null) throw PluginException(setupError!);
+    if ((setup?.usesPlugin ?? false) && !pluginRuntime) {
+      throw const PluginException(
+        'Plugin settings are saved. Live plugin execution is not available yet.',
+      );
+    }
     if (_active) await stop(); // stop before restart
-    for (var ev in events) {
-      ev.add(bot);
+    final generation = ++_runGeneration;
+    if (!pluginRuntime) {
+      for (var ev in events) {
+        ev.add(bot);
+      }
     }
     bot.onError((err) {
-      debugPrint('❌ bot error: $err');
+      if (generation != _runGeneration) return;
+      runtimeError =
+          'Telegram polling stopped. Check the bot token and connection, then restart.';
+      _active = false;
+      onRunningChanged?.call();
     });
-    bot.start();
+    // start() runs for the lifetime of polling; don't await that loop here.
+    unawaited(
+      bot.start().catchError((Object error) {
+        if (generation != _runGeneration) return;
+        _active = false;
+        onRunningChanged?.call();
+        debugPrint('Bot could not start. Check its token and connection.');
+      }),
+    );
     _active = true;
+    onRunningChanged?.call();
   }
 
   Future<void> stop() async {
+    _runGeneration++;
     await bot.stop();
     bot = Bot(token);
+    _attachInbox();
     _active = false;
+    onRunningChanged?.call();
   }
 
   Future<void> toggle() async {

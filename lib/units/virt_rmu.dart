@@ -21,13 +21,10 @@ class VirtRMUKeyboard implements VirtRMU {
   @HiveField(0)
   @override
   String? name;
-
   @HiveField(1)
   List<String?> items = [];
-
   @override
   get type => VirtRMUType.keyboard;
-
   @override
   ReplyMarkup hydrate() {
     var rmu = Keyboard();
@@ -42,20 +39,14 @@ class VirtRMUKeyboard implements VirtRMU {
   }
 
   @override
-  VirtRMU copy(String name) {
-    return VirtRMUKeyboard()
-      ..items = items
-      ..name = name;
-  }
-
+  VirtRMU copy(String name) =>
+      VirtRMUKeyboard()
+        ..items = List.of(items)
+        ..name = name;
   @override
   int callsEvent(VirtEvent ev) {
-    int count = 0;
-    if (ev.type != VirtEventType.text) return count;
-    for (final item in items) {
-      if (item == ev.query) count++;
-    }
-    return count;
+    if (ev.type != VirtEventType.text) return 0;
+    return items.where((item) => item == ev.query).length;
   }
 }
 
@@ -64,13 +55,10 @@ class VirtRMUInlineKeyboard implements VirtRMU {
   @HiveField(0)
   @override
   String? name;
-
   @HiveField(1)
   List<KeyValue?> items = [];
-
   @override
   get type => VirtRMUType.inlineKeyboard;
-
   @override
   ReplyMarkup hydrate() {
     var rmu = InlineKeyboard();
@@ -87,20 +75,20 @@ class VirtRMUInlineKeyboard implements VirtRMU {
   }
 
   @override
-  VirtRMU copy(String name) {
-    return VirtRMUInlineKeyboard()
-      ..items = items
-      ..name = name;
-  }
-
+  VirtRMU copy(String name) =>
+      VirtRMUInlineKeyboard()
+        ..items =
+            items
+                .map(
+                  (item) =>
+                      item == null ? null : KeyValue(item.key, item.value),
+                )
+                .toList()
+        ..name = name;
   @override
   int callsEvent(VirtEvent ev) {
-    int count = 0;
-    if (ev.type != VirtEventType.callbackQuery) return count;
-    for (final item in items) {
-      if (item?.value == ev.query) count++;
-    }
-    return count;
+    if (ev.type != VirtEventType.callbackQuery) return 0;
+    return items.where((item) => item?.value == ev.query).length;
   }
 }
 
@@ -110,6 +98,5 @@ class KeyValue {
   String key;
   @HiveField(1)
   String value;
-
   KeyValue(this.key, this.value);
 }

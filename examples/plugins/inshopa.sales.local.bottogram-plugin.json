@@ -1,0 +1,140 @@
+{
+  "manifestVersion": 2,
+  "hostApiMajor": 2,
+  "id": "bottogram-plugin-inshopa-local",
+  "name": "Inshopa (local development)",
+  "version": "0.5.0",
+  "executionStatus": "live",
+  "description": "Local development version of products and paid-order alerts. Calls the WSL API at 127.0.0.1:8080; suitable for the Linux preview.",
+  "requiresBotFields": [
+    "adminTelegramUserId"
+  ],
+  "setupFields": [
+    {
+      "key": "apiKey",
+      "label": "Inshopa API key",
+      "type": "secret",
+      "required": true,
+      "helpText": "Enable storefront:read for products and shop:orders:read for purchase alerts on this shop’s key."
+    },
+    {
+      "key": "storefrontUrl",
+      "label": "Storefront URL",
+      "type": "text",
+      "required": true,
+      "helpText": "The exact registered shop origin including its scheme. No separate shop ID is needed."
+    }
+  ],
+  "settings": [
+    {
+      "key": "notifyNewSuccessfulPurchases",
+      "type": "boolean",
+      "label": "آگاه شدن از آخرین خرید های موفق",
+      "default": true,
+      "helpText": "Notify the admin about orders first observed as paid after the initial history scan. Requires shop:orders:read."
+    }
+  ],
+  "automations": [
+    {
+      "id": "products",
+      "trigger": {
+        "type": "telegram.command.v1",
+        "config": {
+          "command": "products",
+          "arguments": "page"
+        }
+      },
+      "actions": [
+        {
+          "id": "load-products",
+          "type": "http.get-json.v1",
+          "config": {
+            "request": {
+              "method": "GET",
+              "url": "http://127.0.0.1:8080/v1/storefront/products",
+              "storefrontUrlField": "storefrontUrl",
+              "authentication": {
+                "type": "bearer",
+                "secretField": "apiKey"
+              }
+            },
+            "pagination": {
+              "pageSize": 10
+            },
+            "resultKey": "catalog"
+          }
+        },
+        {
+          "id": "reply-products",
+          "type": "telegram.reply.v1",
+          "config": {
+            "text": "Products · page {{event.page}}\nNext page: /products {{event.nextPage}}",
+            "list": {
+              "itemsPath": "results.catalog.products",
+              "itemText": "• {{item.title}}",
+              "emptyText": "No products on this page."
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "paid-orders",
+      "enabledBySetting": "notifyNewSuccessfulPurchases",
+      "trigger": {
+        "type": "http.poll-list.v1",
+        "config": {
+          "intervalSeconds": 60,
+          "initialSync": "baseline",
+          "lookup": {
+            "request": {
+              "method": "GET",
+              "url": "http://127.0.0.1:8080/v1/storefront",
+              "storefrontUrlField": "storefrontUrl",
+              "authentication": {
+                "type": "bearer",
+                "secretField": "apiKey"
+              }
+            },
+            "bindings": {
+              "shopId": "id"
+            }
+          },
+          "request": {
+            "method": "GET",
+            "url": "http://127.0.0.1:8080/v1/shops/{shopId}/orders",
+            "storefrontUrlField": "storefrontUrl",
+            "authentication": {
+              "type": "bearer",
+              "secretField": "apiKey"
+            }
+          },
+          "response": {
+            "itemsPath": "orders",
+            "itemIdPath": "id"
+          },
+          "filter": {
+            "path": "status",
+            "equals": "paid"
+          },
+          "pagination": {
+            "limitQueryParameter": "limit",
+            "offsetQueryParameter": "offset",
+            "pageSize": 100,
+            "maxPages": 1000,
+            "pageDelaySeconds": 2
+          }
+        }
+      },
+      "actions": [
+        {
+          "id": "notify-admin",
+          "type": "telegram.notify-admin.v1",
+          "config": {
+            "text": "New paid order\nShop: {{event.shop_name}}\nOrder: {{event.id}}\nAmount: {{event.total_irr}} {{event.currency}}"
+          }
+        }
+      ]
+    }
+  ]
+}

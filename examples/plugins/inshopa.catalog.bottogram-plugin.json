@@ -1,0 +1,47 @@
+{
+  "manifestVersion": 2,
+  "hostApiMajor": 2,
+  "id": "bottogram-plugin-inshopa",
+  "name": "Inshopa",
+  "version": "0.4.0",
+  "executionStatus": "live",
+  "description": "Browse this shop’s published products with /products. Available to anyone chatting with the bot. Purchase alerts are not enabled in this version.",
+  "requiresBotFields": ["adminTelegramUserId"],
+  "setupFields": [
+    {
+      "key": "apiKey", "label": "Inshopa API key", "type": "secret", "required": true,
+      "helpText": "A storefront:read key registered for this shop in the target Inshopa environment."
+    },
+    {
+      "key": "storefrontUrl", "label": "Storefront URL", "type": "text", "required": true,
+      "helpText": "The exact registered shop origin including its scheme. This supplies Origin and X-Storefront-Host."
+    }
+  ],
+  "automations": [
+    {
+      "id": "products",
+      "trigger": {"type": "telegram.command.v1", "config": {"command": "products", "arguments": "page"}},
+      "actions": [
+        {
+          "id": "load-products", "type": "http.get-json.v1",
+          "config": {
+            "request": {
+              "method": "GET", "url": "https://api.inshopa.ir/v1/storefront/products",
+              "storefrontUrlField": "storefrontUrl",
+              "authentication": {"type": "bearer", "secretField": "apiKey"}
+            },
+            "pagination": {"pageSize": 10},
+            "resultKey": "catalog"
+          }
+        },
+        {
+          "id": "reply-products", "type": "telegram.reply.v1",
+          "config": {
+            "text": "Products · page {{event.page}}\nNext page: /products {{event.nextPage}}",
+            "list": {"itemsPath": "results.catalog.products", "itemText": "• {{item.title}}", "emptyText": "No products on this page."}
+          }
+        }
+      ]
+    }
+  ]
+}

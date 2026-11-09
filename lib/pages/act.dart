@@ -1,6 +1,7 @@
 // ignore_for_file: use_build_context_synchronously
 
-import 'package:bottogram/decorations/input.dart';
+import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/ui/dialogs.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -35,6 +36,12 @@ class _ActPageState extends State<ActPage> {
   void initState() {
     ctrlText.text = widget.act.text;
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    ctrlText.dispose();
+    super.dispose();
   }
 
   Future<void> _autoAddEventsOfRMU() async {
@@ -75,63 +82,92 @@ class _ActPageState extends State<ActPage> {
         break;
     }
 
-    if (newEvs.isNotEmpty) {
+    if (newEvs.isNotEmpty && mounted) {
       final evNames = newEvs.mapToList((ev) => '${ev.type.name}/${ev.query}');
       context.showSnackBar('Added new event: ${evNames.join(', ')}');
     }
   }
 
-  void _save() async {
-    widget.act.text = ctrlText.text; // update text
+  Future<void> _save() async {
+    widget.act.text = ctrlText.text;
     await _autoAddEventsOfRMU();
+    if (!mounted) return;
+    context.read<BotsCubit>().update();
+    Navigator.pop(context);
+  }
+
+  Future<void> _remove() async {
+    final accepted = await confirmRemoval(
+      context,
+      title: 'Delete action?',
+      message: 'Remove this action from the event?',
+      action: 'Delete action',
+    );
+    if (!accepted || !mounted) return;
+    widget.ev.acts.remove(widget.act);
     context.read<BotsCubit>().update();
     Navigator.pop(context);
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.act.text),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.delete),
-            onPressed: () {
-              widget.ev.acts.remove(widget.act);
-              context.read<BotsCubit>().update();
-              Navigator.of(context).pop();
-            },
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _save,
-        tooltip: 'Save',
-        child: const Icon(Icons.check),
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 18),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            spacing: 12,
-            children: <Widget>[
-              Text('Reply Message'),
-              TextField(
-                controller: ctrlText,
-                keyboardType: TextInputType.multiline,
-                maxLines: 8,
-                decoration: inputDecorationCommon(context),
+  Widget build(BuildContext context) => Scaffold(
+    appBar: AppBar(
+      title: const Text('Action editor'),
+      actions: [
+        IconButton(
+          tooltip: 'Delete action',
+          icon: const Icon(Icons.delete_outline),
+          onPressed: _remove,
+        ),
+      ],
+    ),
+    body: SingleChildScrollView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      child: BContent(
+        maxWidth: 840,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            BHeading(
+              title:
+                  widget.act.type == VirtActType.reply
+                      ? 'Reply message'
+                      : 'Dice action',
+              subtitle: 'For the “${widget.ev.query}” event.',
+            ),
+            const SizedBox(height: 28),
+            BPanel(
+              child: BSection(
+                title: 'Message',
+                description:
+                    widget.act.type == VirtActType.dice
+                        ? 'This action sends a dice animation. Its text is used as a label in Bottogram.'
+                        : 'Write the message your bot will send.',
+                child: TextField(
+                  controller: ctrlText,
+                  keyboardType: TextInputType.multiline,
+                  minLines: 5,
+                  maxLines: 10,
+                  decoration: const InputDecoration(
+                    labelText: 'Action text',
+                    alignLabelWithHint: true,
+                    hintText: 'Write your reply…',
+                  ),
+                ),
               ),
-              SizedBox(height: 32),
-              RMUEditor(act: widget.act),
-              SizedBox(height: 72),
-            ],
-          ),
+            ),
+            const SizedBox(height: 20),
+            BPanel(child: RMUEditor(act: widget.act)),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.check_rounded),
+              label: const Text('Save action'),
+            ),
+            const SizedBox(height: 24),
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
 }

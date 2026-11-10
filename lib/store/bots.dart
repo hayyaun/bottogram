@@ -394,7 +394,9 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       final file = XFile('${dir.path}/$exportBoxName.hive');
       final formattedDate = DateFormat('yyyy-MM-dd').format(DateTime.now());
       final subject = 'Bottogram Data - $formattedDate';
-      return await Share.shareXFiles([file], subject: subject);
+      return await SharePlus.instance.share(
+        ShareParams(files: [file], subject: subject),
+      );
     } catch (err) {
       debugPrint('❌ Share > $err');
       return null;
@@ -434,16 +436,15 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   }
 
   Future<bool> pickAndSaveFile() async {
-    final result = await FilePicker.platform.pickFiles(
-      allowMultiple: false,
+    final file = await FilePicker.pickFile(
       dialogTitle: 'Pick a backup file',
       type: FileType.any,
     );
-    if (result == null || result.files.single.path == null) {
+    if (file == null || file.path == null) {
       debugPrint('❌ No file selected.');
       return false;
     }
-    final selectedFile = File(result.files.single.path!);
+    final selectedFile = File(file.path!);
     final appDocDir = await getApplicationDocumentsDirectory();
     final targetFile = File('${appDocDir.path}/$importBoxName.hive');
     await selectedFile.copy(targetFile.path); // create/overwrite

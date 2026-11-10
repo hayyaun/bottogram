@@ -28,6 +28,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:provider/provider.dart' show ChangeNotifierProvider;
+import 'package:share_plus/share_plus.dart' show XFile;
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -78,30 +79,48 @@ class MemoryCatalog extends PluginRepository {
   }
 }
 
-class TestPicker extends FilePicker {
-  TestPicker(this.bytes);
-  final List<int> bytes;
+class TestPicker extends FilePickerPlatform {
+  TestPicker(this.file);
+  final PlatformFile? file;
+
   @override
-  Future<FilePickerResult?> pickFiles({
+  Future<PlatformFile?> pickFile({
     String? dialogTitle,
     String? initialDirectory,
     FileType type = FileType.any,
     List<String>? allowedExtensions,
     Function(FilePickerStatus)? onFileLoading,
-    bool allowCompression = false,
     int compressionQuality = 0,
-    bool allowMultiple = false,
-    bool withData = false,
-    bool withReadStream = false,
-    bool lockParentWindow = false,
-    bool readSequential = false,
-  }) async => FilePickerResult([
-    PlatformFile(
-      name: 'inshopa.bottogram-plugin.json',
-      size: bytes.length,
-      readStream: Stream.value(bytes),
-    ),
-  ]);
+    AndroidOptions androidOptions = const AndroidOptions(),
+    DarwinOptions darwinOptions = const DarwinOptions(),
+    WindowsOptions windowsOptions = const WindowsOptions(),
+    LinuxOptions linuxOptions = const LinuxOptions(),
+    WebOptions webOptions = const WebOptions(),
+  }) async => file;
+}
+
+final class TestPickedFile extends PlatformFile {
+  TestPickedFile(List<int> bytes, {this.knownLength = true})
+    : bytes = Uint8List.fromList(bytes);
+  final Uint8List bytes;
+  final bool knownLength;
+
+  @override
+  String get name => 'inshopa.bottogram-plugin.json';
+  @override
+  Uri get uri => Uri.dataFromBytes(bytes);
+  @override
+  XFile get xFile => XFile.fromData(bytes, name: name);
+  @override
+  int? lengthSync() => knownLength ? bytes.length : null;
+  @override
+  Future<int?> length() async => lengthSync();
+  @override
+  Future<Uint8List> readAsBytes() async => bytes;
+  @override
+  Stream<Uint8List> readAsByteStream() async* {
+    yield bytes;
+  }
 }
 
 void main() {
@@ -698,9 +717,12 @@ void main() {
     'file import requires review and then adds the package to the catalog',
     (tester) async {
       final catalog = MemoryCatalog();
-      FilePicker.platform = TestPicker(utf8.encode(jsonEncode(definition())));
+      final previousPicker = FilePickerPlatform.instance;
+      FilePickerPlatform.instance = TestPicker(
+        TestPickedFile(utf8.encode(jsonEncode(definition()))),
+      );
       addTearDown(() {
-        FilePicker.platform = TestPicker([]);
+        FilePickerPlatform.instance = previousPicker;
         catalog.dispose();
       });
       await tester.pumpWidget(
@@ -719,6 +741,67 @@ void main() {
     },
   );
 
+  testWidgets('canceling plugin file import leaves the catalog unchanged', (
+    tester,
+  ) async {
+    final catalog = MemoryCatalog();
+    final previousPicker = FilePickerPlatform.instance;
+    FilePickerPlatform.instance = TestPicker(null);
+    addTearDown(() {
+      FilePickerPlatform.instance = previousPicker;
+      catalog.dispose();
+    });
+    await tester.pumpWidget(
+      MaterialApp(home: PluginsPage(repository: catalog)),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Install from file'));
+    await tester.pumpAndSettle();
+    expect(catalog.installed, isEmpty);
+    expect(find.byType(AlertDialog), findsNothing);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  for (final knownLength in [true, false]) {
+    testWidgets(
+      'plugin import limits oversized files with ${knownLength ? 'known' : 'unknown'} length',
+      (tester) async {
+        final catalog = MemoryCatalog();
+        final previousPicker = FilePickerPlatform.instance;
+        FilePickerPlatform.instance = TestPicker(
+          TestPickedFile(
+            Uint8List(maxPluginBytes + 1),
+            knownLength: knownLength,
+          ),
+        );
+        addTearDown(() {
+          FilePickerPlatform.instance = previousPicker;
+          catalog.dispose();
+        });
+        await tester.pumpWidget(
+          MaterialApp(home: PluginsPage(repository: catalog)),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('Install from file'));
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            knownLength
+                ? 'Choose a readable JSON plugin file up to 256 KiB.'
+                : 'The plugin file exceeds 256 KiB.',
+          ),
+          findsOneWidget,
+        );
+        expect(catalog.installed, isEmpty);
+        expect(find.byType(AlertDialog), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
+  }
+
   test(
     'bundled Inshopa appears without import, seeds once, and respects ordinary uninstall',
     () async {
@@ -727,7 +810,7 @@ void main() {
       expect(bundled.installed.map((p) => p.id).toSet(), {
         'bottogram-plugin-inshopa',
       });
-      expect(bundled.installed.single.version, '0.7.0');
+      expect(bundled.installed.single.version, '0.7.1');
       expect(bundled.installed.single.executable, isTrue);
       final reopened = PluginRepository(vault: vault);
       await reopened.ready;

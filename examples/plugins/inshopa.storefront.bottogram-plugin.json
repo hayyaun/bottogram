@@ -3,7 +3,7 @@
   "hostApiMajor": 2,
   "id": "bottogram-plugin-inshopa",
   "name": "این شاپا",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "executionStatus": "live",
   "description": "دسترسی به فروشگاه و سفارش های خریدار در تلگرام با پیام های فارسی و اعلان سفارش های پرداخت شده برای مدیر فروشگاه.",
   "requiresBotFields": [
@@ -15,21 +15,14 @@
       "label": "کلید API فروشگاه",
       "type": "secret",
       "required": true,
-      "helpText": "کلید همین فروشگاه با مجوزهای storefront:read و shop:orders:read برای اعلان سفارش ها. کلید در پیام ها و آدرس عمومی فروشگاه قرار نمی گیرد."
-    },
-    {
-      "key": "apiOrigin",
-      "label": "آدرس ثبت شده برای کلید API",
-      "type": "text",
-      "required": true,
-      "helpText": "آدرس کامل دامنه ثبت شده برای این کلید با همان http:// یا https:// و پورت. دامنه بدون پیشوند با HTTPS تفسیر می شود. آدرس سرور API را اینجا وارد نکنید."
+      "helpText": "کلید API همین فروشگاه با مجوزهای storefront:read و shop:orders:read را وارد کنید. آدرس فروشگاه باید همان آدرس ثبت شده برای این کلید باشد. کلید در پیام ها و آدرس عمومی فروشگاه قرار نمی گیرد."
     },
     {
       "key": "storefrontUrl",
-      "label": "آدرس عمومی فروشگاه در تلگرام",
+      "label": "آدرس HTTPS فروشگاه",
       "type": "text",
       "required": true,
-      "helpText": "آدرس عمومی فروشگاه برای دکمه های تلگرام. دامنه بدون پیشوند با HTTPS باز می شود. این آدرس می تواند از آدرس ثبت شده برای کلید API متفاوت باشد."
+      "helpText": "آدرس همین فروشگاه را مطابق آدرس ثبت شده برای کلید API وارد کنید، مانند shop.example.com یا https://shop.example.com. دامنه بدون پیشوند با HTTPS باز می شود. آدرس سرور API را وارد نکنید."
     }
   ],
   "settings": [
@@ -310,11 +303,11 @@
               },
               "headers": {
                 "Origin": {
-                  "field": "apiOrigin",
+                  "field": "storefrontUrl",
                   "transform": "url.origin"
                 },
                 "X-Storefront-Host": {
-                  "field": "apiOrigin",
+                  "field": "storefrontUrl",
                   "transform": "url.authority"
                 }
               }
@@ -332,11 +325,11 @@
             },
             "headers": {
               "Origin": {
-                "field": "apiOrigin",
+                "field": "storefrontUrl",
                 "transform": "url.origin"
               },
               "X-Storefront-Host": {
-                "field": "apiOrigin",
+                "field": "storefrontUrl",
                 "transform": "url.authority"
               }
             }
@@ -445,13 +438,13 @@
     "shopUrlInvalid": {
       "title": "آدرس عمومی فروشگاه نیاز به اصلاح دارد",
       "message": "دکمه های تلگرام به یک آدرس معتبر HTTPS برای فروشگاه نیاز دارند.",
-      "help": "دامنه ای مانند shop.example.com یا آدرس https://shop.example.com وارد کنید. مسیر صفحه، اطلاعات ورود و پارامتر اضافی ننویسید.",
+      "help": "آدرس HTTPS همین فروشگاه را مطابق آدرس ثبت شده برای کلید API وارد کنید. مسیر صفحه، اطلاعات ورود و پارامتر اضافی ننویسید. آدرس سرور API را وارد نکنید.",
       "action": "editPluginParameters"
     },
     "apiOriginInvalid": {
       "title": "آدرس ثبت شده برای کلید API معتبر نیست",
       "message": "آدرس اتصال باید فقط شامل پیشوند، دامنه و در صورت ثبت، پورت باشد.",
-      "help": "همان آدرس ثبت شده برای کلید را وارد کنید. اگر ثبت با HTTP انجام شده، http:// را صریح بنویسید. مسیر صفحه و پارامتر اضافی ننویسید.",
+      "help": "آدرس HTTPS همین فروشگاه را مطابق آدرس ثبت شده برای کلید API وارد کنید. فقط دامنه و در صورت ثبت، پورت را بنویسید. آدرس سرور API را وارد نکنید.",
       "action": "editPluginParameters"
     },
     "headerValuesInvalid": {

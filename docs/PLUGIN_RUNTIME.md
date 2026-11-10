@@ -17,13 +17,13 @@ public-field references. A reference contains `field` and one of the transforms
 parser and require a complete HTTP/HTTPS origin without userinfo, page path,
 query or fragment. URL transforms use `Uri` encoding. Header values must contain
 only printable ASCII or horizontal tab, matching the installed Dart HTTP
-transport. For example, the Inshopa package owns this declaration:
+transport. For example, the production Inshopa package owns this declaration:
 
 ```json
 {
   "headers": {
-    "Origin": {"field": "apiOrigin", "transform": "url.origin"},
-    "X-Storefront-Host": {"field": "apiOrigin", "transform": "url.authority"}
+    "Origin": {"field": "storefrontUrl", "transform": "url.origin"},
+    "X-Storefront-Host": {"field": "storefrontUrl", "transform": "url.authority"}
   },
   "authentication": {"type": "bearer", "secretField": "apiKey"}
 }
@@ -60,10 +60,19 @@ host failure code to a resource ID. The resource must exist in that package.
 For example, a polling trigger can map `http.unauthorized` and `http.forbidden`
 to separate credential and registration guidance, while `poll.scan_limit_exceeded`
 maps to the package's `orderScanLimit`. A Mini App reply maps
-`configuration.invalid_public_origin` to `shopUrlInvalid`. The 0.7.0 Inshopa
-definitions keep their Persian messages, commands and error resources in JSON.
-Their `apiOrigin` controls API registration headers; `storefrontUrl` controls
-public Mini App links. The host gives neither field a service-specific meaning.
+`configuration.invalid_public_origin` to `shopUrlInvalid`. Production Inshopa
+0.7.1 keeps its Persian messages, commands and error resources in JSON. Its two
+setup inputs are the shop API key and the shop's registered HTTPS URL. The same
+URL supplies the public Mini App links and API registration headers; the API
+server endpoint remains fixed in the package and is not a setup input. The key
+and URL must belong to the same shop. Bare domains are normalized to HTTPS by
+the generic host URL handling.
+
+The local development example remains at 0.7.0. It declares a separate
+`apiOrigin` for API registration headers and `storefrontUrl` for public Mini App
+links, allowing an HTTP development registration and an independent HTTPS
+navigation destination. Both arrangements use the same generic field-binding
+contract; the host gives neither field a service-specific meaning.
 
 The host controls permanence, retry timing, delivery uncertainty and stopping an
 automation. Messages cannot override those decisions. Resource text is plain
@@ -82,9 +91,12 @@ were no delivery receipts to copy. No bot was restarted. Automated checks and
 reopening the normal Linux debug preview verified the transitioned data.
 
 That historical 0.5.0 test bot was subsequently deleted by the user. Installing
-a package does not apply it to an existing bot. The new 0.7.0 definitions add a
-required API-origin input, so the compatible updater does not silently apply
-them to 0.6.0 setups or reuse their progress without a designed transition.
+a package does not apply it to an existing bot. The 0.7.0 definitions added a
+required API-origin input; production 0.7.1 removes that extra input in a new
+immutable package version. The compatible updater rejects the setup-schema
+difference from 0.7.0. Earlier versions can also differ in seller execution, so
+these package imports do not silently repin existing bots or reuse their progress
+without a designed transition.
 
 ## Current contract verification — 2026-11-10
 

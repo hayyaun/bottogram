@@ -1,5 +1,4 @@
 import 'dart:typed_data';
-import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -55,23 +54,19 @@ class _PluginsPageState extends State<PluginsPage> {
       _error = null;
     });
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final file = await FilePicker.pickFile(
         type: FileType.custom,
         allowedExtensions: ['json'],
-        withReadStream: true,
       );
-      if (result == null) return;
-      final file = result.files.single;
-      final stream =
-          file.readStream ??
-          (file.path == null ? null : File(file.path!).openRead());
-      if (file.size > maxPluginBytes || stream == null) {
+      if (file == null) return;
+      final length = file.lengthSync() ?? await file.length();
+      if (length != null && length > maxPluginBytes) {
         throw const PluginException(
           'Choose a readable JSON plugin file up to 256 KiB.',
         );
       }
       final builder = BytesBuilder(copy: false);
-      await for (final chunk in stream) {
+      await for (final chunk in file.readAsByteStream()) {
         if (builder.length + chunk.length > maxPluginBytes) {
           throw const PluginException('The plugin file exceeds 256 KiB.');
         }

@@ -218,100 +218,104 @@ class PluginHarness {
 }
 
 void main() {
-  test(
-    'plugin JSON drives every buyer command and direct Mini App destination through the real SDK',
-    () async {
-      final h = await PluginHarness.create();
-      try {
-        await h.runtime.start(h.bot);
-        for (final command in [
-          'start',
-          'menu',
-          'shop',
-          'products',
-          'store',
-          'orders',
-          'myorders',
-          'help',
-          'guide',
-          'support',
-        ]) {
-          await h.command(command, suffix: command == 'products' ? ' 2' : '');
-          final reply = h.api.messages.last;
-          final rows =
-              (reply['reply_markup'] as Map)['inline_keyboard'] as List;
-          final buttons = rows
-              .expand((row) => (row as List).cast<Map>())
-              .toList();
-          final orderFirst = {
+  for (final package in ['inshopa.storefront', 'inshopa.storefront.local']) {
+    test(
+      '$package JSON drives every buyer command and direct Mini App destination through the real SDK',
+      () async {
+        final h = await PluginHarness.create(package: package);
+        try {
+          await h.runtime.start(h.bot);
+          for (final command in [
+            'start',
+            'menu',
+            'shop',
+            'products',
+            'store',
             'orders',
             'myorders',
+            'help',
+            'guide',
             'support',
-          }.contains(command);
-          expect(
-            buttons.map((b) => b['text']),
-            orderFirst
-                ? ['سفارش های من', 'ورود به فروشگاه']
-                : ['ورود به فروشگاه', 'سفارش های من'],
+          ]) {
+            await h.command(command, suffix: command == 'products' ? ' 2' : '');
+            final reply = h.api.messages.last;
+            final rows =
+                (reply['reply_markup'] as Map)['inline_keyboard'] as List;
+            final buttons = rows
+                .expand((row) => (row as List).cast<Map>())
+                .toList();
+            final orderFirst = {
+              'orders',
+              'myorders',
+              'support',
+            }.contains(command);
+            expect(
+              buttons.map((b) => b['text']),
+              orderFirst
+                  ? ['سفارش های من', 'ورود به فروشگاه']
+                  : ['ورود به فروشگاه', 'سفارش های من'],
+            );
+            expect(buttons[orderFirst ? 0 : 1]['web_app'], {
+              'url': 'https://shop.example.test/orders',
+            });
+            expect(buttons[orderFirst ? 1 : 0]['web_app'], {
+              'url': 'https://shop.example.test/',
+            });
+            expect(rows.every((row) => (row as List).length == 1), isTrue);
+            expect(reply['text'], matches(RegExp(r'^[\u0600-\u06ff]')));
+            expect(jsonEncode(reply), isNot(contains('seller-key')));
+            expect(
+              buttons.every(
+                (b) =>
+                    !b.containsKey('callback_data') &&
+                    !b.containsKey('login_url'),
+              ),
+              isTrue,
+            );
+          }
+          await until(
+            () => h.api.calls.any((c) => c.$1 == 'setChatMenuButton'),
           );
-          expect(buttons[orderFirst ? 0 : 1]['web_app'], {
-            'url': 'https://shop.example.test/orders',
-          });
-          expect(buttons[orderFirst ? 1 : 0]['web_app'], {
-            'url': 'https://shop.example.test/',
-          });
-          expect(rows.every((row) => (row as List).length == 1), isTrue);
-          expect(reply['text'], matches(RegExp(r'^[\u0600-\u06ff]')));
-          expect(jsonEncode(reply), isNot(contains('seller-key')));
-          expect(
-            buttons.every(
-              (b) =>
-                  !b.containsKey('callback_data') &&
-                  !b.containsKey('login_url'),
-            ),
-            isTrue,
-          );
-        }
-        await until(() => h.api.calls.any((c) => c.$1 == 'setChatMenuButton'));
-        final menu =
-            h.api.calls
-                    .firstWhere((c) => c.$1 == 'setChatMenuButton')
-                    .$2['menu_button']
-                as Map;
-        expect(menu['text'], 'ورود به فروشگاه');
-        expect(menu['web_app'], {'url': 'https://shop.example.test/'});
-        await until(() => h.api.calls.any((c) => c.$1 == 'setMyCommands'));
-        final registered = h.api.calls
-            .firstWhere((c) => c.$1 == 'setMyCommands')
-            .$2;
-        expect(registered['commands'], h.manifest.telegram!['commands']);
-        expect(registered['scope'], {'type': 'all_private_chats'});
-        expect(registered['language_code'] ?? '', isEmpty);
-        final before = h.api.messages.length;
-        await h.api.command('shop', chat: -100);
-        await h.api.bot.handleUpdate(
-          Update.fromJson({
-            'update_id': 200,
-            'message': {
-              'message_id': 200,
-              'date': 1700000000,
-              'chat': {'id': 42, 'type': 'private'},
-              'from': {'id': 42, 'is_bot': false, 'first_name': 'Buyer'},
-              'web_app_data': {
-                'button_text': 'Unexpected data',
-                'data': 'not-an-auth-channel',
+          final menu =
+              h.api.calls
+                      .firstWhere((c) => c.$1 == 'setChatMenuButton')
+                      .$2['menu_button']
+                  as Map;
+          expect(menu['text'], 'ورود به فروشگاه');
+          expect(menu['web_app'], {'url': 'https://shop.example.test/'});
+          await until(() => h.api.calls.any((c) => c.$1 == 'setMyCommands'));
+          final registered = h.api.calls
+              .firstWhere((c) => c.$1 == 'setMyCommands')
+              .$2;
+          expect(registered['commands'], h.manifest.telegram!['commands']);
+          expect(registered['scope'], {'type': 'all_private_chats'});
+          expect(registered['language_code'] ?? '', isEmpty);
+          final before = h.api.messages.length;
+          await h.api.command('shop', chat: -100);
+          await h.api.bot.handleUpdate(
+            Update.fromJson({
+              'update_id': 200,
+              'message': {
+                'message_id': 200,
+                'date': 1700000000,
+                'chat': {'id': 42, 'type': 'private'},
+                'from': {'id': 42, 'is_bot': false, 'first_name': 'Buyer'},
+                'web_app_data': {
+                  'button_text': 'Unexpected data',
+                  'data': 'not-an-auth-channel',
+                },
               },
-            },
-          }),
-        );
-        expect(h.api.messages.length, before);
-        expect(h.http.requests, isEmpty);
-        expect(h.bot.active, isTrue);
-      } finally {
-        await h.close();
-      }
-    },
-  );
+            }),
+          );
+          expect(h.api.messages.length, before);
+          expect(h.http.requests, isEmpty);
+          expect(h.bot.active, isTrue);
+        } finally {
+          await h.close();
+        }
+      },
+    );
+  }
 
   test(
     'old pinned package executes its own catalog declaration without host overrides',
@@ -343,8 +347,19 @@ void main() {
     test(
       'prepared seller namespace resumes copied progress ($acknowledged) without rebaselining or replaying receipts',
       () async {
-        final h = await PluginHarness.create(notify: true, failMenu: true);
+        final h = await PluginHarness.create(
+          notify: true,
+          failMenu: true,
+          origin: acknowledged
+              ? 'shop.example.test'
+              : 'https://shop.example.test',
+        );
         final setup = h.bot.setup!;
+        expect(h.manifest.fields.map((field) => field.key), [
+          'apiKey',
+          'storefrontUrl',
+        ]);
+        expect(setup.values.containsKey('apiOrigin'), isFalse);
         final snapshot = jsonEncode(setup.toMap());
         final oldKey =
             '${setup.instanceId}:${shipped('inshopa.sales').digest}:paid-orders';
@@ -447,9 +462,8 @@ void main() {
           expect(
             h.http.requests.every(
               (request) =>
-                  request.$2['Origin'] == 'http://registered-shop.localhost' &&
-                  request.$2['X-Storefront-Host'] ==
-                      'registered-shop.localhost',
+                  request.$2['Origin'] == 'https://shop.example.test' &&
+                  request.$2['X-Storefront-Host'] == 'shop.example.test',
             ),
             isTrue,
           );
@@ -463,12 +477,18 @@ void main() {
   }
 
   test(
-    'invalid website origin and failed command delivery do not stop independent seller alerts',
+    'local example keeps seller origin independent of invalid Telegram website origin',
     () async {
       final h = await PluginHarness.create(
+        package: 'inshopa.storefront.local',
         notify: true,
         origin: 'http://localhost:3000',
       );
+      expect(h.manifest.fields.map((field) => field.key), [
+        'apiKey',
+        'apiOrigin',
+        'storefrontUrl',
+      ]);
       final key = '${h.bot.setup!.instanceId}:${h.manifest.digest}:paid-orders';
       h.progress.values[key] = {'initialized': true};
       h.http.responses.addAll([
@@ -512,17 +532,20 @@ void main() {
       } finally {
         await h.close();
       }
-      final failed = await PluginHarness.create();
-      try {
-        failed.api.failMessages = true;
-        await failed.runtime.start(failed.bot);
-        await failed.api.command('shop');
-        await until(() => failed.runtime.errorFor(failed.bot) != null);
-        expect(failed.bot.active, isTrue);
-        expect(failed.api.errors, isEmpty);
-      } finally {
-        await failed.close();
-      }
     },
   );
+
+  test('failed buyer delivery does not stop the bot', () async {
+    final failed = await PluginHarness.create();
+    try {
+      failed.api.failMessages = true;
+      await failed.runtime.start(failed.bot);
+      await failed.api.command('shop');
+      await until(() => failed.runtime.errorFor(failed.bot) != null);
+      expect(failed.bot.active, isTrue);
+      expect(failed.api.errors, isEmpty);
+    } finally {
+      await failed.close();
+    }
+  });
 }

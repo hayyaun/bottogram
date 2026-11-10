@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:collection';
 import 'ports.dart';
 import 'http_request.dart';
+import 'telegram_config.dart';
 
 class HttpPollTrigger implements AutomationTrigger {
   HttpPollTrigger(this.config, RuntimeContext context)
@@ -69,40 +70,48 @@ class HttpPollTrigger implements AutomationTrigger {
 
 class TelegramCommandTrigger implements AutomationTrigger {
   TelegramCommandTrigger(Json config, RuntimeContext context) {
-    context.telegram.command(config['command'] as String, (event) {
-      if (_closed) return;
-      if (config['arguments'] == 'page') {
-        final args = List<String>.from(event['arguments'] as List? ?? []);
-        final page = args.isEmpty ? 1 : int.tryParse(args.first);
-        if (args.length > 1 || page == null || page < 1 || page > 10000) {
+    final commands = config['commands'] as List? ?? [config['command']];
+    for (final command in commands) {
+      context.telegram.command(command as String, (event) {
+        if (_closed) return;
+        final chatTypes = config['chatTypes'] as List?;
+        if (chatTypes != null && !chatTypes.contains(event['chatType'])) return;
+        if (config['arguments'] == 'ignore') {
+          event = {...event}..remove('arguments');
+        }
+        if (config['arguments'] == 'page') {
+          final args = List<String>.from(event['arguments'] as List? ?? []);
+          final page = args.isEmpty ? 1 : int.tryParse(args.first);
+          if (args.length > 1 || page == null || page < 1 || page > 10000) {
+            unawaited(
+              context.telegram
+                  .send(
+                    event['chatId'].toString(),
+                    'Use /${config['command']} or /${config['command']} 2 for the next page.',
+                  )
+                  .catchError((Object _) {}),
+            );
+            return;
+          }
+          event = {...event, 'page': page};
+        }
+        if (_waiting != null) {
+          _waiting!.complete(TriggerBatch([event]));
+          _waiting = null;
+        } else if (_events.length < 32) {
+          _events.add(event);
+        } else {
           unawaited(
             context.telegram
                 .send(
                   event['chatId'].toString(),
-                  'Use /${config['command']} or /${config['command']} 2 for the next page.',
+                  'The bot is busy. Please try this command again shortly.',
                 )
                 .catchError((Object _) {}),
           );
-          return;
         }
-        event = {...event, 'page': page};
-      }
-      if (_waiting != null) {
-        _waiting!.complete(TriggerBatch([event]));
-        _waiting = null;
-      } else if (_events.length < 32) {
-        _events.add(event);
-      } else {
-        unawaited(
-          context.telegram
-              .send(
-                event['chatId'].toString(),
-                'The bot is busy. Please try this command again shortly.',
-              )
-              .catchError((Object _) {}),
-        );
-      }
-    });
+      });
+    }
   }
   final Queue<Json> _events = Queue();
   Completer<TriggerBatch>? _waiting;
@@ -149,8 +158,8 @@ class HttpGetAction implements AutomationAction {
           query: {
             if (pagination != null) 'limit': pagination['pageSize'].toString(),
             if (pagination != null)
-              'offset':
-                  ((page - 1) * (pagination['pageSize'] as int)).toString(),
+              'offset': ((page - 1) * (pagination['pageSize'] as int))
+                  .toString(),
           },
         ),
       },
@@ -182,10 +191,9 @@ class TelegramMessageAction implements AutomationAction {
           permanent: true,
         );
       }
-      text +=
-          items.isEmpty
-              ? '\n${list['emptyText']}'
-              : '\n${items.map((item) => render(list['itemText'] as String, event, item: item)).join('\n')}';
+      text += items.isEmpty
+          ? '\n${list['emptyText']}'
+          : '\n${items.map((item) => render(list['itemText'] as String, event, item: item)).join('\n')}';
     }
     // A list is split into acknowledged actions at the runner boundary by the
     // package author. Avoid silently truncating products or retrying partial sends.
@@ -195,7 +203,20 @@ class TelegramMessageAction implements AutomationAction {
         permanent: true,
       );
     }
-    await context.telegram.send(chatId, text);
+    Json? replyMarkup;
+    if (config['inlineKeyboard'] != null) {
+      if (event['chatType'] != 'private') {
+        throw const RuntimeFailure(
+          'Mini App replies require a private chat.',
+          permanent: true,
+        );
+      }
+      replyMarkup = resolveInlineKeyboard(
+        config['inlineKeyboard'],
+        context.fields,
+      );
+    }
+    await context.telegram.send(chatId, text, replyMarkup: replyMarkup);
     return event;
   }
 }

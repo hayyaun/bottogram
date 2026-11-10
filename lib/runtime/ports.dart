@@ -31,7 +31,7 @@ abstract interface class JsonTransport {
 abstract interface class TelegramPort {
   /// One shared Telegram session installs every command before it starts.
   void command(String command, void Function(Json event) receive);
-  Future<void> send(String chatId, String text);
+  Future<void> send(String chatId, String text, {Json? replyMarkup});
 }
 
 class RuntimeContext {

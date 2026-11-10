@@ -8,6 +8,8 @@ import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/plugins/settings_form.dart';
 import 'package:bottogram/plugins/parameters_page.dart';
 import 'package:bottogram/plugins/manifest.dart';
+import 'package:bottogram/plugins/capability_review.dart';
+import 'package:bottogram/plugins/update_section.dart';
 import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -254,11 +256,7 @@ class _BotPageState extends State<BotPage> {
                         for (final automation in manifest!.automations)
                           Padding(
                             padding: const EdgeInsets.only(top: 12),
-                            child: Text(
-                              automation.trigger.type == 'telegram.command.v1'
-                                  ? '/${automation.trigger.config['command']} · available to everyone'
-                                  : '${automation.id} · ${automation.trigger.type}',
-                            ),
+                            child: Text(automationSummary(automation)),
                           ),
                         const SizedBox(height: 20),
                         FilledButton.icon(
@@ -288,6 +286,8 @@ class _BotPageState extends State<BotPage> {
                   const SizedBox(height: 20),
                 ],
                 BPanel(child: _pluginSettings()),
+                if (manifest != null)
+                  PluginUpdateSection(bot: widget.bot, plugin: manifest),
               ] else ...[
                 BPanel(
                   child: BSection(

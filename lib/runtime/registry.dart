@@ -1,6 +1,7 @@
 import 'ports.dart';
 import 'components.dart';
 import 'triggers/http_list_poll.dart';
+import 'telegram_config.dart';
 
 typedef TriggerFactory =
     AutomationTrigger Function(Json config, RuntimeContext context);
@@ -59,8 +60,10 @@ class AutomationRegistry {
       (triggers[component.type] ?? actions[component.type])!.requests(
         component.config,
       );
-  static final standard = AutomationRegistry(
-    triggers: {
+  // Built-in registrations follow the loaded code without resetting running
+  // automations. Each runner retains the registry instance it started with.
+  static AutomationRegistry get standard => AutomationRegistry(
+    triggers: Map.unmodifiable({
       'http.poll.v1': ComponentRegistration(_poll, HttpPollTrigger.new),
       'http.poll-list.v1': ComponentRegistration(
         _listPoll,
@@ -75,8 +78,37 @@ class AutomationRegistry {
           invalid();
         }
       }, TelegramCommandTrigger.new),
-    },
-    actions: {
+      'telegram.command.v2': ComponentRegistration((c) {
+        keys(c, {'commands', 'chatTypes', 'arguments'});
+        final commands = c['commands'];
+        if (commands is! List ||
+            commands.isEmpty ||
+            commands.length > 16 ||
+            commands.toSet().length != commands.length) {
+          invalid();
+        }
+        for (final command in commands) {
+          if (!RegExp(
+            r'^[a-z][a-z0-9_]{0,31}$',
+          ).hasMatch(string(command, 32))) {
+            invalid();
+          }
+        }
+        final chatTypes = c['chatTypes'];
+        if (chatTypes is! List ||
+            chatTypes.isEmpty ||
+            chatTypes.length > 4 ||
+            chatTypes.toSet().length != chatTypes.length ||
+            chatTypes.any(
+              (type) =>
+                  !{'private', 'group', 'supergroup', 'channel'}.contains(type),
+            )) {
+          invalid();
+        }
+        if (c['arguments'] != 'ignore') invalid();
+      }, TelegramCommandTrigger.new),
+    }),
+    actions: Map.unmodifiable({
       'http.get-json.v1': ComponentRegistration((c) {
         keys(c, {'request', 'resultKey', 'pagination'});
         if (c['pagination'] != null) {
@@ -99,7 +131,12 @@ class AutomationRegistry {
         _message,
         (c, ctx) => TelegramMessageAction(c, ctx, adminOnly: false),
       ),
-    },
+      'telegram.reply.v2': ComponentRegistration((c) {
+        keys(c, {'text', 'inlineKeyboard'});
+        _template(c['text']);
+        validateInlineKeyboard(c['inlineKeyboard']);
+      }, (c, ctx) => TelegramMessageAction(c, ctx, adminOnly: false)),
+    }),
   );
 
   List<AutomationDefinition> parse(dynamic raw) {
@@ -130,9 +167,14 @@ class AutomationRegistry {
         }
 
         final t = component(a['trigger'], true);
-        if (t.type == 'telegram.command.v1' &&
-            !commands.add(t.config['command'])) {
-          invalid();
+        if (t.type == 'telegram.command.v1' ||
+            t.type == 'telegram.command.v2') {
+          for (final command
+              in t.type == 'telegram.command.v1'
+                  ? [t.config['command']]
+                  : t.config['commands'] as List) {
+            if (!commands.add(command as String)) invalid();
+          }
         }
         final list = a['actions'];
         if (list is! List || list.isEmpty || list.length > 16) invalid();
@@ -140,10 +182,20 @@ class AutomationRegistry {
         final parsed = (list).map((v) => component(v, false)).toList();
         for (final action in parsed) {
           if (!actionIds.add(action.id!)) invalid();
-          if (action.type == 'telegram.reply.v1' &&
-              t.type != 'telegram.command.v1') {
+          if ((action.type == 'telegram.reply.v1' ||
+                  action.type == 'telegram.reply.v2') &&
+              t.type != 'telegram.command.v1' &&
+              t.type != 'telegram.command.v2') {
             throw const FormatException(
               'Reply actions require a Telegram command trigger.',
+            );
+          }
+          if (action.type == 'telegram.reply.v2' &&
+              (t.type != 'telegram.command.v2' ||
+                  (t.config['chatTypes'] as List).length != 1 ||
+                  (t.config['chatTypes'] as List).single != 'private')) {
+            throw const FormatException(
+              'Mini App replies require a private-chat command trigger.',
             );
           }
         }

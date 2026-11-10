@@ -9,6 +9,7 @@ import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/runtime/coordinator.dart';
+import 'package:bottogram/runtime/progress_store.dart';
 import 'package:bottogram/background/platform.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/widgets.dart';
@@ -29,6 +30,9 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   late final Future<void> ready;
   String? lastError;
   Future<void> _tail = Future.value();
+  // A reviewed active-bot update is session-only until its next normal Start.
+  // Nullable storage also permits a state-preserving Flutter hot reload.
+  Map<VirtBot, PluginManifest>? _pendingPluginUpgrades;
 
   BotsCubit(BuildContext ctx, {PluginRepository? plugins, BotRuntime? runtime})
     : plugins = plugins ?? ctx.read<PluginRepository>(),
@@ -42,8 +46,73 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     if (!isClosed) emit(List<VirtBot>.of(state));
   }
 
-  Future<void> toggle(VirtBot bot) =>
-      bot.active ? runtime.stop(bot) : runtime.start(bot);
+  Future<void> toggle(VirtBot bot) => _mutate(() async {
+    if (bot.active) {
+      await runtime.stop(bot);
+      return;
+    }
+    final target = pendingUpgradeFor(bot);
+    if (target != null) await _applyPluginUpgrade(bot, target);
+    await runtime.start(bot);
+  });
+
+  PluginManifest? pendingUpgradeFor(VirtBot bot) =>
+      _pendingPluginUpgrades?[bot];
+
+  void cancelPendingUpgrade(VirtBot bot) {
+    _pendingPluginUpgrades?.remove(bot);
+    emit(List<VirtBot>.of(state));
+  }
+
+  Future<void> upgradePlugin(VirtBot bot, PluginManifest target) =>
+      _mutate(() async {
+        if (!state.contains(bot) || !bot.isInBox) {
+          throw const PluginException('This bot is no longer available.');
+        }
+        await plugins.reviewUpgrade(bot.key, bot.token, target);
+        if (bot.active) {
+          (_pendingPluginUpgrades ??= {})[bot] = target;
+          emit(List<VirtBot>.of(state));
+          return;
+        }
+        await _applyPluginUpgrade(bot, target);
+      });
+
+  Future<void> _applyPluginUpgrade(VirtBot bot, PluginManifest target) async {
+    if (bot.active) {
+      throw const PluginException(
+        'The bot must be stopped before its plugin update can be applied.',
+      );
+    }
+    try {
+      // A polling failure can clear active before the coordinator finishes
+      // draining actions. Serialize and drain that stopped session before
+      // taking the source progress snapshot.
+      await runtime.stop(bot);
+      bot.setup = await plugins.upgrade(
+        bot.key,
+        bot.token,
+        target,
+        copyNamespace: (source, destination) async {
+          final progress = runtime.progress;
+          if (progress is! NamespaceProgressStore) {
+            throw const PluginException(
+              'This progress store does not support state-preserving plugin updates.',
+            );
+          }
+          await progress.copyNamespace(source, destination);
+        },
+      );
+      _pendingPluginUpgrades?.remove(bot);
+      lastError = null;
+      emit(List<VirtBot>.of(state));
+    } catch (_) {
+      lastError =
+          'The plugin update could not be applied. The current bot configuration is unchanged; review the queued update and retry before starting.';
+      emit(List<VirtBot>.of(state));
+      throw PluginException(lastError!);
+    }
+  }
 
   // Initialize Hive box
   Future<void> _initBox() async {
@@ -213,6 +282,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     await runtime.stop(bot);
     final key = bot.key;
     await _box!.delete(key);
+    _pendingPluginUpgrades?.remove(bot);
     final updatedList = List<VirtBot>.from(state)..remove(bot);
     emit(updatedList);
     try {
@@ -363,6 +433,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   Future<void> close() async {
     await ready;
     await _tail;
+    _pendingPluginUpgrades?.clear();
     runtime.removeListener(_runtimeChanged);
     await runtime.close();
     return super.close();

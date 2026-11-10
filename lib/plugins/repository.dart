@@ -8,12 +8,13 @@ import 'package:hive/hive.dart';
 import 'bot_setup.dart';
 import 'manifest.dart';
 import 'secret_vault.dart';
+import 'upgrade.dart';
 
 class PluginRepository extends ChangeNotifier {
   PluginRepository({
     SecretVault? vault,
     this.bundledAssets = const [
-      'examples/plugins/inshopa.sales.bottogram-plugin.json',
+      'examples/plugins/inshopa.storefront.bottogram-plugin.json',
     ],
     AssetBundle? bundle,
   }) : vault = vault ?? PlatformSecretVault(),
@@ -151,11 +152,10 @@ class PluginRepository extends ChangeNotifier {
       }
     }
     final random = Random.secure();
-    final id =
-        List.generate(
-          24,
-          (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
-        ).join();
+    final id = List.generate(
+      24,
+      (_) => random.nextInt(256).toRadixString(16).padLeft(2, '0'),
+    ).join();
     final setup = BotSetup(
       instanceId: id,
       tokenFingerprint: BotSetup.fingerprint(token),
@@ -233,6 +233,67 @@ class PluginRepository extends ChangeNotifier {
     return updated;
   });
 
+  Future<PluginUpgradePlan> reviewUpgrade(
+    dynamic botKey,
+    String token,
+    PluginManifest target,
+  ) async {
+    await ready;
+    return _reviewUpgrade(botKey, token, target);
+  }
+
+  Future<PluginUpgradePlan> _reviewUpgrade(
+    dynamic botKey,
+    String token,
+    PluginManifest target,
+  ) async {
+    final current = await setupFor(botKey, token);
+    final manifest = manifestFor(current);
+    if (current == null ||
+        manifest == null ||
+        _packages!.get(target.storageKey) != target.source) {
+      throw const PluginException(
+        'The current and selected plugin versions must both be installed.',
+      );
+    }
+    return PluginUpgradePlan.review(manifest, target, current);
+  }
+
+  /// Ordinary reviewed configuration update, not a schema conversion/backfill.
+  /// The caller holds this bot stopped so the source namespaces have no writers.
+  Future<BotSetup> upgrade(
+    dynamic botKey,
+    String token,
+    PluginManifest target, {
+    required Future<void> Function(String source, String destination)
+    copyNamespace,
+  }) => _serialize(() async {
+    final plan = await _reviewUpgrade(botKey, token, target);
+    final current = (await setupFor(botKey, token))!;
+    for (final id in plan.preservedAutomationIds) {
+      await copyNamespace(
+        '${current.instanceId}:${plan.current.digest}:$id',
+        '${current.instanceId}:${target.digest}:$id',
+      );
+    }
+    final updated = BotSetup(
+      instanceId: current.instanceId,
+      tokenFingerprint: current.tokenFingerprint,
+      adminTelegramUserId: current.adminTelegramUserId,
+      pluginKey: target.storageKey,
+      pluginDigest: target.digest,
+      pluginName: target.name,
+      values: current.values,
+      secretFields: current.secretFields,
+      settings: current.settings,
+    );
+    // Publish only after every unchanged automation namespace and receipt has
+    // been staged durably. Failure beforehand leaves the current pin intact.
+    await _setups!.put(botKey, updated.toMap());
+    notifyListeners();
+    return updated;
+  });
+
   /// Stage new secrets before publishing the replacement setup. A fresh runtime
   /// identity prevents progress from one shop being reused for another shop.
   Future<BotSetup> updateParameters(
@@ -269,10 +330,9 @@ class PluginRepository extends ChangeNotifier {
     }
     var unchanged = current.adminTelegramUserId == adminId.trim();
     for (final field in manifest.fields) {
-      final previous =
-          field.type == PluginFieldType.secret
-              ? await vault.read(current.secretKey(field.key)) ?? ''
-              : current.values[field.key] ?? '';
+      final previous = field.type == PluginFieldType.secret
+          ? await vault.read(current.secretKey(field.key)) ?? ''
+          : current.values[field.key] ?? '';
       unchanged = unchanged && previous == values[field.key];
     }
     if (unchanged) return current;
@@ -302,38 +362,36 @@ class PluginRepository extends ChangeNotifier {
     return updated;
   });
 
-  Future<void> reconcile(
-    Map<dynamic, String> botTokens,
-  ) => _serialize(() async {
-    for (final key in _setups!.keys.toList()) {
-      final setup = BotSetup.fromMap(_setups!.get(key) as Map);
-      if (key is String && key.startsWith('pending:')) {
-        final matches =
-            botTokens.entries
-                .where(
-                  (entry) =>
-                      BotSetup.fingerprint(entry.value) ==
-                      setup.tokenFingerprint,
-                )
-                .toList();
-        final attached = _setups!.toMap().entries.any(
-          (entry) =>
-              entry.key != key &&
-              entry.value is Map &&
-              entry.value['instanceId'] == setup.instanceId,
-        );
-        if (matches.length == 1 && _setups!.get(matches.single.key) == null) {
-          await _setups!.put(matches.single.key, setup.toMap());
-        } else if (!attached) {
+  Future<void> reconcile(Map<dynamic, String> botTokens) => _serialize(
+    () async {
+      for (final key in _setups!.keys.toList()) {
+        final setup = BotSetup.fromMap(_setups!.get(key) as Map);
+        if (key is String && key.startsWith('pending:')) {
+          final matches = botTokens.entries
+              .where(
+                (entry) =>
+                    BotSetup.fingerprint(entry.value) == setup.tokenFingerprint,
+              )
+              .toList();
+          final attached = _setups!.toMap().entries.any(
+            (entry) =>
+                entry.key != key &&
+                entry.value is Map &&
+                entry.value['instanceId'] == setup.instanceId,
+          );
+          if (matches.length == 1 && _setups!.get(matches.single.key) == null) {
+            await _setups!.put(matches.single.key, setup.toMap());
+          } else if (!attached) {
+            await _deleteSecrets(setup);
+          }
+          await _setups!.delete(key);
+        } else if (!botTokens.containsKey(key)) {
           await _deleteSecrets(setup);
+          await _setups!.delete(key);
         }
-        await _setups!.delete(key);
-      } else if (!botTokens.containsKey(key)) {
-        await _deleteSecrets(setup);
-        await _setups!.delete(key);
       }
-    }
-  });
+    },
+  );
   Future<void> removeSetup(dynamic botKey) => _serialize(() async {
     final raw = _setups!.get(botKey);
     if (raw == null) return;

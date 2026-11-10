@@ -131,7 +131,7 @@ class _CaptureTelegram implements TelegramPort {
   @override
   void command(String command, void Function(Json) receive) {}
   @override
-  Future<void> send(String chatId, String text) async {
+  Future<void> send(String chatId, String text, {Json? replyMarkup}) async {
     // Deliberately count only; no text, recipients or credentials in logs.
     if (text.isEmpty) {
       throw const RuntimeFailure(

@@ -727,7 +727,7 @@ void main() {
       expect(bundled.installed.map((p) => p.id).toSet(), {
         'bottogram-plugin-inshopa',
       });
-      expect(bundled.installed.single.version, '0.5.0');
+      expect(bundled.installed.single.version, '0.6.0');
       expect(bundled.installed.single.executable, isTrue);
       final reopened = PluginRepository(vault: vault);
       await reopened.ready;
@@ -751,7 +751,7 @@ void main() {
       final local = package(
         (jsonDecode(
                 File(
-                  'examples/plugins/inshopa.sales.bottogram-plugin.json',
+                  'examples/plugins/inshopa.storefront.bottogram-plugin.json',
                 ).readAsStringSync(),
               )
               as Map<String, dynamic>)

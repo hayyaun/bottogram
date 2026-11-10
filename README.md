@@ -85,7 +85,7 @@ its declared API destinations and capabilities before installing it.
 
 ### First integration: Inshopa
 
-The bundled **Inshopa 0.5.0** plugin connects one shop using its API key and
+The bundled **Inshopa 0.6.0** plugin connects one shop using its API key and
 registered storefront URL. A separate shop ID is not required.
 
 - `/start` and `/shop` open the existing shop and its `/orders` page as Telegram
@@ -105,12 +105,20 @@ Mini Apps. Login continuity and payment return behavior still need real Telegram
 client verification. Digital goods sold inside Telegram require Telegram Stars;
 the existing external checkout is not a universal digital-goods solution.
 
-This host presentation supports the exact shipped live Inshopa packages, without
-rewriting installed packages, bot settings, credentials, or alert receipts. Custom
-packages keep their declared behavior; setup-only packages stay setup-only.
-An existing running session gets its new command handlers on its next normal
-Start. A code hot reload preserves the running session and does not re-register
-its handlers. See [storefront navigation](docs/STOREFRONT_NAVIGATION.md).
+Commands, text, button labels, page paths and menu configuration all belong to
+the plugin JSON. Bottogram provides the same validated command, reply and Mini App
+capabilities to every plugin; executable host code has no Inshopa ID/hash mapping.
+Older installed packages remain immutable and pinned until a reviewed update is
+selected. Compatible updates retain the bot identity, configuration, credentials
+and unchanged seller-alert progress, including pending actions and delivery
+receipts. The old package and source progress remain intact.
+
+A stopped bot can apply a reviewed update immediately. An active bot can queue it
+for its next normal Start without being stopped. That selection is session-only:
+restarting Bottogram discards the queue and requires review again. An HTTP or
+otherwise invalid Mini App origin rejects the update without changing the old
+bot. Existing HTTP development settings are never silently rewritten. See
+[storefront navigation](docs/STOREFRONT_NAVIGATION.md).
 
 **Verification so far:** the local catalog command and admin connection message
 were confirmed end to end. A newly paid order alert, production-key access, and

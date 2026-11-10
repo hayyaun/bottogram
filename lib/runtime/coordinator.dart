@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../plugins/repository.dart';
 import '../plugins/manifest.dart';
-import '../plugins/bundled_presentations.dart';
 import '../units/virt_bot.dart';
 import 'automation_runner.dart';
 import 'http_transport.dart';
@@ -46,9 +45,6 @@ class BotRuntime extends ChangeNotifier {
     await plugins.ready;
     final setup = bot.setup;
     final manifest = plugins.manifestFor(setup);
-    final presentation = manifest == null
-        ? null
-        : bundledPresentationFor(manifest);
     if (setup?.usesPlugin == true && manifest?.executable != true) {
       throw const PluginException(
         'This plugin version is setup-only. Install a live version and create a new bot with it.',
@@ -81,23 +77,23 @@ class BotRuntime extends ChangeNotifier {
         );
       }
     };
+    BotTelegramPort? telegram;
     try {
       await bot.bot.init().timeout(const Duration(seconds: 22));
       if (manifest != null && setup != null) {
         final http = _clients[bot] =
             httpClientFactory?.call() ?? BoundedJsonTransport();
+        telegram = BotTelegramPort(bot.bot);
         final context = RuntimeContext(
           http: http,
-          telegram: BotTelegramPort(bot.bot),
+          telegram: telegram,
           secret: (field) => plugins.vault.read(setup.secretKey(field)),
           fields: setup.values,
           adminId: setup.adminTelegramUserId,
         );
         final settings = manifest.settingValues(setup.settings);
-        presentation?.register(bot.bot, setup.values);
         final runners = _runners[bot] = [];
-        for (final definition
-            in presentation?.automationsFor(manifest) ?? manifest.automations) {
+        for (final definition in manifest.automations) {
           if (definition.enabledBySetting != null &&
               settings[definition.enabledBySetting] != true) {
             continue;
@@ -124,8 +120,10 @@ class BotRuntime extends ChangeNotifier {
         }
       }
       await bot.start(pluginRuntime: manifest?.executable == true);
-      if (presentation != null && setup != null) {
-        unawaited(presentation.synchronizeMenu(bot.bot, setup.values));
+      if (manifest?.telegram != null && setup != null && telegram != null) {
+        unawaited(
+          _synchronizeMenu(bot, telegram, manifest!.telegram!, setup.values),
+        );
       }
     } catch (_) {
       await _stop(bot);
@@ -135,6 +133,26 @@ class BotRuntime extends ChangeNotifier {
       notifyListeners();
     }
   });
+
+  Future<void> _synchronizeMenu(
+    VirtBot bot,
+    BotTelegramPort telegram,
+    Json declaration,
+    Map<String, String> fields,
+  ) async {
+    final success = await telegram.synchronizeMenu(declaration, fields);
+    if (_closed || !_bots.contains(bot) || bot.bot != telegram.bot) return;
+    const key = '@telegram.menu';
+    if (success) {
+      _errors[bot]?.remove(key);
+    } else {
+      _errors[bot]?[key] =
+          'The Telegram menu could not be updated. Command replies and other automations remain available.';
+    }
+    bot.runtimeError = errorFor(bot);
+    notifyListeners();
+  }
+
   Future<void> _stop(VirtBot bot) async {
     bot.onRunningChanged = null;
     _clients.remove(bot)?.close();

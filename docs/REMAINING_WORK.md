@@ -9,35 +9,37 @@ Publishing a release is explicitly deferred until the plugin is useful to shops.
 
 1. **Actual paid-order alert.** The owner confirmed the Telegram connection message
    and `/products` response. A real new paid-order alert is still unverified because
-   local Gogoli Shop checkout is not enabled. 🟣 Inshopa must make that local shop
+   local Gogoli Shop checkout is not enabled. Inshopa must make that local shop
    ready for mock checkout; then complete a purchase while Bottogram runs and
    confirm the admin alert. This project must not activate the shop or alter its DB.
 2. **Live recovery scenarios.** Check no historical alerts on initial setup, one
    alert across multiple polling cycles, Stop/Start, an offline interval, delayed
    payment, and changed key/storefront settings against the real local API. Unit
    fixtures already cover baseline, late payment, durable receipts and failures.
-3. **Physical Android operation.** 🟣 Test a real device with the screen off,
+3. **Physical Android operation.** Test a real device with the screen off,
    backgrounded UI, Doze, notification Stop, permissions revoked, force-stop and
    reopening. Include Android 7.0/API 24 minimum support and at least one current OEM.
    Emulator background continuity passed; it does not establish OEM behavior.
 4. **Production connection.** Inshopa owns rollout and valid production-key issuance.
-   🟣 Once ready, configure a production plugin bot and verify catalog and paid-order
-   access with the intended scopes and registered storefront. Local success does
+   Once ready, configure a production plugin bot and verify storefront navigation
+   and paid-order access with the intended scopes and registered storefront. Local success does
    not establish that production is ready.
 5. **Build and desktop checks.** Run the new GitHub workflow after pushing it and
-   resolve actual hosted build failures. 🟣 Test the Windows bundle on a clean PC
+   resolve actual hosted build failures. Test the Windows bundle on a clean PC
    and AppImage on a clean Linux desktop, including plugin install, secure storage,
    file opening and Telegram connectivity. See [build artifacts](BUILD_ARTIFACTS.md).
 
 ## Proposed next work to make the Inshopa plugin useful
 
-These are priorities to discuss, not features implemented or newly approved by
-this document. Keep the host generic: package declarations compose registered
+The following items distinguish verification of implemented work from future
+features. Keep the host generic: package declarations compose registered
 trigger/action capabilities instead of adding Inshopa conditions to the runtime.
 
-1. **Verify storefront navigation.** The supported shipped packages now open the
-   existing HTTPS shop and `/orders` as Telegram Mini Apps, with brief help and a
-   `/products` launcher alias. Verify fresh/existing login, cross-host handoff,
+1. **Verify storefront navigation.** Inshopa 0.6.0 declares opening the existing
+   HTTPS shop and `/orders` as Telegram Mini Apps, with brief help and a
+   `/products` launcher alias. Generic command/reply/menu capabilities execute
+   those declarations; older pinned packages keep their original behavior.
+   Verify fresh/existing login, cross-host handoff,
    buyer isolation/account switching, custom domains and payment return in real
    Telegram clients. See [Storefront navigation](STOREFRONT_NAVIGATION.md).
    Chat catalog/cart/checkout duplication and buyer API features are deferred.
@@ -54,10 +56,14 @@ trigger/action capabilities instead of adding Inshopa conditions to the runtime.
    clear guidance when the admin has not started the bot.
 5. **Operational status.** Show last successful check, last alert, current connection
    failure/retry, and what needs user attention. “Active” alone is insufficient.
-6. **Explicit plugin upgrades.** Offer a reviewed way for an existing bot to move
-   between installed plugin versions, validating retained fields/preferences and
-   defining progress compatibility. Current immutable versions and pinned bots
-   work; automatic upgrades are not implemented.
+6. **Verify reviewed plugin updates.** The generic updater validates retained
+   configuration and unchanged automation definitions, stages compatible progress
+   and delivery receipts before committing the selected bot's new package pin,
+   and retains the old package/source progress. Verify recovery and UI behavior
+   on real installations. An active bot queues a reviewed update in memory for
+   its next normal Start; restarting Bottogram discards that selection and
+   requires another review. Invalid/HTTP Mini App origins reject the update
+   without rewriting the old bot. Automatic package switching is not implemented.
 7. **Protected backup/import for plugin bots.** Currently unavailable; existing
    configuration sharing supports manual bots only. Define secret handling and
    restoration before implementing it. Any new database migration needs separate

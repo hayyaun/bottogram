@@ -5,6 +5,8 @@ import 'package:crypto/crypto.dart';
 
 import 'setting.dart';
 import '../runtime/registry.dart';
+import '../runtime/ports.dart' show Json;
+import '../runtime/telegram_config.dart';
 
 const maxPluginBytes = 256 * 1024;
 
@@ -73,6 +75,7 @@ class PluginManifest {
     this.requiresAdmin,
     this.settings,
     this.automations,
+    this.telegram,
   );
 
   final String source;
@@ -84,6 +87,7 @@ class PluginManifest {
   final bool requiresAdmin;
   final List<PluginSetting> settings;
   final List<AutomationDefinition> automations;
+  final Json? telegram;
   bool get executable => automations.isNotEmpty;
   Map<String, Object> settingValues(Map<String, Object?> saved) {
     if (saved.keys.any((key) => !settings.any((s) => s.key == key))) {
@@ -91,10 +95,9 @@ class PluginManifest {
     }
     final result = <String, Object>{};
     for (final setting in settings) {
-      final value =
-          saved.containsKey(setting.key)
-              ? saved[setting.key]
-              : setting.defaultValue;
+      final value = saved.containsKey(setting.key)
+          ? saved[setting.key]
+          : setting.defaultValue;
       if (setting.validate(value) != null) {
         throw const PluginException(
           'Plugin settings do not match their declared types or bounds.',
@@ -145,6 +148,7 @@ class PluginManifest {
       'setupFields',
       'settings',
       'automations',
+      'telegram',
     });
     final live =
         data['manifestVersion'] is int &&
@@ -163,7 +167,9 @@ class PluginManifest {
       reject('The requested plugin engine is not supported.');
     }
     if (data['executionStatus'] != (live ? 'live' : 'setup-only') ||
-        (!live && data.containsKey('automations'))) {
+        (!live &&
+            (data.containsKey('automations') ||
+                data.containsKey('telegram')))) {
       reject(
         'This release supports setup-only plugins; live execution is not available yet.',
       );
@@ -188,10 +194,9 @@ class PluginManifest {
       reject('Plugin versions must use major.minor.patch.');
     }
     final name = text(data['name'], 'name', 100);
-    final description =
-        data['description'] == null
-            ? null
-            : text(data['description'], 'description', 500);
+    final description = data['description'] == null
+        ? null
+        : text(data['description'], 'description', 500);
     final requires = data['requiresBotFields'] ?? <dynamic>[];
     if (requires is! List ||
         requires.any((v) => v != 'adminTelegramUserId') ||
@@ -225,10 +230,9 @@ class PluginManifest {
           'Plugin field keys must be unique and cannot duplicate common bot fields.',
         );
       }
-      final type =
-          PluginFieldType.values
-              .where((v) => v.name == field['type'])
-              .firstOrNull;
+      final type = PluginFieldType.values
+          .where((v) => v.name == field['type'])
+          .firstOrNull;
       if (type == null || field['required'] is! bool) {
         reject('Invalid setup field type or required flag.');
       }
@@ -253,10 +257,9 @@ class PluginManifest {
         label: text(field['label'], 'field label', 100),
         type: type!,
         required: field['required'] as bool,
-        helpText:
-            field['helpText'] == null
-                ? null
-                : text(field['helpText'], 'field help', 300),
+        helpText: field['helpText'] == null
+            ? null
+            : text(field['helpText'], 'field help', 300),
         defaultValue: defaultValue?.toString(),
         min: min as int?,
         max: max as int?,
@@ -280,9 +283,35 @@ class PluginManifest {
       reject(error.message);
     }
     List<AutomationDefinition> automations = const [];
+    Json? telegram;
     if (live) {
       try {
-        automations = AutomationRegistry.standard.parse(data['automations']);
+        final registry = AutomationRegistry.standard;
+        automations = registry.parse(data['automations']);
+        if (data['telegram'] != null) {
+          validateTelegramConfig(data['telegram']);
+          telegram = data['telegram'] as Json;
+        }
+        void validateTargetFields(Iterable<Json> targets) {
+          for (final target in targets) {
+            if (!fields.any(
+              (field) =>
+                  field.key == target['originField'] &&
+                  field.type == PluginFieldType.text &&
+                  field.required,
+            )) {
+              reject(
+                'Mini App origins must reference a required non-secret text field.',
+              );
+            }
+          }
+        }
+
+        if (telegram != null) {
+          validateTargetFields([
+            (telegram['menuButton'] as Json)['webApp'] as Json,
+          ]);
+        }
         for (final automation in automations) {
           if (automation.enabledBySetting != null &&
               !settings.any(
@@ -293,11 +322,16 @@ class PluginManifest {
             reject('An automation must reference a boolean setting.');
           }
           for (final component in [automation.trigger, ...automation.actions]) {
+            if (component.type == 'telegram.reply.v2') {
+              validateTargetFields(
+                inlineKeyboardTargets(component.config['inlineKeyboard']),
+              );
+            }
             if (component.type == 'telegram.notify-admin.v1' &&
                 !(requires as List).contains('adminTelegramUserId')) {
               reject('Admin notifications require the shared admin field.');
             }
-            for (final request in AutomationRegistry.standard.requestsFor(
+            for (final request in registry.requestsFor(
               component,
             )) {
               final auth = request['authentication'];
@@ -341,6 +375,7 @@ class PluginManifest {
       (requires as List).contains('adminTelegramUserId'),
       List.unmodifiable(settings),
       automations,
+      telegram,
     );
   }
 }

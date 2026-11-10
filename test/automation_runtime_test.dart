@@ -47,7 +47,7 @@ class FakeTelegram implements TelegramPort {
   }
 
   @override
-  Future<void> send(String chat, String text) async {
+  Future<void> send(String chat, String text, {Json? replyMarkup}) async {
     messages.add((chat, text));
   }
 }
@@ -153,18 +153,15 @@ void main() {
       expect(parse(productDefinition()).executable, isTrue);
       for (final mutate in <void Function(Json)>[
         (d) => d['automations'][0]['trigger']['type'] = 'download.code',
-        (d) =>
-            d['automations'][0]['actions'][0]['config']['request']['url'] =
-                'http://unsafe.test',
+        (d) => d['automations'][0]['actions'][0]['config']['request']['url'] =
+            'http://unsafe.test',
         (d) =>
             d['automations'][0]['actions'][0]['config']['request']['authentication']['secretField'] =
                 'missing',
-        (d) =>
-            d['automations'][0]['actions'][1]['config']['chatId'] =
-                'someone-else',
-        (d) =>
-            d['automations'][0]['actions'][1]['config']['text'] =
-                '{{secrets.apiKey}}',
+        (d) => d['automations'][0]['actions'][1]['config']['chatId'] =
+            'someone-else',
+        (d) => d['automations'][0]['actions'][1]['config']['text'] =
+            '{{secrets.apiKey}}',
         (d) => d['automations'][0]['actions'].add(
           d['automations'][0]['actions'][1],
         ),
@@ -178,14 +175,13 @@ void main() {
   test(
     'products command replies to a non-admin and uses key, host and pagination',
     () async {
-      final http =
-          FakeHttp()
-            ..responses.add({
-              'products': [
-                {'title': 'Product A'},
-                {'title': 'Product B'},
-              ],
-            });
+      final http = FakeHttp()
+        ..responses.add({
+          'products': [
+            {'title': 'Product A'},
+            {'title': 'Product B'},
+          ],
+        });
       final telegram = FakeTelegram();
       final progress = MemoryProgress();
       final context = RuntimeContext(
@@ -458,16 +454,15 @@ void main() {
     },
   );
   test('polling rejects malformed pagination and unstable IDs', () async {
-    final http =
-        FakeHttp()
-          ..responses.add({
-            'orders': [
-              {'id': 'e'},
-            ],
-            'checkpoint': 'C',
-            'next_cursor': null,
-            'has_more': true,
-          });
+    final http = FakeHttp()
+      ..responses.add({
+        'orders': [
+          {'id': 'e'},
+        ],
+        'checkpoint': 'C',
+        'next_cursor': null,
+        'has_more': true,
+      });
     final context = RuntimeContext(
       http: http,
       telegram: FakeTelegram(),

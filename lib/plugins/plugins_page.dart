@@ -7,9 +7,7 @@ import 'package:bottogram/ui/design.dart';
 
 import 'manifest.dart';
 import 'repository.dart';
-import 'bundled_presentations.dart';
-import '../runtime/registry.dart';
-import '../runtime/storefront_presentation.dart';
+import 'capability_review.dart';
 
 class PluginsPage extends StatefulWidget {
   const PluginsPage({
@@ -59,7 +57,6 @@ class _PluginsPageState extends State<PluginsPage> {
         builder.add(chunk);
       }
       final plugin = PluginManifest.parse(builder.takeBytes());
-      final presentation = bundledPresentationFor(plugin);
       if (!mounted) return;
       final accepted = await showDialog<bool>(
         context: context,
@@ -72,41 +69,14 @@ class _PluginsPageState extends State<PluginsPage> {
               children: [
                 Text('${plugin.id}\nVersion ${plugin.version}'),
                 const SizedBox(height: 16),
-                if (presentation != null)
-                  const Text(StorefrontPresentation.description)
-                else if (plugin.description != null)
-                  Text(plugin.description!),
+                if (plugin.description != null) Text(plugin.description!),
                 const SizedBox(height: 16),
                 Text(
                   plugin.executable
                       ? 'This plugin can make the requests below while its bots are started. Install packages only from an author you trust with their API credentials.'
                       : 'Setup only. This package adds configuration fields without executing automations.',
                 ),
-                if (plugin.executable) ...[
-                  if (presentation != null) ...[
-                    const SizedBox(height: 12),
-                    const Text(
-                      '/start · /shop · /orders · /help · /products · private chats',
-                    ),
-                    const Text(
-                      'Opens the configured HTTPS shop and its /orders page directly in Telegram. Website sign-in stays on the website.',
-                    ),
-                  ],
-                  for (final automation
-                      in presentation?.automationsFor(plugin) ??
-                          plugin.automations) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      automation.trigger.type == 'telegram.command.v1'
-                          ? '/${automation.trigger.config['command']} · everyone'
-                          : '${automation.trigger.type} · ${automation.trigger.config['intervalSeconds']} seconds',
-                    ),
-                    for (final c in [automation.trigger, ...automation.actions])
-                      for (final request
-                          in AutomationRegistry.standard.requestsFor(c))
-                        Text('GET ${request['url']}'),
-                  ],
-                ],
+                if (plugin.executable) PluginCapabilityReview(plugin: plugin),
                 const SizedBox(height: 12),
                 Text(
                   'Additional fields: ${plugin.fields.map((f) => f.label).join(', ')}',
@@ -276,10 +246,7 @@ class _PluginsPageState extends State<PluginsPage> {
                                   ),
                                 ],
                               ),
-                              if (bundledPresentationFor(plugin) != null) ...[
-                                const SizedBox(height: 16),
-                                const Text(StorefrontPresentation.description),
-                              ] else if (plugin.description != null) ...[
+                              if (plugin.description != null) ...[
                                 const SizedBox(height: 16),
                                 Text(plugin.description!),
                               ],

@@ -1,0 +1,227 @@
+{
+  "manifestVersion": 2,
+  "hostApiMajor": 2,
+  "id": "bottogram-plugin-inshopa",
+  "name": "Inshopa",
+  "version": "0.6.0",
+  "executionStatus": "live",
+  "description": "Open the existing shop and buyer order history as Telegram Mini Apps. Preserve private admin alerts for newly observed paid orders.",
+  "requiresBotFields": [
+    "adminTelegramUserId"
+  ],
+  "setupFields": [
+    {
+      "key": "apiKey",
+      "label": "Inshopa API key",
+      "type": "secret",
+      "required": true,
+      "helpText": "The existing seller key identifies the shop for alerts. Keep storefront:read for shop lookup and shop:orders:read for order alerts. Opening website pages needs no buyer permission."
+    },
+    {
+      "key": "storefrontUrl",
+      "label": "Storefront URL",
+      "type": "text",
+      "required": true,
+      "helpText": "The exact registered shop origin. Telegram Mini App buttons require HTTPS. Website login and checkout remain on the existing site."
+    }
+  ],
+  "settings": [
+    {
+      "key": "notifyNewSuccessfulPurchases",
+      "type": "boolean",
+      "label": "آگاه شدن از آخرین خرید های موفق",
+      "default": true,
+      "helpText": "Notify the admin about orders first observed as paid after the initial history scan. Requires shop:orders:read."
+    }
+  ],
+  "automations": [
+    {
+      "id": "buyer-navigation",
+      "trigger": {
+        "type": "telegram.command.v2",
+        "config": {
+          "commands": [
+            "start",
+            "shop",
+            "products"
+          ],
+          "chatTypes": [
+            "private"
+          ],
+          "arguments": "ignore"
+        }
+      },
+      "actions": [
+        {
+          "id": "reply-navigation",
+          "type": "telegram.reply.v2",
+          "config": {
+            "text": "Visit the shop or view your orders. Sign in on the shop website if asked.",
+            "inlineKeyboard": [
+              [
+                {
+                  "text": "Open shop",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/"
+                  }
+                },
+                {
+                  "text": "My orders",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/orders"
+                  }
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "buyer-orders",
+      "trigger": {
+        "type": "telegram.command.v2",
+        "config": {
+          "commands": [
+            "orders"
+          ],
+          "chatTypes": [
+            "private"
+          ],
+          "arguments": "ignore"
+        }
+      },
+      "actions": [
+        {
+          "id": "reply-orders",
+          "type": "telegram.reply.v2",
+          "config": {
+            "text": "View your purchases on the shop website. Sign in there if asked.",
+            "inlineKeyboard": [
+              [
+                {
+                  "text": "My orders",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/orders"
+                  }
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "buyer-help",
+      "trigger": {
+        "type": "telegram.command.v2",
+        "config": {
+          "commands": [
+            "help"
+          ],
+          "chatTypes": [
+            "private"
+          ],
+          "arguments": "ignore"
+        }
+      },
+      "actions": [
+        {
+          "id": "reply-help",
+          "type": "telegram.reply.v2",
+          "config": {
+            "text": "Open the shop to browse and buy. Open My orders to see your purchases. Sign in only on the shop website. Never send passwords or sign-in codes in this chat.",
+            "inlineKeyboard": [
+              [
+                {
+                  "text": "Open shop",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/"
+                  }
+                },
+                {
+                  "text": "My orders",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/orders"
+                  }
+                }
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "paid-orders",
+      "enabledBySetting": "notifyNewSuccessfulPurchases",
+      "trigger": {
+        "type": "http.poll-list.v1",
+        "config": {
+          "intervalSeconds": 60,
+          "initialSync": "baseline",
+          "lookup": {
+            "request": {
+              "method": "GET",
+              "url": "https://api.inshopa.ir/v1/storefront",
+              "storefrontUrlField": "storefrontUrl",
+              "authentication": {
+                "type": "bearer",
+                "secretField": "apiKey"
+              }
+            },
+            "bindings": {
+              "shopId": "id"
+            }
+          },
+          "request": {
+            "method": "GET",
+            "url": "https://api.inshopa.ir/v1/shops/{shopId}/orders",
+            "storefrontUrlField": "storefrontUrl",
+            "authentication": {
+              "type": "bearer",
+              "secretField": "apiKey"
+            }
+          },
+          "response": {
+            "itemsPath": "orders",
+            "itemIdPath": "id"
+          },
+          "filter": {
+            "path": "status",
+            "equals": "paid"
+          },
+          "pagination": {
+            "limitQueryParameter": "limit",
+            "offsetQueryParameter": "offset",
+            "pageSize": 100,
+            "maxPages": 1000,
+            "pageDelaySeconds": 2
+          }
+        }
+      },
+      "actions": [
+        {
+          "id": "notify-admin",
+          "type": "telegram.notify-admin.v1",
+          "config": {
+            "text": "New paid order\nShop: {{event.shop_name}}\nOrder: {{event.id}}\nAmount: {{event.total_irr}} {{event.currency}}"
+          }
+        }
+      ]
+    }
+  ],
+  "telegram": {
+    "menuButton": {
+      "text": "Open shop",
+      "webApp": {
+        "originField": "storefrontUrl",
+        "path": "/"
+      }
+    }
+  }
+}

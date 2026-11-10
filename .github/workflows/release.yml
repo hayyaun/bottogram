@@ -1,0 +1,45 @@
+name: Publish GitHub release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish verified platform packages
+    runs-on: ubuntu-22.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      GH_PROMPT_DISABLED: '1'
+      RELEASE_TAG: ${{ github.ref_name }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Select exact successful build and verify all four packages
+        run: |
+          python3 tool/ci/prepare_release.py \
+            --tag "$RELEASE_TAG" --sha "$GITHUB_SHA" --repo "$GH_REPO" \
+            --work-dir build/release
+      - name: Publish release and checksums
+        run: |
+          gh release create "$RELEASE_TAG" \
+            --repo "$GH_REPO" --verify-tag --target "$GITHUB_SHA" \
+            --title "Bottogram ${RELEASE_TAG#v}" \
+            --notes-file build/release/notes.md \
+            build/release/assets/bottogram-android-release.apk \
+            build/release/assets/bottogram-windows-x64.zip \
+            build/release/assets/bottogram-macos-universal.zip \
+            build/release/assets/bottogram-linux-x86_64.AppImage.tar.gz \
+            build/release/assets/SHA256SUMS.txt

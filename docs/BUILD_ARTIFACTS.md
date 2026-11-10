@@ -1,9 +1,11 @@
-# Test builds, without publishing releases
+# Builds and GitHub releases
 
 The [build workflow](../.github/workflows/build.yml) runs on pushes to `main`,
 pull requests targeting `main`, and manual dispatch. Analysis and unit/widget
-tests must pass before the three native builds run. Packaged SQL isolation tests
-also run on a headless Android emulator, Linux under Xvfb and Windows. Live
+tests must pass before the four platform builds run. Packaged SQLite isolation
+and bot-template tests also run on a headless Android emulator, Linux under Xvfb,
+Windows, and both Intel and Apple silicon macOS runners. macOS additionally tests
+native credential storage. Live
 Telegram/shop integration tests stay opt-in and receive no customer credentials
 in CI.
 
@@ -20,6 +22,12 @@ Outputs, retained for 14 days in the workflow run's **Artifacts** section:
   and data, plus a checksum. Extract the whole folder before running the EXE.
   This is unsigned, without an installer; a clean Windows machine may need the
   Microsoft Visual C++ runtime. Clean-machine runtime testing remains required.
+- macOS Intel and Apple silicon: `bottogram-macos-universal.zip`, containing
+  `bottogram.app`, plus a checksum. Packaging verifies both architectures in the
+  launcher and every embedded framework, along with the app's existing ad-hoc
+  signature. This is not Developer ID signing or Apple notarization, so macOS
+  may block opening a downloaded package. Credentials use the macOS login
+  Keychain without a shared access group.
 - Linux x86_64: a tarball containing `bottogram-linux-x86_64.AppImage` and its
   checksum. The tarball preserves the executable permission. Built on Ubuntu
   22.04; older glibc systems are not a compatibility target. A running desktop
@@ -27,9 +35,66 @@ Outputs, retained for 14 days in the workflow run's **Artifacts** section:
   runtime requires FUSE. Test desktop integration and keyring access on a clean
   distribution before treating the package as ready for users.
 
-The workflow uses read-only repository permissions, private Android signing
-secrets only in the trusted build step, no tags, no release jobs, and no store uploads. “Release” in Flutter
-Flutter build commands means optimized compilation, not a published release.
+The build workflow uses read-only repository permissions and private Android
+signing secrets only in the trusted build step. It does not publish packages to
+GitHub Releases or app stores. “Release” in Flutter build commands means optimized
+compilation. Public GitHub releases use the separate tag workflow below.
+
+## Publish a verified GitHub release
+
+The [release workflow](../.github/workflows/release.yml) runs when a `v*` tag is
+pushed. It accepts stable SemVer tags only, such as `v1.0.0`; the version must match
+`pubspec.yaml` without its `+build` number. Push the commit to `main` and wait for
+its complete **Build test artifacts** run to succeed before tagging that exact
+commit:
+
+```sh
+git tag -a v1.0.0 <verified-commit-sha> -m 'Bottogram 1.0.0'
+git push origin v1.0.0
+```
+
+The release job uses GitHub's preinstalled `gh` CLI and the workflow's automatic
+`GITHUB_TOKEN`; no personal token or additional secret is needed. Its permissions
+are scoped to that job: `actions: read` for downloading build artifacts and
+`contents: write` for creating the release. It never rebuilds a package.
+
+[prepare_release.py](../tool/ci/prepare_release.py) looks up a successful
+`build.yml` run triggered by a push to `main` whose commit SHA exactly equals the
+tagged commit. It does not use the latest unrelated build or a PR artifact. All
+four artifact names must be present in that one run:
+
+- `bottogram-android-release`
+- `bottogram-windows-x64`
+- `bottogram-macos-universal`
+- `bottogram-linux-x86_64`
+
+The script downloads each artifact by its selected run ID, validates its expected
+files and existing SHA-256 checksum, and prepares one flat release folder. For
+Linux it validates the executable AppImage and checksum inside the tarball
+without extracting arbitrary archive paths. The published Linux asset remains
+the tarball so its executable permission survives download. The combined release
+`SHA256SUMS.txt` covers the APK, both ZIP files, and the Linux tarball itself.
+
+Only after all checks pass does `gh release create --verify-tag` publish the four
+packages and combined checksum. Release notes link to the exact successful build
+and source commit. Publication stops if there is no successful exact-commit build,
+or if an artifact is missing or expired, a version differs, or a checksum fails. If a
+workflow attempt fails before creating the release, fix the stated cause and
+rerun that failed release workflow after all four artifacts are available. It
+does not replace an existing release or overwrite its assets.
+
+Download a release's `SHA256SUMS.txt` beside its packages and verify them, for
+example on Linux:
+
+```sh
+sha256sum --check SHA256SUMS.txt
+```
+
+This uses the documented [workflow-run filters](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-workflow),
+[run-specific artifact downloads](https://cli.github.com/manual/gh_run_download),
+and [release creation with existing-tag verification](https://cli.github.com/manual/gh_release_create).
+
+## Toolchain and native checks
 
 Flutter is pinned to 3.47.9; Android uses JDK 17,
 SDK 36 and NDK 28.2.13676358 to match the project. The AppImage builder uses the
@@ -57,6 +122,8 @@ Run the same packaged isolation suite locally with a configured native target:
 xvfb-run -a flutter test integration_test/sqlite_isolation_test.dart -d linux --no-pub --reporter expanded
 flutter test integration_test/sqlite_isolation_test.dart -d emulator-5554 --no-pub --reporter expanded
 flutter test integration_test/sqlite_isolation_test.dart -d windows --no-pub --reporter expanded
+flutter test integration_test/sqlite_isolation_test.dart -d macos --no-pub --reporter expanded
+flutter test integration_test/secret_vault_test.dart -d macos --no-pub --reporter expanded
 ```
 
 The suite creates temporary databases, attacks a second bot's existing file,
@@ -75,15 +142,15 @@ a fresh `build/appimage/AppDir`. Outputs remain ignored by Git. The script retai
 Flutter's executable-relative data/library layout and asks linuxdeploy to collect
 dependencies of the executable and its dynamically loaded plugin libraries.
 
-After the workflow is pushed, inspect its first GitHub run and download/test
-all three artifacts. A syntax check or an existing Android APK build does not
-prove that the new hosted Windows/AppImage jobs passed.
+Inspect the complete GitHub build run and download/test all four platform
+artifacts before tagging. Automated checks do not establish clean-machine
+compatibility or Apple notarization.
 
 References: [Flutter Windows distribution](https://docs.flutter.dev/platform-integration/windows/building),
 [linuxdeploy packaging](https://docs.appimage.org/packaging-guide/from-source/linuxdeploy-user-guide.html),
 [artifact retention and file permissions](https://github.com/actions/upload-artifact).
 
-## Verification on 2026-11-09
+## Earlier local verification on 2026-11-09
 
 `actionlint` passed, YAML parsed, Bash syntax passed, and the Windows packaging
 snippet parsed as PowerShell. A local optimized Linux build and the complete

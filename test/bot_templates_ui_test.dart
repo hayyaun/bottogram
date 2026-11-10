@@ -61,6 +61,15 @@ void main() {
         home: RepaintBoundary(key: boundary, child: page),
       ),
     );
+    final images = tester.widgetList<Image>(find.byType(Image)).toList();
+    if (images.isNotEmpty) {
+      await tester.runAsync(() async {
+        final context = tester.element(find.byType(Image).first);
+        await Future.wait([
+          for (final image in images) precacheImage(image.image, context),
+        ]);
+      });
+    }
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   }
@@ -105,15 +114,33 @@ void main() {
       expect(find.text('Event registration'), findsOneWidget);
       expect(find.text('Use template'), findsNWidgets(7));
       await capture(tester, boundary, 'catalog-$width');
-      await tester.tap(
-        find.widgetWithText(OutlinedButton, 'Use template').first,
-      );
+      await tester.tap(find.text('Use template').first);
       await tester.pumpAndSettle();
       expect(find.byType(TemplateSetupPage), findsOneWidget);
       expect(find.text('Template settings'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   }
+  testWidgets('catalog fits narrow dark screens with large text', (
+    tester,
+  ) async {
+    final boundary = GlobalKey();
+    await open(
+      tester,
+      const Scaffold(body: StorePage()),
+      width: 320,
+      scale: 1.6,
+      brightness: Brightness.dark,
+      boundary: boundary,
+    );
+    await capture(tester, boundary, 'catalog-dark-320');
+    await tester.ensureVisible(find.text('Event registration'));
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('Event registration'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TemplateSetupPage), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
   testWidgets(
     'sample editing is copied into the created action chain and original samples stay intact',
     (tester) async {

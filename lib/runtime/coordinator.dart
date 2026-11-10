@@ -8,6 +8,7 @@ import 'http_transport.dart';
 import 'ports.dart';
 import 'progress_store.dart';
 import 'telegram_port.dart';
+import 'failure_presentation.dart';
 
 /// Lifecycle operations serialize; long-running automations never occupy this
 /// queue. Android and desktop supply the same narrow execution lease.
@@ -26,10 +27,21 @@ class BotRuntime extends ChangeNotifier {
   final Map<VirtBot, List<AutomationRunner>> _runners = {};
   final Map<VirtBot, JsonTransport> _clients = {};
   final Map<VirtBot, Map<String, String>> _errors = {};
+  final Map<VirtBot, Map<String, FailurePresentation>> _failureDetails = {};
   Future<void> _tail = Future.value();
   bool _closed = false;
   int get activeCount => _bots.where((bot) => bot.active).length;
-  String? errorFor(VirtBot bot) => _errors[bot]?.values.firstOrNull;
+  String? _firstErrorKey(VirtBot bot) {
+    final keys = _errors[bot]?.keys;
+    return keys?.where((key) => key != '@telegram.menu').firstOrNull ??
+        keys?.firstOrNull;
+  }
+
+  String? errorFor(VirtBot bot) => _errors[bot]?[_firstErrorKey(bot)];
+  FailurePresentation? failureFor(VirtBot bot) {
+    final key = _firstErrorKey(bot);
+    return key == null ? null : _failureDetails[bot]?[key];
+  }
 
   Future<void> _queue(Future<void> Function() work) {
     final result = _tail.then((_) async {
@@ -60,6 +72,7 @@ class BotRuntime extends ChangeNotifier {
     }
     _bots.add(bot);
     _errors[bot] = {};
+    _failureDetails[bot] = {};
     bot.onRunningChanged = () {
       if (_closed) return;
       notifyListeners();
@@ -103,6 +116,17 @@ class BotRuntime extends ChangeNotifier {
             context: context,
             store: progress,
             key: '${setup.instanceId}:${manifest.digest}:${definition.id}',
+            errorMessages: manifest.errorMessages,
+            onFailure: (failure) {
+              if (_closed || !_bots.contains(bot)) return;
+              if (failure == null) {
+                _failureDetails[bot]?.remove(definition.id);
+              } else {
+                _failureDetails.putIfAbsent(bot, () => {})[definition.id] =
+                    failure;
+              }
+              notifyListeners();
+            },
             onStatus: (error) {
               if (_closed || !_bots.contains(bot)) return;
               if (error == null) {
@@ -169,6 +193,7 @@ class BotRuntime extends ChangeNotifier {
     }
     _bots.remove(bot);
     _errors.remove(bot);
+    _failureDetails.remove(bot);
     bot.runtimeError = null;
   }
 

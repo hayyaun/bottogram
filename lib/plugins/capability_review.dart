@@ -33,6 +33,28 @@ class PluginCapabilityReview extends StatelessWidget {
   final PluginManifest plugin;
   final Map<String, String>? fields;
 
+  String _fieldLabel(String key) =>
+      plugin.fields.firstWhere((field) => field.key == key).label;
+
+  String _headerDescription(MapEntry<String, dynamic> header) {
+    final binding = header.value;
+    if (binding is String) return 'Header: ${header.key} (literal value)';
+    final transform = switch (binding['transform']) {
+      'value' => 'field value',
+      'url.origin' => 'URL origin',
+      'url.authority' => 'URL host and port',
+      _ => 'field value',
+    };
+    return 'Header: ${header.key} ← ${_fieldLabel(binding['field'] as String)} ($transform)';
+  }
+
+  String _authenticationDescription(Map<String, dynamic> authentication) {
+    final method = authentication['type'] == 'bearer'
+        ? 'Bearer token'
+        : 'Custom header ${authentication['header']}';
+    return 'Authentication: $method ← ${_fieldLabel(authentication['secretField'] as String)} (secure storage)';
+  }
+
   String _destination(Map<String, dynamic> target) {
     final field = plugin.fields.firstWhere(
       (f) => f.key == target['originField'],
@@ -80,8 +102,20 @@ class PluginCapabilityReview extends StatelessWidget {
             const Text('Sends notifications to the configured admin.'),
           for (final request in AutomationRegistry.standard.requestsFor(
             component,
-          ))
+          )) ...[
             Text('GET ${request['url']}'),
+            for (final header
+                in (request['headers'] as Map<String, dynamic>? ??
+                        const <String, dynamic>{})
+                    .entries)
+              Text(_headerDescription(header)),
+            if (request['authentication'] != null)
+              Text(
+                _authenticationDescription(
+                  request['authentication'] as Map<String, dynamic>,
+                ),
+              ),
+          ],
         ],
       ],
     ],

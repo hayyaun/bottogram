@@ -181,7 +181,7 @@ class _PluginsPageState extends State<PluginsPage> {
                     const SizedBox(height: 28),
                     const BNotice(
                       message:
-                          'Live plugins run while their bots are started. Existing shop buttons can open the website even when Bottogram is stopped.',
+                          'Live plugins run while their bots are started. Existing Mini App buttons can open their website even when Bottogram is stopped.',
                     ),
                     if (_error != null)
                       Padding(

@@ -34,6 +34,7 @@ class BotTelegramPort implements TelegramPort {
       // SDK exceptions can contain authenticated URLs; never surface them.
       throw const RuntimeFailure(
         'Telegram did not confirm delivery. Retrying may duplicate a message.',
+        code: 'telegram.delivery_unconfirmed',
       );
     }
   }

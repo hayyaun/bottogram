@@ -3,8 +3,14 @@ import 'dart:async';
 typedef Json = Map<String, dynamic>;
 
 class RuntimeFailure implements Exception {
-  const RuntimeFailure(this.message, {this.permanent = false, this.retryAfter});
+  const RuntimeFailure(
+    this.message, {
+    this.permanent = false,
+    this.retryAfter,
+    this.code = 'runtime.failure',
+  });
   final String message;
+  final String code;
   final bool permanent;
   final Duration? retryAfter;
   @override
@@ -90,6 +96,7 @@ String render(String template, Json event, {dynamic item}) => template
       if (value is! String && value is! num && value is! bool) {
         throw const RuntimeFailure(
           'The message template requires a scalar value.',
+          code: 'message.invalid_template',
           permanent: true,
         );
       }

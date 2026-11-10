@@ -40,6 +40,7 @@ class HttpPollTrigger implements AutomationTrigger {
                 next == cursor))) {
       throw const RuntimeFailure(
         'The polling response does not match the plugin contract.',
+        code: 'poll.invalid_response',
         permanent: true,
       );
     }
@@ -52,6 +53,7 @@ class HttpPollTrigger implements AutomationTrigger {
           id.toString().length > 256) {
         throw const RuntimeFailure(
           'A polling event has no stable ID.',
+          code: 'poll.invalid_response',
           permanent: true,
         );
       }
@@ -178,6 +180,7 @@ class TelegramMessageAction implements AutomationAction {
     if (chatId == null) {
       throw const RuntimeFailure(
         'The event has no reply destination.',
+        code: 'message.no_destination',
         permanent: true,
       );
     }
@@ -187,7 +190,8 @@ class TelegramMessageAction implements AutomationAction {
       final items = valueAt(event, list['itemsPath'] as String);
       if (items is! List || items.length > 100) {
         throw const RuntimeFailure(
-          'The catalog response is invalid.',
+          'The list response is invalid.',
+          code: 'message.invalid_list',
           permanent: true,
         );
       }
@@ -196,10 +200,11 @@ class TelegramMessageAction implements AutomationAction {
           : '\n${items.map((item) => render(list['itemText'] as String, event, item: item)).join('\n')}';
     }
     // A list is split into acknowledged actions at the runner boundary by the
-    // package author. Avoid silently truncating products or retrying partial sends.
+    // package author. Avoid silently truncating items or retrying partial sends.
     if (text.isEmpty || text.length > 4096) {
       throw const RuntimeFailure(
-        'The reply exceeds Telegram’s 4096-character limit. Use a smaller catalog page.',
+        'The reply exceeds Telegram’s 4096-character limit. Send fewer items per message.',
+        code: 'message.too_long',
         permanent: true,
       );
     }
@@ -208,6 +213,7 @@ class TelegramMessageAction implements AutomationAction {
       if (event['chatType'] != 'private') {
         throw const RuntimeFailure(
           'Mini App replies require a private chat.',
+          code: 'telegram.invalid_chat_type',
           permanent: true,
         );
       }

@@ -22,8 +22,9 @@ class MemoryBuilderVariables implements BuilderVariables {
     dynamic value, {
     bool increment = false,
   }) async {
-    return values[name] =
-        increment ? (values[name] as num) + (value as num) : value;
+    return values[name] = increment
+        ? (values[name] as num) + (value as num)
+        : value;
   }
 }
 
@@ -171,7 +172,7 @@ void main() {
       ]);
       expect(telegram.calls.single.$2['text'], 'false');
       final messages = console.entries('fixture').map((e) => e.message).join();
-      expect(messages, contains('HTTP 401'));
+      expect(messages, contains('401'));
       expect(messages, isNot(contains('do-not-log')));
     },
   );

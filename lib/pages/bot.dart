@@ -10,6 +10,7 @@ import 'package:bottogram/plugins/parameters_page.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/capability_review.dart';
 import 'package:bottogram/plugins/update_section.dart';
+import 'package:bottogram/plugins/failure_notice.dart';
 import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -115,6 +116,9 @@ class _BotPageState extends State<BotPage> {
     final plugin = setup?.usesPlugin ?? false;
     final manifest = context.read<PluginRepository>().manifestFor(setup);
     final live = manifest?.executable == true;
+    final failure = widget.bot.runtimeError == null
+        ? null
+        : context.read<BotsCubit>().runtime.failureFor(widget.bot);
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.bot.name, overflow: TextOverflow.ellipsis),
@@ -241,7 +245,34 @@ class _BotPageState extends State<BotPage> {
                 ),
                 const SizedBox(height: 20),
                 if (widget.bot.runtimeError != null) ...[
-                  BNotice(message: widget.bot.runtimeError!, error: true),
+                  if (failure != null)
+                    PluginFailureNotice(
+                      failure: failure,
+                      onEditParameters: manifest == null
+                          ? null
+                          : () => Navigator.push(
+                              context,
+                              MaterialPageRoute<void>(
+                                builder: (_) => PluginParametersPage(
+                                  bot: widget.bot,
+                                  plugin: manifest,
+                                ),
+                              ),
+                            ),
+                      onRetry: () async {
+                        try {
+                          await context.read<BotsCubit>().retryBot(widget.bot);
+                        } catch (_) {
+                          if (context.mounted) {
+                            context.showSnackBar(
+                              'This bot could not restart. Check its configuration and connection.',
+                            );
+                          }
+                        }
+                      },
+                    )
+                  else
+                    BNotice(message: widget.bot.runtimeError!, error: true),
                   const SizedBox(height: 20),
                 ],
                 if (live) ...[

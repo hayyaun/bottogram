@@ -295,7 +295,7 @@ class PluginRepository extends ChangeNotifier {
   });
 
   /// Stage new secrets before publishing the replacement setup. A fresh runtime
-  /// identity prevents progress from one shop being reused for another shop.
+  /// identity isolates progress when configured parameters change.
   Future<BotSetup> updateParameters(
     dynamic botKey,
     String token, {

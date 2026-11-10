@@ -126,7 +126,7 @@ void main() {
           throwsA(
             isA<RuntimeFailure>()
                 .having((e) => e.permanent, 'permanent', true)
-                .having((e) => e.message, 'message', contains('permissions')),
+                .having((e) => e.code, 'code', 'http.forbidden'),
           ),
         );
       } finally {
@@ -224,15 +224,12 @@ void main() {
         (c) =>
             c['lookup']['request']['authentication']['secretField'] = 'missing',
         (c) => c['request']['url'] = 'https://{shopId}.example.test/orders',
-        (c) =>
-            c['request']['url'] =
-                'https://api.inshopa.ir/v1/orders?shop={shopId}',
-        (c) =>
-            c['request']['url'] =
-                'https://api.inshopa.ir/v1/shops/{unknown}/orders',
-        (c) =>
-            c['request']['url'] =
-                'https://api.inshopa.ir/v1/shops/prefix-{shopId}/orders',
+        (c) => c['request']['url'] =
+            'https://api.inshopa.ir/v1/orders?shop={shopId}',
+        (c) => c['request']['url'] =
+            'https://api.inshopa.ir/v1/shops/{unknown}/orders',
+        (c) => c['request']['url'] =
+            'https://api.inshopa.ir/v1/shops/prefix-{shopId}/orders',
         (c) => c['lookup']['bindings']['unused'] = 'id',
         (c) => c['pagination']['pageSize'] = 101,
         (c) => c['pagination']['pageDelaySeconds'] = 0,
@@ -248,20 +245,19 @@ void main() {
   test(
     'lookup identifies the shop; raw page size controls pagination before paid filtering',
     () async {
-      final http =
-          FakeHttp()
-            ..responses.addAll([
-              {'id': 'shop-1'},
-              {
-                'orders': [
-                  order('unpaid', 'pending_payment'),
-                  order('paid', 'paid'),
-                ],
-              },
-              {
-                'orders': [order('older', 'paid')],
-              },
-            ]);
+      final http = FakeHttp()
+        ..responses.addAll([
+          {'id': 'shop-1'},
+          {
+            'orders': [
+              order('unpaid', 'pending_payment'),
+              order('paid', 'paid'),
+            ],
+          },
+          {
+            'orders': [order('older', 'paid')],
+          },
+        ]);
       final config = salesConfig();
       config['pagination']['pageSize'] = 2;
       final trigger = HttpListPollTrigger(
@@ -330,12 +326,11 @@ void main() {
           ],
         },
       ]) {
-        final http =
-            FakeHttp()
-              ..responses.addAll([
-                {'id': 'shop-1'},
-                response,
-              ]);
+        final http = FakeHttp()
+          ..responses.addAll([
+            {'id': 'shop-1'},
+            response,
+          ]);
         await expectLater(
           HttpListPollTrigger(
             salesConfig(),
@@ -561,14 +556,13 @@ void main() {
   test(
     'Stop during page pacing retains continuation and makes no further request',
     () async {
-      final http =
-          FakeHttp()
-            ..responses.addAll([
-              {'id': 'shop-1'},
-              {
-                'orders': [order('old', 'paid')],
-              },
-            ]);
+      final http = FakeHttp()
+        ..responses.addAll([
+          {'id': 'shop-1'},
+          {
+            'orders': [order('old', 'paid')],
+          },
+        ]);
       final config = salesConfig();
       config['pagination']['pageSize'] = 1;
       final registry = AutomationRegistry(

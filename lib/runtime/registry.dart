@@ -2,6 +2,8 @@ import 'ports.dart';
 import 'components.dart';
 import 'triggers/http_list_poll.dart';
 import 'telegram_config.dart';
+import 'http_headers.dart';
+import 'failure_presentation.dart';
 
 typedef TriggerFactory =
     AutomationTrigger Function(Json config, RuntimeContext context);
@@ -31,10 +33,16 @@ class ComponentRegistration<T> {
 }
 
 class ComponentDefinition {
-  const ComponentDefinition(this.type, this.config, {this.id});
+  const ComponentDefinition(
+    this.type,
+    this.config, {
+    this.id,
+    this.errorMap = const {},
+  });
   final String type;
   final Json config;
   final String? id;
+  final Map<String, String> errorMap;
 }
 
 class AutomationDefinition {
@@ -152,7 +160,12 @@ class AutomationRegistry {
         if (a['enabledBySetting'] != null) identifier(a['enabledBySetting']);
         ComponentDefinition component(dynamic raw, bool trigger) {
           final c = object(raw);
-          keys(c, trigger ? {'type', 'config'} : {'id', 'type', 'config'});
+          keys(
+            c,
+            trigger
+                ? {'type', 'config', 'errorMap'}
+                : {'id', 'type', 'config', 'errorMap'},
+          );
           final type = string(c['type'], 100);
           final config = object(c['config']);
           final registration = trigger ? triggers[type] : actions[type];
@@ -163,7 +176,12 @@ class AutomationRegistry {
           }
           if (!trigger) identifier(c['id']);
           registration.validate(config);
-          return ComponentDefinition(type, config, id: c['id'] as String?);
+          return ComponentDefinition(
+            type,
+            config,
+            id: c['id'] as String?,
+            errorMap: validateErrorMap(c['errorMap']),
+          );
         }
 
         final t = component(a['trigger'], true);
@@ -240,13 +258,7 @@ class AutomationRegistry {
   }
 
   static void _request(Json c, {Set<String>? pathParameters}) {
-    keys(c, {
-      'method',
-      'url',
-      'authentication',
-      'headers',
-      'storefrontUrlField',
-    });
+    keys(c, {'method', 'url', 'authentication', 'headers'});
     if (c['method'] != 'GET') invalid();
     final u = Uri.tryParse(string(c['url'], 2048));
     if (u == null ||
@@ -282,23 +294,7 @@ class AutomationRegistry {
       }
       if (found.length != pathParameters.length) invalid();
     }
-    if (c['authentication'] != null) {
-      final a = object(c['authentication']);
-      keys(a, {'type', 'secretField'});
-      if (a['type'] != 'bearer') invalid();
-      identifier(a['secretField']);
-    }
-    if (c['storefrontUrlField'] != null) identifier(c['storefrontUrlField']);
-    if (c['headers'] != null) {
-      final h = object(c['headers']);
-      for (final e in h.entries) {
-        if (!{'origin', 'x-storefront-host'}.contains(e.key.toLowerCase())) {
-          invalid();
-        }
-        final v = string(e.value, 2048);
-        if (v.contains('\r') || v.contains('\n') || v.contains('{{')) invalid();
-      }
-    }
+    validateHttpHeaders(c);
   }
 
   static void _poll(Json c) {

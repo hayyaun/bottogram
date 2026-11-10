@@ -38,7 +38,8 @@ trigger/action capabilities instead of adding Inshopa conditions to the runtime.
 1. **Verify storefront navigation.** Inshopa 0.6.0 declares opening the existing
    HTTPS shop and `/orders` as Telegram Mini Apps, with brief help and a
    `/products` launcher alias. Generic command/reply/menu capabilities execute
-   those declarations; older pinned packages keep their original behavior.
+   those declarations. Current source examples and the transitioned test catalog
+   use the explicit generic header contract.
    Verify fresh/existing login, cross-host handoff,
    buyer isolation/account switching, custom domains and payment return in real
    Telegram clients. See [Storefront navigation](STOREFRONT_NAVIGATION.md).
@@ -56,14 +57,24 @@ trigger/action capabilities instead of adding Inshopa conditions to the runtime.
    clear guidance when the admin has not started the bot.
 5. **Operational status.** Show last successful check, last alert, current connection
    failure/retry, and what needs user attention. “Active” alone is insufficient.
-6. **Verify reviewed plugin updates.** The generic updater validates retained
-   configuration and unchanged automation definitions, stages compatible progress
+   Plugin-owned error resources now supply shop-specific wording through stable
+   host codes; verify parameter/retry actions and generic fallback rendering.
+6. **Verify reviewed plugin updates.** The generic updater validates the retained
+   setup and compares automation execution configuration, excluding error catalogs
+   and component `errorMap` presentation metadata. It stages compatible progress
    and delivery receipts before committing the selected bot's new package pin,
    and retains the old package/source progress. Verify recovery and UI behavior
    on real installations. An active bot queues a reviewed update in memory for
    its next normal Start; restarting Bottogram discards that selection and
    requires another review. Invalid/HTTP Mini App origins reject the update
    without rewriting the old bot. Automatic package switching is not implemented.
+   The current breaking HTTP/error contract intentionally has no legacy decoder.
+   The approved offline catalog transition is complete, with external exact-file
+   backups, retained settings and copied progress. Automated checks and reopening
+   the normal Linux debug preview verified the transitioned data and package
+   pins. Local 0.6.0 is installed, but the current local bot remains on
+   0.5.0 because its HTTP shop address cannot launch a Telegram Mini App. No bot
+   was restarted.
 7. **Protected backup/import for plugin bots.** Currently unavailable; existing
    configuration sharing supports manual bots only. Define secret handling and
    restoration before implementing it. Any new database migration needs separate

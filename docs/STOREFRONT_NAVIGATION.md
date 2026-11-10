@@ -19,8 +19,9 @@ change.
 
 All command names, aliases, messages, button labels, routes and menu labels live
 in JSON. The host contains no registry that recognizes Inshopa IDs, versions or
-source digests and substitutes behavior. Older packages execute their own
-unchanged declarations; setup-only packages stay setup-only.
+source digests and substitutes behavior. Packages execute the declarations they
+contain. The unreleased format is allowed to break; there is no decoder that
+recreates the removed implicit HTTP-header convention for old installed data.
 
 ## Generic host capabilities
 
@@ -58,26 +59,38 @@ execution.
 
 ## Versions, reviewed updates and saved state
 
-Fresh installations seed Inshopa 0.6.0. Older package files and installed source
-bytes remain immutable; installing or bundling a newer version does not move
-an existing bot to it. The generic update operation reviews the selected target
-version and checks setup and automation compatibility before changing its pin.
+Fresh installations seed Inshopa 0.6.0. The current production and local 0.6.0
+definitions declare request headers and error messages explicitly. Shipped older
+example versions have also been rewritten to the current request syntax; their
+old source bytes are not a compatibility promise. The approved one-time offline
+Hive transition rewrote three installed definitions and added local 0.6.0 after
+exact data-file backups outside the repository. Installing a package is distinct
+from applying it to a bot.
 
 For a compatible update, the bot instance ID, token binding, admin destination,
 field values, secure key references and saved preferences remain unchanged.
-Only the selected bot's installed package pin changes. The entire `paid-orders`
-automation in 0.6.0 is structurally identical to the 0.5.0 production package,
-including its setting gate, action IDs, API endpoints, intervals, pagination and
-notification text.
+The `paid-orders` execution behavior remains the same: its setting gate, action
+IDs, API endpoints, intervals, pagination, filter and notification text are
+retained. Header construction is now explicit JSON, and error presentation is
+plugin metadata. Error wording and presentation mappings are excluded from
+execution compatibility comparisons; request behavior is not ignored.
 
 The existing progress key includes the whole package source digest. Reusing an
 automation ID alone therefore cannot preserve its state. The updater compares
-the full old/new automation definition and retained execution context, then
+the old/new automation execution configuration and retained execution context,
+excluding error catalogs and component `errorMap` presentation metadata, then
 stages its state and all delivery-receipt keys under the new package namespace
 before committing the setup pin. A failed copy leaves the original bot pin and
 progress intact. The source namespace and old package are retained; a package's
 own declaration cannot authorize state reuse across different shops or contexts.
-No database schema migration or startup backfill is introduced.
+The header/error source contract requires no schema migration or startup backfill.
+The approved one-time offline data transition changed only the local 0.5.0 setup
+digest, retained its other settings and defaults
+(including enabled seller notifications), and copied two progress records while
+retaining their originals. There were no delivery receipts to copy. Automated
+checks and reopening the normal Linux debug preview verified the transitioned
+data: all package pins resolve and the other public setup fields, including the
+exact shop URL, are unchanged. No bot was restarted.
 
 The retained state includes the baseline, pending event/action position, page
 continuation and durable delivery receipts. An update does not establish a fresh
@@ -91,6 +104,12 @@ queue belongs to the current app session: restarting Bottogram discards the
 selection and requires another review. The update is revalidated when applied.
 An invalid or HTTP target Mini App origin rejects that update; the older pinned
 bot and its alerts remain intact. No shop/domain or protocol rewrite is inferred.
+
+The local package keeps `bottogram-plugin-inshopa-local` and the existing local
+API destinations. It is not a production-backend replacement. Local 0.6.0 is
+installed and available; the current local bot remains on 0.5.0 because no
+reachable HTTPS shop address has been provided. A local HTTP website cannot be
+advertised as a usable Telegram Mini App destination.
 
 Flutter hot reload keeps existing sessions and their already-registered handlers
 alive. It does not retroactively install new startup handlers or select plugin
@@ -136,8 +155,8 @@ configured Telegram menu. Changing a storefront value does not recall prior
 messages, and a failed menu update may leave the previous menu in place.
 
 Local automated checks use fixtures rather than real bot tokens, buyer sessions
-or payment-provider credentials. Recorded verification for this implementation
-belongs in [Plugin runtime](PLUGIN_RUNTIME.md) after the checks have run.
+or payment-provider credentials. Current verification results are recorded in
+[Plugin runtime](PLUGIN_RUNTIME.md).
 
 Real Telegram checks remain outstanding: fresh/existing login, cross-host
 handoff and return to `/orders`, custom shop domains, reopening, logout/account

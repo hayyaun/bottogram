@@ -59,6 +59,16 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   PluginManifest? pendingUpgradeFor(VirtBot bot) =>
       _pendingPluginUpgrades?[bot];
 
+  Future<void> retryBot(VirtBot bot) => _mutate(() async {
+    if (!state.contains(bot) || !bot.isInBox) {
+      throw const PluginException('This bot is no longer available.');
+    }
+    await runtime.stop(bot);
+    final target = pendingUpgradeFor(bot);
+    if (target != null) await _applyPluginUpgrade(bot, target);
+    await runtime.start(bot);
+  });
+
   void cancelPendingUpgrade(VirtBot bot) {
     _pendingPluginUpgrades?.remove(bot);
     emit(List<VirtBot>.of(state));

@@ -6,10 +6,9 @@ import '../ports.dart';
 class HttpListPollTrigger implements AutomationTrigger {
   HttpListPollTrigger(this.config, RuntimeContext context)
     : request = HttpRequest(config['request'] as Json, context),
-      lookup =
-          config['lookup'] == null
-              ? null
-              : HttpRequest(config['lookup']['request'] as Json, context);
+      lookup = config['lookup'] == null
+          ? null
+          : HttpRequest(config['lookup']['request'] as Json, context);
   final Json config;
   final HttpRequest request;
   final HttpRequest? lookup;
@@ -27,12 +26,14 @@ class HttpListPollTrigger implements AutomationTrigger {
     if (offset == null || offset < 0 || offset % size != 0) {
       throw const RuntimeFailure(
         'Stored list scan progress is invalid.',
+        code: 'poll.invalid_progress',
         permanent: true,
       );
     }
     if (offset ~/ size >= (pagination['maxPages'] as int)) {
       throw const RuntimeFailure(
-        'Order history exceeds this plugin’s scan limit. Contact the plugin author.',
+        'The list scan exceeds this plugin’s configured limit.',
+        code: 'poll.scan_limit_exceeded',
         permanent: true,
       );
     }
@@ -46,6 +47,7 @@ class HttpListPollTrigger implements AutomationTrigger {
               !RegExp(r'^[a-zA-Z0-9_-]{1,256}$').hasMatch(value)) {
             throw const RuntimeFailure(
               'The API lookup returned an invalid resource ID.',
+              code: 'poll.invalid_response',
               permanent: true,
             );
           }
@@ -66,6 +68,7 @@ class HttpListPollTrigger implements AutomationTrigger {
     if (items is! List || items.length > size) {
       throw const RuntimeFailure(
         'The list response does not match the plugin contract.',
+        code: 'poll.invalid_response',
         permanent: true,
       );
     }
@@ -79,6 +82,7 @@ class HttpListPollTrigger implements AutomationTrigger {
           id.toString().length > 256) {
         throw const RuntimeFailure(
           'A list item has no stable ID.',
+          code: 'poll.invalid_response',
           permanent: true,
         );
       }
@@ -87,6 +91,7 @@ class HttpListPollTrigger implements AutomationTrigger {
         if (value == null) {
           throw const RuntimeFailure(
             'A list item is missing its filter field.',
+            code: 'poll.invalid_response',
             permanent: true,
           );
         }

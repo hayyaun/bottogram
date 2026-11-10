@@ -7,6 +7,8 @@ import 'setting.dart';
 import '../runtime/registry.dart';
 import '../runtime/ports.dart' show Json;
 import '../runtime/telegram_config.dart';
+import '../runtime/http_headers.dart';
+import '../runtime/failure_presentation.dart';
 
 const maxPluginBytes = 256 * 1024;
 
@@ -76,6 +78,7 @@ class PluginManifest {
     this.settings,
     this.automations,
     this.telegram,
+    this.errorMessages,
   );
 
   final String source;
@@ -88,6 +91,7 @@ class PluginManifest {
   final List<PluginSetting> settings;
   final List<AutomationDefinition> automations;
   final Json? telegram;
+  final Json? errorMessages;
   bool get executable => automations.isNotEmpty;
   Map<String, Object> settingValues(Map<String, Object?> saved) {
     if (saved.keys.any((key) => !settings.any((s) => s.key == key))) {
@@ -148,6 +152,7 @@ class PluginManifest {
       'setupFields',
       'settings',
       'automations',
+      'errorMessages',
       'telegram',
     });
     final live =
@@ -284,9 +289,11 @@ class PluginManifest {
     }
     List<AutomationDefinition> automations = const [];
     Json? telegram;
+    Json? errorMessages;
     if (live) {
       try {
         final registry = AutomationRegistry.standard;
+        errorMessages = parseErrorMessages(data['errorMessages']);
         automations = registry.parse(data['automations']);
         if (data['telegram'] != null) {
           validateTelegramConfig(data['telegram']);
@@ -322,6 +329,13 @@ class PluginManifest {
             reject('An automation must reference a boolean setting.');
           }
           for (final component in [automation.trigger, ...automation.actions]) {
+            if (component.errorMap.values.any(
+              (resource) => !errorMessages!.containsKey(resource),
+            )) {
+              reject(
+                'An error mapping references an undeclared error message.',
+              );
+            }
             if (component.type == 'telegram.reply.v2') {
               validateTargetFields(
                 inlineKeyboardTargets(component.config['inlineKeyboard']),
@@ -331,9 +345,7 @@ class PluginManifest {
                 !(requires as List).contains('adminTelegramUserId')) {
               reject('Admin notifications require the shared admin field.');
             }
-            for (final request in registry.requestsFor(
-              component,
-            )) {
+            for (final request in registry.requestsFor(component)) {
               final auth = request['authentication'];
               if (auth is Map &&
                   !fields.any(
@@ -343,20 +355,22 @@ class PluginManifest {
                         f.required,
                   )) {
                 reject(
-                  'Bearer authentication must reference a required secret field.',
+                  'HTTP authentication must reference a required secret field.',
                 );
               }
-              final storefront = request['storefrontUrlField'];
-              if (storefront != null &&
-                  !fields.any(
-                    (f) =>
-                        f.key == storefront &&
-                        f.type == PluginFieldType.text &&
-                        f.required,
-                  )) {
-                reject(
-                  'The storefront URL must reference a required text field.',
-                );
+              for (final binding in headerFieldBindings(request)) {
+                if (!fields.any(
+                  (f) =>
+                      f.key == binding.field &&
+                      f.type != PluginFieldType.secret &&
+                      (binding.transform == 'value' ||
+                          f.type == PluginFieldType.text) &&
+                      f.required,
+                )) {
+                  reject(
+                    'HTTP header bindings require a declared required non-secret field; URL transforms require text.',
+                  );
+                }
               }
             }
           }
@@ -376,6 +390,7 @@ class PluginManifest {
       List.unmodifiable(settings),
       automations,
       telegram,
+      errorMessages,
     );
   }
 }

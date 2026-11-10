@@ -75,6 +75,10 @@
                 }
               ]
             ]
+          },
+          "errorMap": {
+            "configuration.invalid_public_origin": "shopUrlInvalid",
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
           }
         }
       ]
@@ -110,6 +114,10 @@
                 }
               ]
             ]
+          },
+          "errorMap": {
+            "configuration.invalid_public_origin": "shopUrlInvalid",
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
           }
         }
       ]
@@ -152,6 +160,10 @@
                 }
               ]
             ]
+          },
+          "errorMap": {
+            "configuration.invalid_public_origin": "shopUrlInvalid",
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
           }
         }
       ]
@@ -168,10 +180,19 @@
             "request": {
               "method": "GET",
               "url": "https://api.inshopa.ir/v1/storefront",
-              "storefrontUrlField": "storefrontUrl",
               "authentication": {
                 "type": "bearer",
                 "secretField": "apiKey"
+              },
+              "headers": {
+                "Origin": {
+                  "field": "storefrontUrl",
+                  "transform": "url.origin"
+                },
+                "X-Storefront-Host": {
+                  "field": "storefrontUrl",
+                  "transform": "url.authority"
+                }
               }
             },
             "bindings": {
@@ -181,10 +202,19 @@
           "request": {
             "method": "GET",
             "url": "https://api.inshopa.ir/v1/shops/{shopId}/orders",
-            "storefrontUrlField": "storefrontUrl",
             "authentication": {
               "type": "bearer",
               "secretField": "apiKey"
+            },
+            "headers": {
+              "Origin": {
+                "field": "storefrontUrl",
+                "transform": "url.origin"
+              },
+              "X-Storefront-Host": {
+                "field": "storefrontUrl",
+                "transform": "url.authority"
+              }
             }
           },
           "response": {
@@ -202,6 +232,15 @@
             "maxPages": 1000,
             "pageDelaySeconds": 2
           }
+        },
+        "errorMap": {
+          "http.unauthorized": "shopAccessDenied",
+          "http.forbidden": "shopAccessDenied",
+          "http.credentials_unavailable": "keyUnavailable",
+          "http.timeout": "connectionUnavailable",
+          "http.request_failed": "connectionUnavailable",
+          "http.invalid_response": "connectionUnavailable",
+          "poll.scan_limit_exceeded": "orderScanLimit"
         }
       },
       "actions": [
@@ -210,6 +249,9 @@
           "type": "telegram.notify-admin.v1",
           "config": {
             "text": "New paid order\nShop: {{event.shop_name}}\nOrder: {{event.id}}\nAmount: {{event.total_irr}} {{event.currency}}"
+          },
+          "errorMap": {
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
           }
         }
       ]
@@ -222,6 +264,42 @@
         "originField": "storefrontUrl",
         "path": "/"
       }
+    }
+  },
+  "errorMessages": {
+    "shopAccessDenied": {
+      "title": "Shop access denied",
+      "message": "Inshopa rejected the shop connection.",
+      "help": "Check the API key, its permissions and the registered shop address.",
+      "action": "editPluginParameters"
+    },
+    "keyUnavailable": {
+      "title": "Shop key unavailable",
+      "message": "The saved Inshopa API key could not be used.",
+      "help": "Unlock secure storage and check the saved key in the plugin parameters.",
+      "action": "editPluginParameters"
+    },
+    "orderScanLimit": {
+      "title": "Order scan limit reached",
+      "message": "The order history exceeds this plugin’s configured scan limit.",
+      "help": "Contact the plugin author before increasing the limit."
+    },
+    "shopUrlInvalid": {
+      "title": "Shop link unavailable",
+      "message": "Opening the shop in Telegram requires a valid HTTPS address.",
+      "help": "Use the existing shop’s HTTPS origin without a page path, credentials, query or fragment.",
+      "action": "editPluginParameters"
+    },
+    "connectionUnavailable": {
+      "title": "Shop connection unavailable",
+      "message": "The Inshopa API could not complete the request.",
+      "help": "Check the network and service availability, then try again.",
+      "action": "retry"
+    },
+    "deliveryUnconfirmed": {
+      "title": "Telegram delivery unconfirmed",
+      "message": "Telegram did not confirm this message’s delivery.",
+      "help": "Check the existing conversation before retrying; the message may already have arrived."
     }
   }
 }

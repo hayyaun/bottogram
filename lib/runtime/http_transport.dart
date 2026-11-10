@@ -3,6 +3,55 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'ports.dart';
+import 'http_headers.dart' show validHttpHeaderValue;
+
+void _validateOutgoingHeaders(Map<String, String> headers) {
+  final names = headers.keys.map((name) => name.toLowerCase()).toSet();
+  if (headers.length > 32 ||
+      names.length != headers.length ||
+      headers.entries.any(
+        (entry) =>
+            entry.key.length > 128 ||
+            !RegExp(r"^[!#$%&'*+.^_`|~0-9a-zA-Z-]+$").hasMatch(entry.key) ||
+            !validHttpHeaderValue(entry.value) ||
+            {
+              'host',
+              'content-length',
+              'transfer-encoding',
+              'connection',
+              'proxy-connection',
+              'keep-alive',
+              'te',
+              'trailer',
+              'upgrade',
+              'expect',
+            }.contains(entry.key.toLowerCase()),
+      )) {
+    throw const RuntimeFailure(
+      'Invalid or reserved HTTP header.',
+      code: 'http.invalid_headers',
+      permanent: true,
+    );
+  }
+}
+
+RuntimeFailure _statusFailure(HttpClientResponse response) {
+  final status = response.statusCode;
+  final retry = int.tryParse(response.headers.value('retry-after') ?? '');
+  final code = switch (status) {
+    401 => 'http.unauthorized',
+    403 => 'http.forbidden',
+    408 => 'http.timeout',
+    429 => 'http.rate_limited',
+    _ => 'http.request_failed',
+  };
+  return RuntimeFailure(
+    'HTTP request failed (status $status).',
+    code: code,
+    permanent: status >= 300 && status < 500 && !{408, 429}.contains(status),
+    retryAfter: retry == null ? null : Duration(seconds: retry.clamp(1, 3600)),
+  );
+}
 
 /// Each bot owns its client: Stop cancels its requests without affecting others.
 class BoundedJsonTransport implements JsonTransport {
@@ -26,32 +75,16 @@ class BoundedJsonTransport implements JsonTransport {
         url.hasFragment) {
       throw const RuntimeFailure(
         'Invalid HTTP method or API URL.',
+        code: 'http.request_failed',
         permanent: true,
       );
     }
-    if (headers.length > 32 ||
-        headers.entries.any(
-          (e) =>
-              !RegExp(r'^[!#$%&\x27*+.^_`|~0-9a-zA-Z-]+$').hasMatch(e.key) ||
-              e.value.length > 8192 ||
-              e.value.contains('\r') ||
-              e.value.contains('\n') ||
-              {
-                'host',
-                'content-length',
-                'transfer-encoding',
-                'connection',
-              }.contains(e.key.toLowerCase()),
-        )) {
-      throw const RuntimeFailure(
-        'Invalid or reserved API header.',
-        permanent: true,
-      );
-    }
+    _validateOutgoingHeaders(headers);
     final payload = body == null ? null : utf8.encode(jsonEncode(body));
     if (payload != null && (payload.length > 65536 || method == 'GET')) {
       throw const RuntimeFailure(
         'JSON request bodies are limited to 64 KiB and are not supported for GET.',
+        code: 'http.request_failed',
         permanent: true,
       );
     }
@@ -68,18 +101,14 @@ class BoundedJsonTransport implements JsonTransport {
         }
         final response = await outgoing!.close();
         if (response.statusCode < 200 || response.statusCode >= 300) {
-          throw RuntimeFailure(
-            'API request failed (HTTP ${response.statusCode}).',
-            permanent:
-                response.statusCode < 500 &&
-                !{408, 429}.contains(response.statusCode),
-          );
+          throw _statusFailure(response);
         }
         final bytes = BytesBuilder(copy: false);
         await for (final chunk in response) {
           if (bytes.length + chunk.length > 1024 * 1024) {
             throw const RuntimeFailure(
               'API response exceeds 1 MiB.',
+              code: 'http.invalid_response',
               permanent: true,
             );
           }
@@ -98,12 +127,20 @@ class BoundedJsonTransport implements JsonTransport {
       outgoing?.abort();
       throw const RuntimeFailure(
         'The API returned invalid JSON.',
+        code: 'http.invalid_response',
         permanent: true,
+      );
+    } on TimeoutException {
+      outgoing?.abort();
+      throw const RuntimeFailure(
+        'The HTTP request timed out.',
+        code: 'http.timeout',
       );
     } catch (_) {
       outgoing?.abort();
       throw const RuntimeFailure(
-        'The API request timed out or could not connect.',
+        'The HTTP endpoint could not be reached.',
+        code: 'http.request_failed',
       );
     }
   }
@@ -111,37 +148,24 @@ class BoundedJsonTransport implements JsonTransport {
   @override
   Future<Json> get(Uri url, Map<String, String> headers) async {
     if (_closed) throw const RuntimeFailure('Bot stopped.');
+    _validateOutgoingHeaders(headers);
     HttpClientRequest? request;
     try {
       return await (() async {
         request = await _client.getUrl(url);
         request!.followRedirects = false;
-        headers.forEach((key, value) => request!.headers.set(key, value));
         request!.headers.set('Accept', 'application/json');
+        headers.forEach((key, value) => request!.headers.set(key, value));
         final response = await request!.close();
         if (response.statusCode != 200) {
-          final retry = int.tryParse(
-            response.headers.value('retry-after') ?? '',
-          );
-          throw RuntimeFailure(
-            response.statusCode == 401
-                ? 'The API rejected this key (HTTP 401). Check the key and registered storefront.'
-                : response.statusCode == 403
-                ? 'API access was denied (HTTP 403). Check the key permissions and registered storefront.'
-                : 'API request failed (HTTP ${response.statusCode}).',
-            permanent:
-                response.statusCode >= 300 &&
-                response.statusCode < 500 &&
-                !{408, 429}.contains(response.statusCode),
-            retryAfter:
-                retry == null ? null : Duration(seconds: retry.clamp(1, 3600)),
-          );
+          throw _statusFailure(response);
         }
         final bytes = BytesBuilder(copy: false);
         await for (final chunk in response) {
           if (bytes.length + chunk.length > 1024 * 1024) {
             throw const RuntimeFailure(
               'API response exceeds 1 MiB.',
+              code: 'http.invalid_response',
               permanent: true,
             );
           }
@@ -157,11 +181,21 @@ class BoundedJsonTransport implements JsonTransport {
     } on FormatException {
       throw const RuntimeFailure(
         'The API returned invalid JSON.',
+        code: 'http.invalid_response',
         permanent: true,
+      );
+    } on TimeoutException {
+      request?.abort();
+      throw const RuntimeFailure(
+        'The HTTP request timed out.',
+        code: 'http.timeout',
       );
     } catch (_) {
       request?.abort();
-      throw const RuntimeFailure('The API could not be reached. Retrying.');
+      throw const RuntimeFailure(
+        'The HTTP endpoint could not be reached.',
+        code: 'http.request_failed',
+      );
     }
   }
 

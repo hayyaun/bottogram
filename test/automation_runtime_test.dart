@@ -120,7 +120,13 @@ Json productDefinition() => {
             'request': {
               'method': 'GET',
               'url': 'https://api.example.test/v1/storefront/products',
-              'storefrontUrlField': 'storefrontUrl',
+              'headers': {
+                'Origin': {'field': 'storefrontUrl', 'transform': 'url.origin'},
+                'X-Storefront-Host': {
+                  'field': 'storefrontUrl',
+                  'transform': 'url.authority',
+                },
+              },
               'authentication': {'type': 'bearer', 'secretField': 'apiKey'},
             },
             'resultKey': 'catalog',

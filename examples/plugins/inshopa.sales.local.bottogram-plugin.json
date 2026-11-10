@@ -52,10 +52,19 @@
             "request": {
               "method": "GET",
               "url": "http://127.0.0.1:8080/v1/storefront/products",
-              "storefrontUrlField": "storefrontUrl",
               "authentication": {
                 "type": "bearer",
                 "secretField": "apiKey"
+              },
+              "headers": {
+                "Origin": {
+                  "field": "storefrontUrl",
+                  "transform": "url.origin"
+                },
+                "X-Storefront-Host": {
+                  "field": "storefrontUrl",
+                  "transform": "url.authority"
+                }
               }
             },
             "pagination": {
@@ -90,10 +99,19 @@
             "request": {
               "method": "GET",
               "url": "http://127.0.0.1:8080/v1/storefront",
-              "storefrontUrlField": "storefrontUrl",
               "authentication": {
                 "type": "bearer",
                 "secretField": "apiKey"
+              },
+              "headers": {
+                "Origin": {
+                  "field": "storefrontUrl",
+                  "transform": "url.origin"
+                },
+                "X-Storefront-Host": {
+                  "field": "storefrontUrl",
+                  "transform": "url.authority"
+                }
               }
             },
             "bindings": {
@@ -103,10 +121,19 @@
           "request": {
             "method": "GET",
             "url": "http://127.0.0.1:8080/v1/shops/{shopId}/orders",
-            "storefrontUrlField": "storefrontUrl",
             "authentication": {
               "type": "bearer",
               "secretField": "apiKey"
+            },
+            "headers": {
+              "Origin": {
+                "field": "storefrontUrl",
+                "transform": "url.origin"
+              },
+              "X-Storefront-Host": {
+                "field": "storefrontUrl",
+                "transform": "url.authority"
+              }
             }
           },
           "response": {

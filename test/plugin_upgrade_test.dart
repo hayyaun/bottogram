@@ -133,7 +133,13 @@ Map<String, dynamic> definition({String version = '1.0.0'}) => {
           'request': {
             'method': 'GET',
             'url': 'https://api.example.test/events',
-            'storefrontUrlField': 'publicOrigin',
+            'headers': {
+              'Origin': {'field': 'publicOrigin', 'transform': 'url.origin'},
+              'X-Storefront-Host': {
+                'field': 'publicOrigin',
+                'transform': 'url.authority',
+              },
+            },
             'authentication': {'type': 'bearer', 'secretField': 'credential'},
           },
           'response': {

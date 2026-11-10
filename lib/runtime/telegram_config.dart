@@ -119,6 +119,7 @@ String resolveWebAppTarget(Json target, Map<String, String> fields) {
       (origin.hasPort && (origin.port < 1 || origin.port > 65535))) {
     throw const RuntimeFailure(
       'The Mini App link needs a valid HTTPS origin in the plugin parameters.',
+      code: 'configuration.invalid_public_origin',
       permanent: true,
     );
   }
@@ -126,6 +127,7 @@ String resolveWebAppTarget(Json target, Map<String, String> fields) {
   if (resolved.origin != origin.origin) {
     throw const RuntimeFailure(
       'The Mini App link must stay on its configured origin.',
+      code: 'configuration.invalid_public_origin',
       permanent: true,
     );
   }

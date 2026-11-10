@@ -1,10 +1,118 @@
 # Plugin runtime
 
-Contract updated 2026-11-10. Historical verification results below identify the
-earlier feature slices they exercised; they do not establish real Telegram
+Contract updated 2026-11-10. Verification results below identify the feature
+slices they exercised; they do not establish real Telegram
 client compatibility for the new Mini App navigation.
 
-## Generic Telegram navigation and update verification — 2026-11-10
+## Current HTTP headers and plugin error contract
+
+The current unreleased contract has no legacy decoder for the former implicit
+storefront-header property. HTTP execution has no built-in Inshopa header names,
+shop registration convention or plugin-specific message catalog. Every current
+v2 example declares the headers it needs.
+
+`request.headers` maps validated header names to either literal strings or typed
+public-field references. A reference contains `field` and one of the transforms
+`value`, `url.origin` or `url.authority`. URI transforms use the supported URI
+parser and require a complete HTTP/HTTPS origin without userinfo, page path,
+query or fragment. URL transforms use `Uri` encoding. Header values must contain
+only printable ASCII or horizontal tab, matching the installed Dart HTTP
+transport. For example, the Inshopa package owns this declaration:
+
+```json
+{
+  "headers": {
+    "Origin": {"field": "storefrontUrl", "transform": "url.origin"},
+    "X-Storefront-Host": {"field": "storefrontUrl", "transform": "url.authority"}
+  },
+  "authentication": {"type": "bearer", "secretField": "apiKey"}
+}
+```
+
+Another plugin can declare different header names without a host change.
+Authentication is separate: `type: "bearer"` constructs the bearer header;
+`type: "header"` uses a declared `header` name and `secretField`, such as an
+`X-Api-Key` credential. Only the authentication path reads secure storage.
+Public header bindings must reference declared non-secret fields. Case-insensitive
+duplicates, authentication/header collisions, transport-managed headers, malformed
+names, line-break injection and oversized values are rejected. Raw configured
+values, authenticated request URLs and credentials are not included in failures.
+
+The optional top-level `errorMessages` object defines reusable display resources:
+`title`, `message`, optional `help`, and optional `action`. The initial action
+names are `editPluginParameters` and `retry`; these request explicit UI actions,
+not automatic execution. A trigger/action's sibling `errorMap` maps a stable
+host failure code to a resource ID. The resource must exist in that package.
+
+```json
+{
+  "errorMessages": {
+    "shopAccessDenied": {
+      "title": "Shop access denied",
+      "message": "Inshopa rejected the shop connection.",
+      "help": "Check the API key, its permissions and the registered shop address.",
+      "action": "editPluginParameters"
+    }
+  }
+}
+```
+
+For example, the polling trigger maps `http.unauthorized` and `http.forbidden`
+to `shopAccessDenied`, while `poll.scan_limit_exceeded` maps to the package's
+`orderScanLimit`. A Mini App reply maps `configuration.invalid_public_origin`
+to `shopUrlInvalid`. Both current 0.6.0 definitions keep all shop-specific error
+wording in these JSON resources.
+
+The host controls permanence, retry timing, delivery uncertainty and stopping an
+automation. Messages cannot override those decisions. Resource text is plain
+text without interpolation or executable expressions; it receives no response
+body, raw exception, credential, setup value or arbitrary event data. Unmapped
+failures use generic host messages. Presentation-only catalog/map changes do not
+reset automation progress, whereas actual request/execution changes still need
+their own state transition assessment.
+
+The approved one-time offline Hive transition saved exact pre-change data files
+outside the repository, rewrote three installed package definitions and added
+local 0.6.0. Only the local 0.5.0 setup digest changed; other settings and defaults
+were retained, including enabled seller notifications. Two progress records were
+copied to the rewritten digest namespace and the originals were retained. There
+were no delivery receipts to copy. No bot was restarted. Automated checks and
+reopening the normal Linux debug preview verified the transitioned data.
+
+The current local bot remains pinned to 0.5.0. Local 0.6.0 is installed and
+available, but no reachable HTTPS shop address has been provided for its Mini App
+navigation. Installing a package does not apply it to a bot.
+
+## Current contract verification — 2026-11-10
+
+The pinned SDK was used for these checks:
+
+- `dart analyze lib test`: no issues found.
+- `flutter --no-version-check test --no-pub --concurrency=1`: 184 passed and six
+  failed out of 190 tests. After correcting two UI cases, one schema fixture and
+  one console assertion, the targeted rerun below passed all 23 tests.
+- `flutter --no-version-check test --no-pub --concurrency=1 test/ui_test.dart test/plugin_contract_schema_test.dart test/builder_engine_test.dart`:
+  23 passed.
+- `flutter --no-version-check test --no-pub --concurrency=1 test/bot_templates_test.dart test/inbox_repository_test.dart --name 'task creation, paging, toggle and deletion never affect another user|user pages are ordered, bounded, unique, and ignore group chats'`:
+  both native persistence cases passed in isolation with their existing deadlines.
+
+All 190 distinct tests have successful outcomes across the full run and these
+reruns; there was no single green full-suite invocation. Logs are
+`build/verification/contract-full-test.log`, `contract-corrected-rerun.log` and
+`contract-persistence-rerun.log`. A source-coupling audit covered 557 files and
+found no Inshopa-specific runtime behavior; the remaining name reference
+registers the bundled JSON asset.
+
+The normal Linux debug preview reopened with three saved bots, zero active bots
+and four installed packages; every saved package pin resolved. The local bot
+remains on 0.5.0 with seller notifications enabled, local 0.6.0 is installed and
+no update is queued. A private canonical-JSON comparison against the pre-change
+snapshot confirmed every public setup field except the intended digest change
+was unchanged, including the exact original shop URL. Public counts and result
+flags are recorded in `build/verification/contract-preview-state.json`. Real
+Telegram HTTPS navigation, authentication and checkout checks remain outstanding.
+
+## Earlier generic Telegram navigation verification — 2026-11-10
 
 Inshopa 0.6.0 owns its navigation behavior in JSON. The prior host-side package
 hash registry and storefront command implementation have been removed. Generic
@@ -23,7 +131,9 @@ preview. The approved 0.6.0 definition was installed through the same validated
 repository API used by file import. Before/after public VM-service checks showed
 three saved bots and one active bot with unchanged setup identities, pinned
 versions, preferences and running state. No existing bot was automatically
-upgraded, stopped or started. All pre-existing plugin files remain unchanged.
+upgraded, stopped or started. This earlier check preceded the breaking
+header/error contract above; its package-byte observations are not a current
+backward-compatibility guarantee.
 
 These checks do not establish live Telegram website sign-in, account isolation,
 or payment-provider return behavior. Those checks and the digital-goods payment
@@ -71,13 +181,15 @@ Version 1 packages remain setup-only. Version 2 requires `manifestVersion: 2`, `
 Package definitions stay pinned by ID, version and source digest. Installation shows command availability, request URLs, and polling intervals. Bundled definitions seed once; uninstall remains effective across restart. Existing bots never switch package version or begin executing because a new package was installed.
 
 A generic reviewed update checks the target package's schema, retained setup,
-and full automation definitions. Compatible unchanged automations retain their
-execution context and progress, including all receipt keys. Their state is
+and automation execution configuration. Error catalogs and component `errorMap`
+presentation metadata are excluded from this comparison. Compatible automations
+retain their execution context and progress, including all receipt keys. Their state is
 staged in the target package namespace before the existing setup pin is committed;
 failure leaves the old pin and source progress intact. The old package and
 namespace remain available. A package declaration cannot authorize cross-shop
 state reuse or skip the host's compatibility checks. Existing storage schemas
-and format versions are unchanged; no migration or startup backfill is used.
+and format versions are unchanged; no schema migration or startup backfill is
+used. The explicit one-time offline data transition is recorded above.
 
 Stopped bots apply an approved compatible update immediately. Active bots can
 queue the reviewed target for their next normal Start without being stopped.
@@ -100,9 +212,9 @@ Other packages execute their own declarations. Existing pinned bots retain their
 version until a compatible reviewed update is selected. Details and outstanding
 client checks are in [Storefront navigation](STOREFRONT_NAVIGATION.md).
 
-### Original catalog declaration (retained immutable package contract)
+### Catalog example declaration
 
-[The retained earlier package](../examples/plugins/inshopa.sales.bottogram-plugin.json)
+[The catalog-and-alert example](../examples/plugins/inshopa.sales.bottogram-plugin.json)
 is version 0.5.0, displayed as **Inshopa**. Its public command composes:
 
 ```text
@@ -117,19 +229,20 @@ is version 0.5.0, displayed as **Inshopa**. Its public command composes:
         reply with product titles to the originating chat
 ```
 
-This describes the original declaration, which remains in immutable package source and continues to run for bots pinned to it. The host does not silently substitute newer behavior. The generic catalog command is public: no admin-ID filter is applied. `/products` requests page 1, `/products 2` requests page 2. Empty pages are explicit. Ten products per page keep the supported 200-character titles inside Telegram's message limit; this is a list, without checkout, buyer login, or product-detail requests. Command queues are bounded. Overloaded command queues ask the requester to retry.
+This example uses the current explicit header syntax while retaining its catalog behavior. It is not a decoder or compatibility guarantee for an older installed source copy. The generic catalog command is public: no admin-ID filter is applied. `/products` requests page 1, `/products 2` requests page 2. Empty pages are explicit. Ten products per page keep the supported 200-character titles inside Telegram's message limit; this is a list, without checkout, buyer login, or product-detail requests. Command queues are bounded. Overloaded command queues ask the requester to retry.
 
 The public API origin is **https://api.inshopa.ir**, verified from `inshopa/gateway/nginx/templates/gateway.conf.template`. The gateway preserves `/v1` and routes that hostname to Go. Independent anonymous checks returned health HTTP 200 and product-list HTTP 401 `CALLER_UNAUTHORIZED`. The SDK constructs `/v1${path}` against `config.apiOrigin`, so the configured origin has no `/v1` suffix. The local web instance separately uses `http://127.0.0.1:8080` as its private upstream.
 
 The Next.js facade also exists at `/api/v1`: a live anonymous request to `https://inshopa.ir/api/v1/storefront/products` returned JSON `SHOP_NOT_FOUND`. Its current implementation obtains credentials from `apiConfig()`, derives context from the ingress Host, and does not forward an incoming customer Bearer key. The external server-side SDK and Bottogram use `api.inshopa.ir` directly. A customer's own browser-facing facade remains on that customer's website. No proxy or backend changes are included here.
 
-An optional [local-development package](../examples/plugins/inshopa.sales.local.bottogram-plugin.json), version 0.5.0 with its own `bottogram-plugin-inshopa-local` ID, uses the verified WSL loopback endpoint. It can be imported for locally issued keys and the Linux preview without conflicting with future production package versions. An Android phone's loopback address points to the phone. HTTP API addresses are allowed only for literal loopback hosts (`localhost`, `127.0.0.1`, `::1`); remote URLs require HTTPS. The registered storefront origin may use HTTP for an existing development registration because it supplies headers, not the credential destination.
+The [local 0.6.0 navigation package](../examples/plugins/inshopa.storefront.local.bottogram-plugin.json) keeps its own `bottogram-plugin-inshopa-local` ID and the existing WSL loopback API destinations. The older [catalog-and-alert example](../examples/plugins/inshopa.sales.local.bottogram-plugin.json) is also expressed with current explicit headers. These files do not redirect a local bot to production or invent an HTTPS storefront. An Android phone's loopback address points to the phone. HTTP API addresses are allowed only for literal loopback hosts (`localhost`, `127.0.0.1`, `::1`); remote URLs require HTTPS. A registered development origin can remain HTTP as API-header data, while Telegram Mini App navigation separately requires HTTPS.
 
-Fresh installations seed the 0.6.0 package. Existing definitions and pinned bots
-remain intact. In particular, 0.2.0 stays setup-only and 0.4.0 stays catalog-only.
-Installing a new version does not activate alerts on an older bot. The retained
-local-development 0.5.0 package keeps its own identity, API endpoints and HTTP
-registration behavior; no new HTTPS origin is invented for it.
+Fresh installations seed the production 0.6.0 package. Current source examples
+may retain earlier version labels to exercise their distinct declarations, but
+the unreleased contract does not preserve their old bytes or removed syntax.
+The existing test catalog received the explicit offline transition described
+above; no legacy request adapter is retained. Installing a package and applying
+it to a particular bot remain distinct operations.
 
 Reachability and SDK publication do not establish production website-key rollout. The Inshopa release records distinguish locally verified key support from production rollout and real client enrollment. Local-key catalog replies and live Telegram delivery are verified below; registered production-key access remains untested.
 
@@ -145,7 +258,8 @@ State lives in `automation_progress_v1`. Existing bot adapters and stored setup
 maps are not converted or backfilled at startup. An explicitly reviewed update
 stages compatible progress before changing the selected setup's existing package
 pin. Stop drains pending acknowledgements; Delete removes that instance's
-progress and receipt entries. No new database migration is used.
+progress and receipt entries. No schema migration or startup backfill is used;
+the approved one-time offline data transition is described above.
 
 Requests time out after 22 seconds, responses are limited to 1 MiB, each progress record to 2 MiB, and API redirects are refused. Receipt count and total receipt storage grow with observed paid orders. Each bot owns its HTTP client so Stop cancels its requests independently. Retry uses capped backoff and honors numeric `Retry-After`. Authentication/contract failures require attention; credentials and SDK exception URLs are not surfaced in diagnostics.
 
@@ -161,7 +275,7 @@ The first complete scan establishes a client-side baseline of observed paid IDs 
 
 The runner, not the trigger, records acknowledgements per normalized order ID. List-trigger batches request durable deduplication: one SHA-256-ID receipt is stored per baseline/completed order in the existing progress box, scoped by bot instance, package digest and automation. Receipts survive Stop/Start and disk reopening and are not evicted by the older 2,000-ID recent cache. They consume storage proportional to observed paid orders and are removed with the bot. The original cursor and command components retain their existing bounded recent-cache behavior.
 
-Each action acknowledgement is saved before its delivery receipt. If receipt persistence fails after an acknowledged send, recovery completes the receipt without repeating the action. Local page continuation is saved after processing a page and resumes on restart; it is an offset, not a server-issued cursor or consistent snapshot. Authentication failures stop that automation and show actionable key/permission/registered-storefront guidance. The purchase-notification preference is enabled by default and can be disabled independently of buyer navigation. The full `paid-orders` declaration in 0.6.0 is structurally identical to 0.5.0, allowing its compatible state and receipts to be retained by the generic updater.
+Each action acknowledgement is saved before its delivery receipt. If receipt persistence fails after an acknowledged send, recovery completes the receipt without repeating the action. Local page continuation is saved after processing a page and resumes on restart; it is an offset, not a server-issued cursor or consistent snapshot. Authentication failures stop that automation and show the plugin's mapped guidance or the host's generic fallback. The purchase-notification preference is enabled by default and can be disabled independently of buyer navigation. The `paid-orders` execution configuration is unchanged between the current 0.5.0 and 0.6.0 definitions. Their presentation metadata can differ: local 0.6.0 adds an error catalog and `errorMap` entries absent from local 0.5.0. The generic updater excludes that presentation metadata when comparing execution compatibility, allowing compatible state and receipts to be retained.
 
 This is best-effort observation of current states. A paid state that appears and disappears between requests may be missed. Concurrent list changes and the API’s creation-time ordering do not provide a stable event-log guarantee, and `created_at` is never treated as a payment timestamp. A payment already confirmed by Telegram but lacking a durable acknowledgement can still be duplicated after an ambiguous failure. No Inshopa source, database, migration, service or production configuration was changed by Bottogram.
 

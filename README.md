@@ -80,6 +80,14 @@ fields, and automations. The host executes registered **triggers → actions**;
 packages do not download or execute arbitrary Dart code. Adding a new host
 capability requires an application update.
 
+HTTP headers are declared by each plugin as literal values or typed references
+to public setup fields. Credentials use a separate authentication declaration.
+Header values use printable ASCII plus horizontal tab, matching Dart's HTTP
+transport; URL transforms use `Uri` encoding.
+Plugins also define reusable `errorMessages` and map stable host error codes to
+them on individual triggers/actions. Bottogram retains retry and execution
+control; plugin messages never receive raw exceptions, response bodies or secrets.
+
 To install an additional package, open **Plugins → Install from file** and review
 its declared API destinations and capabilities before installing it.
 
@@ -108,10 +116,21 @@ the existing external checkout is not a universal digital-goods solution.
 Commands, text, button labels, page paths and menu configuration all belong to
 the plugin JSON. Bottogram provides the same validated command, reply and Mini App
 capabilities to every plugin; executable host code has no Inshopa ID/hash mapping.
-Older installed packages remain immutable and pinned until a reviewed update is
-selected. Compatible updates retain the bot identity, configuration, credentials
-and unchanged seller-alert progress, including pending actions and delivery
-receipts. The old package and source progress remain intact.
+The unreleased plugin contract can change without backward compatibility. The
+old implicit request-header property has been removed; current packages declare
+their `Origin` and `X-Storefront-Host` headers explicitly in JSON. Old-format
+installed definitions were rewritten in an approved one-time offline Hive
+transition after exact data-file backups were saved outside the repository.
+The local bot remains pinned to 0.5.0, with its settings and seller-alert state
+retained. Automated checks and reopening the normal Linux debug preview verified
+the transitioned data and saved package pins. No bot was restarted.
+
+The matching [local 0.6.0 package](examples/plugins/inshopa.storefront.local.bottogram-plugin.json)
+uses the existing local API endpoints and its own local plugin identity. It still
+needs a reachable HTTPS storefront for Telegram Mini App navigation. A production
+package is not substituted for a local bot's backend. Local 0.6.0 is installed
+and available, but the existing HTTP shop address prevents applying its Mini App
+navigation to the current bot.
 
 A stopped bot can apply a reviewed update immediately. An active bot can queue it
 for its next normal Start without being stopped. That selection is session-only:

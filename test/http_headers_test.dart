@@ -135,6 +135,45 @@ void main() {
   );
 
   test(
+    'URL header bindings default bare authorities to HTTPS without changing text bindings',
+    () async {
+      for (final address in [
+        'portal.example.test',
+        'PORTAL.example.test:8443',
+        'portal.example.test/',
+        'portal.example.test:443/',
+        '127.0.0.1:8443',
+        'localhost:8443',
+        '[::1]',
+        '[::1]:8443/',
+        'bücher.example',
+        'مثال.test',
+        'xn--bcher-kva.example:8443',
+      ]) {
+        final origin = Uri.parse('https://$address');
+        expect(
+          await resolveHttpHeaders({
+            'headers': {
+              'X-Origin': {'field': 'portal', 'transform': 'url.origin'},
+              'X-Authority': {'field': 'portal', 'transform': 'url.authority'},
+            },
+          }, context(fields: {'portal': address})),
+          {'X-Origin': origin.origin, 'X-Authority': origin.authority},
+        );
+      }
+      expect(
+        await resolveHttpHeaders({
+          'headers': {
+            'X-Raw': {'field': 'portal', 'transform': 'value'},
+            'X-Literal': 'portal.example.test',
+          },
+        }, context(fields: {'portal': 'portal.example.test'})),
+        {'X-Raw': 'portal.example.test', 'X-Literal': 'portal.example.test'},
+      );
+    },
+  );
+
+  test(
     'header contract rejects injection, duplicate casing, session headers and credential collisions',
     () {
       final invalid = <Json>[
@@ -252,6 +291,20 @@ void main() {
         'https://portal%2eexample.test',
         'file:///private-marker',
         'https://portal.example.test:70000',
+        '//portal.example.test',
+        'portal.example.test/path',
+        'portal.example.test?key=$marker',
+        'portal.example.test#$marker',
+        'portal.example.test:70000',
+        '[::1]:70000',
+        'portal.example.test:',
+        'portal.example.test:invalid',
+        'user:$marker@portal.example.test',
+        'portal.example.test\r\nX-Injected: value',
+        'ftp://portal.example.test',
+        'custom:443',
+        'javascript:443',
+        'https:portal.example.test',
       ]) {
         try {
           await resolveHttpHeaders({

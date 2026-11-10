@@ -22,9 +22,11 @@ class _BotCardState extends State<BotCard> {
     context,
     MaterialPageRoute<void>(builder: (_) => InboxUsersPage(bot: widget.bot)),
   );
-  void _settings() => Navigator.push(
+  void _settings({bool focusError = false}) => Navigator.push(
     context,
-    MaterialPageRoute<void>(builder: (_) => BotPage(bot: widget.bot)),
+    MaterialPageRoute<void>(
+      builder: (_) => BotPage(bot: widget.bot, focusError: focusError),
+    ),
   );
   Future<void> _toggle() async {
     if (_busy) return;
@@ -59,26 +61,37 @@ class _BotCardState extends State<BotCard> {
       0,
       (count, event) => count + event.acts.length,
     );
-    final status =
-        bot.setupError != null || error != null
-            ? BStatus(
-              label: 'Needs attention',
-              color: BColors.of(context).error,
-              background: BColors.of(context).errorWash,
-            )
-            : setupOnly
-            ? BStatus(
-              label: 'Setup only',
-              color: BColors.of(context).warning,
-              background: BColors.of(context).warningWash,
-            )
-            : bot.active
-            ? BStatus(
-              label: 'Active',
-              color: BColors.of(context).success,
-              background: BColors.of(context).successWash,
-            )
-            : const BStatus(label: 'Stopped');
+    final status = bot.setupError != null || error != null
+        ? Tooltip(
+            message: 'View bot error',
+            child: TextButton(
+              onPressed: () => _settings(focusError: true),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(48, 48),
+                padding: EdgeInsets.zero,
+                foregroundColor: BColors.of(context).error,
+                tapTargetSize: MaterialTapTargetSize.padded,
+              ),
+              child: BStatus(
+                label: 'Needs attention',
+                color: BColors.of(context).error,
+                background: BColors.of(context).errorWash,
+              ),
+            ),
+          )
+        : setupOnly
+        ? BStatus(
+            label: 'Setup only',
+            color: BColors.of(context).warning,
+            background: BColors.of(context).warningWash,
+          )
+        : bot.active
+        ? BStatus(
+            label: 'Active',
+            color: BColors.of(context).success,
+            background: BColors.of(context).successWash,
+          )
+        : const BStatus(label: 'Stopped');
     return BPanel(
       onTap: _open,
       child: Column(
@@ -150,32 +163,29 @@ class _BotCardState extends State<BotCard> {
                 icon: const Icon(Icons.settings_outlined),
               ),
               IconButton.outlined(
-                tooltip:
-                    setupOnly
-                        ? 'Configure plugin'
-                        : bot.active
-                        ? 'Stop bot'
-                        : 'Start bot',
-                onPressed:
-                    _busy
-                        ? null
-                        : setupOnly
-                        ? _settings
-                        : _toggle,
-                icon:
-                    _busy
-                        ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                        : Icon(
-                          setupOnly
-                              ? Icons.tune_rounded
-                              : bot.active
-                              ? Icons.pause_rounded
-                              : Icons.play_arrow_rounded,
-                        ),
+                tooltip: setupOnly
+                    ? 'Configure plugin'
+                    : bot.active
+                    ? 'Stop bot'
+                    : 'Start bot',
+                onPressed: _busy
+                    ? null
+                    : setupOnly
+                    ? _settings
+                    : _toggle,
+                icon: _busy
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(
+                        setupOnly
+                            ? Icons.tune_rounded
+                            : bot.active
+                            ? Icons.pause_rounded
+                            : Icons.play_arrow_rounded,
+                      ),
               ),
             ],
           ),

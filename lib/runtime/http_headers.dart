@@ -1,3 +1,4 @@
+import 'origin.dart';
 import 'ports.dart';
 
 const _transportHeaders = {
@@ -115,21 +116,8 @@ Iterable<({String field, String transform})> headerFieldBindings(
 }
 
 Uri _origin(String value) {
-  final address = Uri.tryParse(value);
-  if (value.isEmpty ||
-      value.length > 2048 ||
-      value != value.trim() ||
-      value.contains('@') ||
-      value.contains('%') ||
-      RegExp(r'[\s\\]').hasMatch(value) ||
-      address == null ||
-      !{'http', 'https'}.contains(address.scheme) ||
-      address.host.isEmpty ||
-      address.userInfo.isNotEmpty ||
-      address.hasQuery ||
-      address.hasFragment ||
-      (address.path.isNotEmpty && address.path != '/') ||
-      (address.hasPort && (address.port < 1 || address.port > 65535))) {
+  final address = parseConfiguredOrigin(value);
+  if (address == null) {
     throw const RuntimeFailure(
       'A header URL binding requires a valid HTTP or HTTPS origin in the plugin parameters.',
       code: 'http.invalid_origin',

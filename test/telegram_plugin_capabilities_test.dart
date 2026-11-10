@@ -220,6 +220,19 @@ void main() {
         'https://events.example.test%2f.other.test',
         'https://events.example.test%3a443',
         'https://events.example.test%5c.other.test',
+        'events.example.test/auth',
+        'events.example.test?key=private-secret',
+        'events.example.test#private-secret',
+        'events.example.test:65536',
+        '[::1]:65536',
+        'events.example.test:',
+        'events.example.test:invalid',
+        'user:private-secret@events.example.test',
+        'events.example.test\r\nX-Injected: value',
+        'ftp://events.example.test',
+        'custom:443',
+        'javascript:443',
+        'https:events.example.test',
       ]) {
         expect(
           () => resolveWebAppTarget(
@@ -237,6 +250,34 @@ void main() {
       }
     },
   );
+
+  test('bare authorities open Mini App paths on their HTTPS origin', () {
+    for (final address in [
+      'events.example.test',
+      'EVENTS.example.test:8443',
+      'events.example.test/',
+      'events.example.test:443/',
+      '127.0.0.1:8443',
+      'localhost:8443',
+      '[::1]',
+      '[::1]:8443/',
+      'bücher.example',
+      'مثال.test',
+      'xn--bcher-kva.example:8443',
+    ]) {
+      final expected = Uri.parse('https://$address');
+      final fields = {'portalOrigin': address};
+      final result = Uri.parse(
+        resolveWebAppTarget({
+          'originField': 'portalOrigin',
+          'path': '/tickets',
+        }, fields),
+      );
+      expect(result.origin, expected.origin);
+      expect(result.path, '/tickets');
+      expect(fields['portalOrigin'], address);
+    }
+  });
 
   test('Unicode and punycode custom domains retain their parsed origin', () {
     for (final address in [

@@ -273,6 +273,10 @@ uses those headers. Replace the example endpoint with its documented URL.
 scheme and hostname, optional port, no page path except `/`, credentials, query
 or fragment. `url.origin` yields scheme plus authority; `url.authority` yields
 host plus port where applicable. Dart's `Uri` performs URI normalization/encoding.
+When a user omits the scheme, a hostname such as `events.example.com` resolves
+as `https://events.example.com`; a numeric port and trailing root slash are
+accepted. This rule applies only to declared origin bindings. Saved inputs,
+ordinary text bindings, credentials and fixed API URLs are not rewritten.
 
 For bearer authentication, replace the authentication object with:
 
@@ -397,6 +401,8 @@ Use that as a `telegram.reply.v2` configuration with a private
 contain a query, fragment, whitespace, backslash or template. The configured
 origin must be HTTPS, without credentials, a page path, query or fragment.
 Origin values and declared paths are each limited to 2,048 characters.
+A scheme-less hostname uses HTTPS automatically, including in an existing saved
+setup. An explicitly entered HTTP origin still fails the Mini App check.
 
 Optional top-level `telegram` config declares a menu button:
 

@@ -48,6 +48,9 @@ resolves a valid HTTPS origin and a literal same-origin path. Userinfo,
 credentials, queries, fragments, alternate authorities and template expressions
 cannot enter the launch URL. Invalid field values are not echoed in errors or
 logs. Existing HTTP development registrations are not converted to HTTPS.
+If the scheme is omitted, a hostname such as `shop.example.com` resolves as
+`https://shop.example.com`. The same rule applies to URL-derived header bindings.
+Resolution does not rewrite saved setup values or reset automation progress.
 
 The optional top-level `telegram.menuButton` uses the same validated URL form.
 The supported Televerse `InlineKeyboardButton.webApp`, `WebAppInfo` and

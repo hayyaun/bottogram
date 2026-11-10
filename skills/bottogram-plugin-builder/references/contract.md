@@ -95,6 +95,9 @@ Bindings must reference declared required non-secret fields. `value` permits a
 text or integer field; `url.origin` and `url.authority` require text containing
 an HTTP(S) origin, with no credentials, page path, query or fragment. Authority
 includes the port when present. URI parsing performs its normal encoding.
+Scheme-less hostnames (including a numeric port or root slash) resolve with
+HTTPS. This is resolution of declared origin bindings, not a rewrite of stored
+inputs, ordinary `value` bindings, credentials or fixed API endpoints.
 
 Names are HTTP tokens, maximum 128 characters, case-insensitively unique. Values
 are printable ASCII plus horizontal tab, maximum 8192 characters. At most 32
@@ -254,6 +257,8 @@ no configurable parse mode or Markdown expression engine.
 Every `webApp` is `{ "originField": "portalOrigin", "path": "/account" }`.
 The field must be a declared required non-secret text setup field. Its configured
 value must be an HTTPS origin, not a page URL, credentials, query or fragment.
+The host adds HTTPS when a hostname has no scheme; explicit HTTP remains invalid
+for Mini Apps. Existing saved bare hostnames use the same resolution rule.
 Paths are literal, start with one `/`, stay on that origin and have no authority,
 query, fragment, whitespace, backslash or interpolation.
 

@@ -1,3 +1,4 @@
+import 'origin.dart';
 import 'ports.dart';
 
 void _keys(Json value, Set<String> allowed) {
@@ -99,24 +100,8 @@ Iterable<Json> webAppTargets({
 
 String resolveWebAppTarget(Json target, Map<String, String> fields) {
   final value = fields[target['originField']] ?? '';
-  final origin = Uri.tryParse(value);
-  // Inspect raw delimiters before URI normalization, while allowing the URI
-  // implementation to encode a literal Unicode hostname itself.
-  if (value.isEmpty ||
-      value.length > 2048 ||
-      value != value.trim() ||
-      value.contains('@') ||
-      value.contains('%') ||
-      RegExp(r'[\s\\]').hasMatch(value) ||
-      origin == null ||
-      origin.scheme != 'https' ||
-      origin.host.isEmpty ||
-      origin.userInfo.isNotEmpty ||
-      origin.authority.contains('@') ||
-      origin.hasQuery ||
-      origin.hasFragment ||
-      (origin.path.isNotEmpty && origin.path != '/') ||
-      (origin.hasPort && (origin.port < 1 || origin.port > 65535))) {
+  final origin = parseConfiguredOrigin(value, requireHttps: true);
+  if (origin == null) {
     throw const RuntimeFailure(
       'The Mini App link needs a valid HTTPS origin in the plugin parameters.',
       code: 'configuration.invalid_public_origin',

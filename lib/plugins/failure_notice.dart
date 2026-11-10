@@ -17,10 +17,26 @@ class PluginFailureNotice extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => BPanel(
+    color: BColors.of(context).errorWash,
+    borderColor: BColors.of(context).error,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(failure.title, style: Theme.of(context).textTheme.titleMedium),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(Icons.error_outline_rounded, color: BColors.of(context).error),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                failure.title,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: BColors.of(context).error,
+                ),
+              ),
+            ),
+          ],
+        ),
         const SizedBox(height: 8),
         Text(failure.message),
         if (failure.help != null) ...[

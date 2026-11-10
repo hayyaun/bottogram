@@ -380,11 +380,13 @@ class BPanel extends StatefulWidget {
     this.onTap,
     this.padding = const EdgeInsets.all(24),
     this.color,
+    this.borderColor,
   });
   final Widget child;
   final VoidCallback? onTap;
   final EdgeInsetsGeometry padding;
   final Color? color;
+  final Color? borderColor;
   @override
   State<BPanel> createState() => _BPanelState();
 }
@@ -409,9 +411,10 @@ class _BPanelState extends State<BPanel> {
         borderRadius: BottogramDesign.radius,
         side: BorderSide(
           color:
-              _hover || _focus
+              widget.borderColor ??
+              (_hover || _focus
                   ? BColors.of(context).ink
-                  : BColors.of(context).line,
+                  : BColors.of(context).line),
         ),
       ),
       clipBehavior: Clip.antiAlias,

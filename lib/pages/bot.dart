@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bottogram/inbox/users_page.dart';
 import 'package:bottogram/builder/console_page.dart';
 import 'package:bottogram/builder/state_page.dart';
@@ -22,14 +24,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class BotPage extends StatefulWidget {
-  const BotPage({super.key, required this.bot});
+  const BotPage({super.key, required this.bot, this.focusError = false});
   final VirtBot bot;
+  final bool focusError;
   @override
   State<BotPage> createState() => _BotPageState();
 }
 
 class _BotPageState extends State<BotPage> {
   late final ctrlName = TextEditingController(text: widget.bot.name);
+  final _errorAnchor = GlobalKey();
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.focusError) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final target = _errorAnchor.currentContext;
+        if (target == null) return;
+        unawaited(
+          Scrollable.ensureVisible(
+            target,
+            alignment: 0,
+            duration: MediaQuery.disableAnimationsOf(context)
+                ? Duration.zero
+                : const Duration(milliseconds: 250),
+          ),
+        );
+      });
+    }
+  }
+
   @override
   void dispose() {
     ctrlName.dispose();
@@ -173,7 +199,19 @@ class _BotPageState extends State<BotPage> {
               ),
               const SizedBox(height: 28),
               if (widget.bot.setupError != null) ...[
-                BNotice(message: widget.bot.setupError!, error: true),
+                BNotice(
+                  key: _errorAnchor,
+                  message: widget.bot.setupError!,
+                  error: true,
+                ),
+                const SizedBox(height: 20),
+              ],
+              if (!plugin && widget.bot.runtimeError != null) ...[
+                BNotice(
+                  key: widget.bot.setupError == null ? _errorAnchor : null,
+                  message: widget.bot.runtimeError!,
+                  error: true,
+                ),
                 const SizedBox(height: 20),
               ],
               if (plugin) ...[
@@ -247,6 +285,7 @@ class _BotPageState extends State<BotPage> {
                 if (widget.bot.runtimeError != null) ...[
                   if (failure != null)
                     PluginFailureNotice(
+                      key: widget.bot.setupError == null ? _errorAnchor : null,
                       failure: failure,
                       onEditParameters: manifest == null
                           ? null
@@ -272,7 +311,11 @@ class _BotPageState extends State<BotPage> {
                       },
                     )
                   else
-                    BNotice(message: widget.bot.runtimeError!, error: true),
+                    BNotice(
+                      key: widget.bot.setupError == null ? _errorAnchor : null,
+                      message: widget.bot.runtimeError!,
+                      error: true,
+                    ),
                   const SizedBox(height: 20),
                 ],
                 if (live) ...[

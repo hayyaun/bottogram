@@ -88,13 +88,29 @@ its declared API destinations and capabilities before installing it.
 The bundled **Inshopa 0.5.0** plugin connects one shop using its API key and
 registered storefront URL. A separate shop ID is not required.
 
-- `/products` and `/products 2` show catalog pages to any Telegram user.
+- `/start` and `/shop` open the existing shop and its `/orders` page as Telegram
+  Mini Apps. `/orders` opens order history; `/help` gives brief sign-in guidance.
+- `/products` remains an alias for opening the shop, without fetching a catalog.
+- Buttons load the shop website directly in Telegram's web view. The website
+  handles sign-in and checkout; Bottogram does not receive website passwords,
+  sign-in codes, or sessions.
 - Paid-order polling sends alerts only to the configured admin.
 - The first complete scan establishes a baseline without historical alerts.
 - Purchase alerts can be disabled in that bot's plugin preferences.
 
-The key needs `storefront:read` for products and `shop:orders:read` for order
-alerts. Purchases currently happen on the shop website, not inside Telegram.
+Opening pages needs no buyer API permission. The existing alert automation still
+uses `storefront:read` to identify the shop and `shop:orders:read` for order alerts.
+The storefront must have a usable HTTPS origin; local HTTP origins cannot launch
+Mini Apps. Login continuity and payment return behavior still need real Telegram
+client verification. Digital goods sold inside Telegram require Telegram Stars;
+the existing external checkout is not a universal digital-goods solution.
+
+This host presentation supports the exact shipped live Inshopa packages, without
+rewriting installed packages, bot settings, credentials, or alert receipts. Custom
+packages keep their declared behavior; setup-only packages stay setup-only.
+An existing running session gets its new command handlers on its next normal
+Start. A code hot reload preserves the running session and does not re-register
+its handlers. See [storefront navigation](docs/STOREFRONT_NAVIGATION.md).
 
 **Verification so far:** the local catalog command and admin connection message
 were confirmed end to end. A newly paid order alert, production-key access, and

@@ -1,6 +1,6 @@
 # Remaining work
 
-Updated 2026-11-09 (Asia/Tehran). Current status is based on implemented code and
+Updated 2026-11-10 (Asia/Tehran). Current status is based on implemented code and
 recorded verification in [PLUGIN_RUNTIME.md](PLUGIN_RUNTIME.md). Older ideas and
 implementation proposals preserve history; they are not all outstanding tasks.
 Publishing a release is explicitly deferred until the plugin is useful to shops.
@@ -35,12 +35,16 @@ These are priorities to discuss, not features implemented or newly approved by
 this document. Keep the host generic: package declarations compose registered
 trigger/action capabilities instead of adding Inshopa conditions to the runtime.
 
-1. **Useful catalog cards.** Product image, price/currency, availability, and an
-   “Open in shop” button; simple next/previous-page buttons instead of requiring
-   `/products 2`. Use only fields supplied by the documented catalog API.
-2. **A clear entry point.** `/start`, brief help, and a products button so a buyer
-   can use the bot without knowing commands. Checkout continues on the shop site;
-   Telegram checkout is a separate feature needing its own scope and design.
+1. **Verify storefront navigation.** The supported shipped packages now open the
+   existing HTTPS shop and `/orders` as Telegram Mini Apps, with brief help and a
+   `/products` launcher alias. Verify fresh/existing login, cross-host handoff,
+   buyer isolation/account switching, custom domains and payment return in real
+   Telegram clients. See [Storefront navigation](STOREFRONT_NAVIGATION.md).
+   Chat catalog/cart/checkout duplication and buyer API features are deferred.
+2. **Verify checkout suitability.** Reuse the existing website and its restrictions;
+   do not assume external-browser session sharing. Digital goods sold inside
+   Telegram require Stars, so unchanged external checkout is not universally
+   suitable. No Inshopa changes or auth/session workaround are included.
 3. **Useful seller alerts.** Show an understandable order reference, amount/currency,
    relevant item summary and an order/dashboard link where the API provides them.
    Keep alerts restricted to the configured admin; do not add buyer messages or

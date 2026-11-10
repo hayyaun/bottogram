@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import '../plugins/repository.dart';
 import '../plugins/manifest.dart';
+import '../plugins/bundled_presentations.dart';
 import '../units/virt_bot.dart';
 import 'automation_runner.dart';
 import 'http_transport.dart';
@@ -12,11 +13,16 @@ import 'telegram_port.dart';
 /// Lifecycle operations serialize; long-running automations never occupy this
 /// queue. Android and desktop supply the same narrow execution lease.
 class BotRuntime extends ChangeNotifier {
-  BotRuntime(this.lease, this.plugins, {ProgressStore? progress})
-    : progress = progress ?? HiveProgressStore();
+  BotRuntime(
+    this.lease,
+    this.plugins, {
+    ProgressStore? progress,
+    this.httpClientFactory,
+  }) : progress = progress ?? HiveProgressStore();
   final ExecutionLease lease;
   final PluginRepository plugins;
   final ProgressStore progress;
+  final JsonTransport Function()? httpClientFactory;
   final Set<VirtBot> _bots = {};
   final Map<VirtBot, List<AutomationRunner>> _runners = {};
   final Map<VirtBot, JsonTransport> _clients = {};
@@ -40,6 +46,9 @@ class BotRuntime extends ChangeNotifier {
     await plugins.ready;
     final setup = bot.setup;
     final manifest = plugins.manifestFor(setup);
+    final presentation = manifest == null
+        ? null
+        : bundledPresentationFor(manifest);
     if (setup?.usesPlugin == true && manifest?.executable != true) {
       throw const PluginException(
         'This plugin version is setup-only. Install a live version and create a new bot with it.',
@@ -75,7 +84,8 @@ class BotRuntime extends ChangeNotifier {
     try {
       await bot.bot.init().timeout(const Duration(seconds: 22));
       if (manifest != null && setup != null) {
-        final http = _clients[bot] = BoundedJsonTransport();
+        final http = _clients[bot] =
+            httpClientFactory?.call() ?? BoundedJsonTransport();
         final context = RuntimeContext(
           http: http,
           telegram: BotTelegramPort(bot.bot),
@@ -84,8 +94,10 @@ class BotRuntime extends ChangeNotifier {
           adminId: setup.adminTelegramUserId,
         );
         final settings = manifest.settingValues(setup.settings);
+        presentation?.register(bot.bot, setup.values);
         final runners = _runners[bot] = [];
-        for (final definition in manifest.automations) {
+        for (final definition
+            in presentation?.automationsFor(manifest) ?? manifest.automations) {
           if (definition.enabledBySetting != null &&
               settings[definition.enabledBySetting] != true) {
             continue;
@@ -112,6 +124,9 @@ class BotRuntime extends ChangeNotifier {
         }
       }
       await bot.start(pluginRuntime: manifest?.executable == true);
+      if (presentation != null && setup != null) {
+        unawaited(presentation.synchronizeMenu(bot.bot, setup.values));
+      }
     } catch (_) {
       await _stop(bot);
       rethrow;

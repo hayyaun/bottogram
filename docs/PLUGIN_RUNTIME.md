@@ -31,7 +31,7 @@ flowchart TD
   Service --> Engine[Cached Flutter engine and single Dart isolate]
 ```
 
-The downloaded JSON declares configuration. It cannot supply Dart/JavaScript/native code, executable class names, or arbitrary message destinations. A new component type needs a host implementation and schema registration in `lib/runtime/registry.dart`. Existing registered types can be composed by JSON alone. The coordinator contains no Inshopa-specific branch.
+The downloaded JSON declares configuration. It cannot supply Dart/JavaScript/native code, executable class names, or arbitrary message destinations. A new component type needs a host implementation and schema registration in `lib/runtime/registry.dart`. Existing registered types can be composed by JSON alone. The coordinator contains no Inshopa-specific branch. A host presentation registry now supplies direct storefront navigation for exact shipped live packages; it excludes their old catalog command while retaining every other automation and its original progress key. See [Storefront navigation](STOREFRONT_NAVIGATION.md).
 
 `AutomationRunner`, component contracts, request/message execution and schema registration are independent of widgets and Android settings. `BotRuntime` adapts existing bot storage and Telegram lifecycle to the core. The Android platform is accessed through the small `ExecutionLease` port.
 
@@ -43,7 +43,18 @@ Package definitions stay pinned by ID, version and source digest. Installation s
 
 The common form still asks for name, Telegram bot token and numeric admin ID. The Inshopa plugin adds `apiKey` and the approved `storefrontUrl`. The key selects its one shop; the storefront URL supplies the registration headers. The authenticated `/v1/storefront` lookup provides the shop ID, so no additional shop-ID input is needed.
 
-## Inshopa catalog command
+## Inshopa storefront navigation
+
+As of 2026-11-10, the exact shipped live Inshopa packages use `/start`, `/shop`,
+`/orders`, `/help`, and a `/products` compatibility alias to open the existing
+HTTPS storefront and `/orders` directly as Telegram Mini Apps. The host does not
+fetch products for these commands. Website sign-in and sessions stay in Telegram's
+browser and Inshopa; no buyer scope or Inshopa change is required. Existing
+package bytes, bot setups and paid-order progress are retained. Custom packages
+keep their declared behavior, and setup-only bots remain setup-only. Details and
+client verification limits are in [Storefront navigation](STOREFRONT_NAVIGATION.md).
+
+### Original catalog declaration (retained immutable package contract)
 
 [The bundled package](../examples/plugins/inshopa.sales.bottogram-plugin.json) is version 0.5.0, displayed as **Inshopa**. Its public command composes:
 
@@ -59,7 +70,7 @@ The common form still asks for name, Telegram bot token and numeric admin ID. Th
         reply with product titles to the originating chat
 ```
 
-This command is public: no admin-ID filter is applied. `/products` requests page 1, `/products 2` requests page 2. Empty pages are explicit. Ten products per page keep the supported 200-character titles inside Telegram's message limit; this is a list, without checkout, buyer login, or product-detail requests. Command queues are bounded. Overloaded command queues ask the requester to retry.
+This describes the original declaration, which remains in immutable package source. For supported shipped packages its execution is replaced by the host presentation above; modified/custom packages still execute their declared automations. The generic catalog command is public: no admin-ID filter is applied. `/products` requests page 1, `/products 2` requests page 2. Empty pages are explicit. Ten products per page keep the supported 200-character titles inside Telegram's message limit; this is a list, without checkout, buyer login, or product-detail requests. Command queues are bounded. Overloaded command queues ask the requester to retry.
 
 The public API origin is **https://api.inshopa.ir**, verified from `inshopa/gateway/nginx/templates/gateway.conf.template`. The gateway preserves `/v1` and routes that hostname to Go. Independent anonymous checks returned health HTTP 200 and product-list HTTP 401 `CALLER_UNAUTHORIZED`. The SDK constructs `/v1${path}` against `config.apiOrigin`, so the configured origin has no `/v1` suffix. The local web instance separately uses `http://127.0.0.1:8080` as its private upstream.
 

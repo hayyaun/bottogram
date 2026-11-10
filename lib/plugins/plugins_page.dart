@@ -7,7 +7,9 @@ import 'package:bottogram/ui/design.dart';
 
 import 'manifest.dart';
 import 'repository.dart';
+import 'bundled_presentations.dart';
 import '../runtime/registry.dart';
+import '../runtime/storefront_presentation.dart';
 
 class PluginsPage extends StatefulWidget {
   const PluginsPage({
@@ -57,77 +59,86 @@ class _PluginsPageState extends State<PluginsPage> {
         builder.add(chunk);
       }
       final plugin = PluginManifest.parse(builder.takeBytes());
+      final presentation = bundledPresentationFor(plugin);
       if (!mounted) return;
       final accepted = await showDialog<bool>(
         context: context,
-        builder:
-            (context) => AlertDialog(
-              title: Text('Install ${plugin.name}?'),
-              content: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('${plugin.id}\nVersion ${plugin.version}'),
-                    const SizedBox(height: 16),
-                    if (plugin.description != null) Text(plugin.description!),
-                    const SizedBox(height: 16),
-                    Text(
-                      plugin.executable
-                          ? 'This plugin can make the requests below while its bots are started. Install packages only from an author you trust with their API credentials.'
-                          : 'Setup only. This package adds configuration fields without executing automations.',
+        builder: (context) => AlertDialog(
+          title: Text('Install ${plugin.name}?'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text('${plugin.id}\nVersion ${plugin.version}'),
+                const SizedBox(height: 16),
+                if (presentation != null)
+                  const Text(StorefrontPresentation.description)
+                else if (plugin.description != null)
+                  Text(plugin.description!),
+                const SizedBox(height: 16),
+                Text(
+                  plugin.executable
+                      ? 'This plugin can make the requests below while its bots are started. Install packages only from an author you trust with their API credentials.'
+                      : 'Setup only. This package adds configuration fields without executing automations.',
+                ),
+                if (plugin.executable) ...[
+                  if (presentation != null) ...[
+                    const SizedBox(height: 12),
+                    const Text(
+                      '/start · /shop · /orders · /help · /products · private chats',
                     ),
-                    if (plugin.executable) ...[
-                      for (final automation in plugin.automations) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          automation.trigger.type == 'telegram.command.v1'
-                              ? '/${automation.trigger.config['command']} · everyone'
-                              : '${automation.trigger.type} · ${automation.trigger.config['intervalSeconds']} seconds',
-                        ),
-                        for (final c in [
-                          automation.trigger,
-                          ...automation.actions,
-                        ])
-                          for (final request in AutomationRegistry.standard
-                              .requestsFor(c))
-                            Text('GET ${request['url']}'),
-                      ],
-                    ],
+                    const Text(
+                      'Opens the configured HTTPS shop and its /orders page directly in Telegram. Website sign-in stays on the website.',
+                    ),
+                  ],
+                  for (final automation
+                      in presentation?.automationsFor(plugin) ??
+                          plugin.automations) ...[
                     const SizedBox(height: 12),
                     Text(
-                      'Additional fields: ${plugin.fields.map((f) => f.label).join(', ')}',
+                      automation.trigger.type == 'telegram.command.v1'
+                          ? '/${automation.trigger.config['command']} · everyone'
+                          : '${automation.trigger.type} · ${automation.trigger.config['intervalSeconds']} seconds',
                     ),
-                    if (plugin.settings.isNotEmpty) ...[
-                      const SizedBox(height: 12),
-                      Text(
-                        'Editable settings: ${plugin.settings.map((s) => s.label).join(', ')}',
-                      ),
-                    ],
+                    for (final c in [automation.trigger, ...automation.actions])
+                      for (final request
+                          in AutomationRegistry.standard.requestsFor(c))
+                        Text('GET ${request['url']}'),
                   ],
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  'Additional fields: ${plugin.fields.map((f) => f.label).join(', ')}',
                 ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Cancel'),
-                ),
-                FilledButton(
-                  onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Install'),
-                ),
+                if (plugin.settings.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Text(
+                    'Editable settings: ${plugin.settings.map((s) => s.label).join(', ')}',
+                  ),
+                ],
               ],
             ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Install'),
+            ),
+          ],
+        ),
       );
       if (accepted == true) await widget.repository.install(plugin);
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is PluginException
-                      ? error.message
-                      : 'The plugin could not be installed. No settings were changed.',
+          () => _error = error is PluginException
+              ? error.message
+              : 'The plugin could not be installed. No settings were changed.',
         );
       }
     } finally {
@@ -141,11 +152,9 @@ class _PluginsPageState extends State<PluginsPage> {
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is PluginException
-                      ? error.message
-                      : 'The plugin could not be removed.',
+          () => _error = error is PluginException
+              ? error.message
+              : 'The plugin could not be removed.',
         );
       }
     }
@@ -202,7 +211,7 @@ class _PluginsPageState extends State<PluginsPage> {
                     const SizedBox(height: 28),
                     const BNotice(
                       message:
-                          'Plugins add setup fields and settings. API requests and plugin execution are not enabled in this release.',
+                          'Live plugins run while their bots are started. Existing shop buttons can open the website even when Bottogram is stopped.',
                     ),
                     if (_error != null)
                       Padding(
@@ -245,30 +254,32 @@ class _PluginsPageState extends State<PluginsPage> {
                                       children: [
                                         Text(
                                           plugin.name,
-                                          style:
-                                              Theme.of(
-                                                context,
-                                              ).textTheme.titleLarge,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.titleLarge,
                                         ),
                                         Text(
                                           'Version ${plugin.version} · ${plugin.executable ? 'Live automations' : 'Setup only'}',
-                                          style:
-                                              Theme.of(
-                                                context,
-                                              ).textTheme.bodySmall,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
                                         ),
                                       ],
                                     ),
                                   ),
                                   IconButton(
                                     tooltip: 'Uninstall ${plugin.name}',
-                                    onPressed:
-                                        _busy ? null : () => _uninstall(plugin),
+                                    onPressed: _busy
+                                        ? null
+                                        : () => _uninstall(plugin),
                                     icon: const Icon(Icons.delete_outline),
                                   ),
                                 ],
                               ),
-                              if (plugin.description != null) ...[
+                              if (bundledPresentationFor(plugin) != null) ...[
+                                const SizedBox(height: 16),
+                                const Text(StorefrontPresentation.description),
+                              ] else if (plugin.description != null) ...[
                                 const SizedBox(height: 16),
                                 Text(plugin.description!),
                               ],
@@ -281,13 +292,15 @@ class _PluginsPageState extends State<PluginsPage> {
                                 children: [
                                   Text(
                                     '${widget.repository.dependents(plugin.storageKey)} ${widget.repository.dependents(plugin.storageKey) == 1 ? 'bot' : 'bots'} using this version',
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                   Text(
                                     '${plugin.fields.length} setup ${plugin.fields.length == 1 ? 'field' : 'fields'} · ${plugin.settings.length} ${plugin.settings.length == 1 ? 'setting' : 'settings'}',
-                                    style:
-                                        Theme.of(context).textTheme.bodySmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
                                   ),
                                 ],
                               ),
@@ -305,6 +318,9 @@ class _PluginsPageState extends State<PluginsPage> {
     );
     return widget.embedded
         ? content
-        : Scaffold(appBar: AppBar(title: const Text('Plugins')), body: content);
+        : Scaffold(
+            appBar: AppBar(title: const Text('Plugins')),
+            body: content,
+          );
   }
 }

@@ -75,6 +75,10 @@ leaving a saved API key blank keeps its current value.
 
 ## Plugins
 
+To create an integration, start with the [plugin-authoring guide](docs/PLUGIN_AUTHORING.md).
+It includes a working first plugin and an installable agent skill for generating
+packages from a user's requirements.
+
 Plugins are `.bottogram-plugin.json` files containing validated configuration,
 fields, and automations. The host executes registered **triggers → actions**;
 packages do not download or execute arbitrary Dart code. Adding a new host

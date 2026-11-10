@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/utils/context.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import 'manifest.dart';
 import 'repository.dart';
@@ -27,6 +29,25 @@ class _PluginsPageState extends State<PluginsPage> {
   bool _busy = false;
   String? _error;
   late final Future<void> _ready = widget.repository.ready;
+
+  Future<void> _openAuthoringGuide() async {
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        Uri.parse(
+          'https://github.com/hayyaun/bottogram/blob/main/docs/PLUGIN_AUTHORING.md',
+        ),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      // Platform diagnostics are not useful as user-facing browser guidance.
+    }
+    if (!opened && mounted) {
+      context.showSnackBar(
+        'The plugin guide could not be opened. Check your browser and try again.',
+      );
+    }
+  }
 
   Future<void> _install() async {
     setState(() {
@@ -178,7 +199,19 @@ class _PluginsPageState extends State<PluginsPage> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 28),
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: AlignmentDirectional.centerStart,
+                      child: TextButton.icon(
+                        onPressed: _openAuthoringGuide,
+                        icon: const Icon(Icons.menu_book_outlined),
+                        label: const Text(
+                          'آموزش ساخت پلاگین',
+                          textDirection: TextDirection.rtl,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                     const BNotice(
                       message:
                           'Live plugins run while their bots are started. Existing Mini App buttons can open their website even when Bottogram is stopped.',

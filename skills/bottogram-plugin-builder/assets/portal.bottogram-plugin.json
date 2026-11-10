@@ -1,0 +1,77 @@
+{
+  "manifestVersion": 2,
+  "hostApiMajor": 2,
+  "id": "example.portal",
+  "name": "Website portal",
+  "version": "1.0.0",
+  "executionStatus": "live",
+  "description": "Open an existing website from private Telegram commands and the bot menu.",
+  "setupFields": [
+    {
+      "key": "portalOrigin",
+      "label": "Portal HTTPS origin",
+      "type": "text",
+      "required": true,
+      "helpText": "Enter an existing public HTTPS origin without a page path, query or fragment."
+    }
+  ],
+  "errorMessages": {
+    "invalidPortalOrigin": {
+      "title": "Portal link unavailable",
+      "message": "The portal needs a valid HTTPS origin.",
+      "help": "Check the portal address in the plugin parameters.",
+      "action": "editPluginParameters"
+    },
+    "deliveryUnconfirmed": {
+      "title": "Telegram delivery unconfirmed",
+      "message": "Telegram did not confirm the reply.",
+      "help": "Check the conversation before retrying because the reply may already have arrived."
+    }
+  },
+  "telegram": {
+    "menuButton": {
+      "text": "Open portal",
+      "webApp": {
+        "originField": "portalOrigin",
+        "path": "/"
+      }
+    }
+  },
+  "automations": [
+    {
+      "id": "open-portal",
+      "trigger": {
+        "type": "telegram.command.v2",
+        "config": {
+          "commands": ["start", "portal"],
+          "chatTypes": ["private"],
+          "arguments": "ignore"
+        }
+      },
+      "actions": [
+        {
+          "id": "portal-reply",
+          "type": "telegram.reply.v2",
+          "config": {
+            "text": "Open your portal using the button below.",
+            "inlineKeyboard": [
+              [
+                {
+                  "text": "Open portal",
+                  "webApp": {
+                    "originField": "portalOrigin",
+                    "path": "/"
+                  }
+                }
+              ]
+            ]
+          },
+          "errorMap": {
+            "configuration.invalid_public_origin": "invalidPortalOrigin",
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -15,159 +15,79 @@ Create replies, install integrations, and answer conversations from one app.
 
 </div>
 
----
+Bottogram runs Telegram bots on your Android, Windows or Linux device, without
+a separate Bottogram server. Use it to:
 
-Bottogram is a Flutter app that runs Telegram bots locally. Configure a bot by
-hand or choose an installed plugin, start it, and let your device handle Telegram
-updates and API requests. Bot execution does not need a separate Bottogram server.
-Your device still needs a network connection to Telegram and any connected service.
+- Build commands, replies, buttons and API actions with a visual editor.
+- Store variables and structured data in each bot's own SQLite database.
+- Install JSON plugins with generated setup forms and editable preferences.
+- Read conversations, reply manually and open attachments from the inbox.
 
-> **Work in progress.** Test builds are available through GitHub Actions once a
-> successful build completes. Public releases are deferred while the Inshopa
-> integration and real-device verification develop. See the [current roadmap](docs/REMAINING_WORK.md).
-
-## What you can do
-
-- **Build without writing code.** Configure command, text, callback and inline-query
-  events, polling timers, connected actions, external JSON API calls, persistent
-  variables, SQL and Telegram messages with a MarkdownV2 editor. See the
-  [action builder](docs/ACTION_BUILDER.md).
-- **Install integrations.** Import a declarative JSON plugin and fill in its
-  generated setup form. Plugin versions stay pinned to the bots that use them.
-- **Answer from the inbox.** Open a bot's users, read retained conversations,
-  reply manually, and open attachments on demand.
-- **Keep started bots running on Android.** A foreground service, ongoing Stop
-  notification, and battery-settings guide support execution while the UI is away.
-- **Use your desktop too.** Windows and Linux builds run bots while the application
-  remains running. They share the same configuration and plugin concepts.
+**Experimental:** test builds are available through GitHub Actions. Public
+releases and real-device verification are still in progress; see the
+[roadmap](docs/REMAINING_WORK.md).
 
 ## Try a build
 
 Open [GitHub Actions](https://github.com/hayyaun/bottogram/actions/workflows/build.yml),
-choose a successful run, and download its artifact. GitHub may ask you to sign in.
+choose a successful run and download its artifact. GitHub may require sign-in.
 
-- **Android:** `bottogram-android-release` — a universal, optimized release-mode APK.
-- **Windows x64:** `bottogram-windows-x64` — extract the complete ZIP and run
-  `bottogram.exe` alongside its DLLs and data.
-- **Linux x86_64:** `bottogram-linux-x86_64` — extract the AppImage tarball and run
-  the included executable. A desktop keyring is needed for plugin API keys.
+- **Android:** `bottogram-android-release` — install the APK.
+- **Windows x64:** `bottogram-windows-x64` — extract the whole ZIP and run
+  `bottogram.exe` beside its DLLs and data.
+- **Linux x86_64:** `bottogram-linux-x86_64` — extract the tarball and run its
+  AppImage. Plugin API keys need a desktop keyring.
 
-These are testing artifacts, retained for 14 days, without store publishing or
-GitHub Releases. Trusted Android builds use a dedicated, permanent app-signing
-key for updates across GitHub downloads. PR validation artifacts use a separate
-temporary certificate. Older debug-signed installations cannot be updated
-directly to this new identity; uninstalling them removes local data. See
-[Android signing](docs/ANDROID_SIGNING.md) and [build details](docs/BUILD_ARTIFACTS.md).
+Artifacts expire after 14 days. See [build requirements and packaging](docs/BUILD_ARTIFACTS.md)
+and [Android signing and updates](docs/ANDROID_SIGNING.md) before replacing an
+older installation; uninstalling removes local data.
 
 ## Get started
 
-1. Create a Telegram bot with [@BotFather](https://t.me/BotFather) and keep its token private.
-2. In Bottogram, choose **Create bot** — the centered **+** on mobile.
-3. Enter a name, the bot token, and your numeric Telegram admin ID. Choose
-   **Manual** or a plugin; its additional fields appear in the same form.
-4. Open your bot in Telegram and send `/start`, so it can message your account.
-5. Start the bot in Bottogram. On Android, follow **Keep bots running** to check
-   battery/background and notification settings.
+1. Create a bot with [@BotFather](https://t.me/BotFather) and keep its token private.
+2. Choose **Create bot** in Bottogram, or the centered **+** on mobile.
+3. Enter a name, token and numeric Telegram admin ID. Choose **Manual** or a
+   plugin, then complete any extra setup fields.
+4. Open your bot in Telegram and send `/start` so it can message your account.
+5. Start it in Bottogram. On Android, follow **Keep bots running** to configure
+   background execution and notifications.
 
-Tap a bot card to open its **users and inbox**. The card's **Settings** gear opens
-configuration. Plugin setup values have a separate **Edit parameters** page;
-leaving a saved API key blank keeps its current value.
+Tap a bot card for its users and inbox; use its **Settings** gear for configuration.
+
+Bots need a network connection and a running Bottogram process. Android's
+foreground service supports background operation, but device shutdown, force-stop
+or OS termination can interrupt it. Reopen Bottogram and start the bots again.
+Keep local data and exports private: they can contain bot tokens and conversations.
 
 ## Plugins
 
-To create an integration, start with the [plugin-authoring guide](docs/PLUGIN_AUTHORING.md).
-It includes a working first plugin and an installable agent skill for generating
-packages from a user's requirements.
+Open **Plugins → Install from file** to import a `.bottogram-plugin.json` package.
+Review its capabilities and API destinations, then create a bot with that plugin.
+Packages declare configuration and automations; they do not execute arbitrary code.
+Installing a package does not start a bot or update existing bots automatically.
 
-Plugins are `.bottogram-plugin.json` files containing validated configuration,
-fields, and automations. The host executes registered **triggers → actions**;
-packages do not download or execute arbitrary Dart code. Adding a new host
-capability requires an application update.
+To build your own integration, read the [plugin-authoring guide](docs/PLUGIN_AUTHORING.md),
+or give your coding agent this command. It requires **Node.js 22.20+ and npm**:
 
-HTTP headers are declared by each plugin as literal values or typed references
-to public setup fields. Credentials use a separate authentication declaration.
-Header values use printable ASCII plus horizontal tab, matching Dart's HTTP
-transport; URL transforms use `Uri` encoding.
-Plugins also define reusable `errorMessages` and map stable host error codes to
-them on individual triggers/actions. Bottogram retains retry and execution
-control; plugin messages never receive raw exceptions, response bodies or secrets.
+```sh
+npx skills add hayyaun/bottogram --skill bottogram-plugin-builder --agent codex --yes
+```
 
-To install an additional package, open **Plugins → Install from file** and review
-its declared API destinations and capabilities before installing it.
+Then ask the agent to use `bottogram-plugin-builder`, describe the plugin you want,
+and provide the service's API documentation. The command installs the agent skill;
+the agent then creates the package. Other agents and installation options are
+covered in the guide.
 
-### First integration: Inshopa
-
-The bundled **Inshopa 0.6.0** plugin connects one shop using its API key and
-registered storefront URL. A separate shop ID is not required.
-
-- `/start` and `/shop` open the existing shop and its `/orders` page as Telegram
-  Mini Apps. `/orders` opens order history; `/help` gives brief sign-in guidance.
-- `/products` remains an alias for opening the shop, without fetching a catalog.
-- Buttons load the shop website directly in Telegram's web view. The website
-  handles sign-in and checkout; Bottogram does not receive website passwords,
-  sign-in codes, or sessions.
-- Paid-order polling sends alerts only to the configured admin.
-- The first complete scan establishes a baseline without historical alerts.
-- Purchase alerts can be disabled in that bot's plugin preferences.
-
-Opening pages needs no buyer API permission. The existing alert automation still
-uses `storefront:read` to identify the shop and `shop:orders:read` for order alerts.
-The storefront must have a usable HTTPS origin; local HTTP origins cannot launch
-Mini Apps. Login continuity and payment return behavior still need real Telegram
-client verification. Digital goods sold inside Telegram require Telegram Stars;
-the existing external checkout is not a universal digital-goods solution.
-
-Commands, text, button labels, page paths and menu configuration all belong to
-the plugin JSON. Bottogram provides the same validated command, reply and Mini App
-capabilities to every plugin; executable host code has no Inshopa ID/hash mapping.
-The unreleased plugin contract can change without backward compatibility. The
-old implicit request-header property has been removed; current packages declare
-their `Origin` and `X-Storefront-Host` headers explicitly in JSON. Old-format
-installed definitions were rewritten in an approved one-time offline Hive
-transition after exact data-file backups were saved outside the repository.
-The local bot remains pinned to 0.5.0, with its settings and seller-alert state
-retained. Automated checks and reopening the normal Linux debug preview verified
-the transitioned data and saved package pins. No bot was restarted.
-
-The matching [local 0.6.0 package](examples/plugins/inshopa.storefront.local.bottogram-plugin.json)
-uses the existing local API endpoints and its own local plugin identity. It still
-needs a reachable HTTPS storefront for Telegram Mini App navigation. A production
-package is not substituted for a local bot's backend. Local 0.6.0 is installed
-and available, but the existing HTTP shop address prevents applying its Mini App
-navigation to the current bot.
-
-A stopped bot can apply a reviewed update immediately. An active bot can queue it
-for its next normal Start without being stopped. That selection is session-only:
-restarting Bottogram discards the queue and requires review again. An HTTP or
-otherwise invalid Mini App origin rejects the update without changing the old
-bot. Existing HTTP development settings are never silently rewritten. See
-[storefront navigation](docs/STOREFRONT_NAVIGATION.md).
-
-**Verification so far:** the local catalog command and admin connection message
-were confirmed end to end. A newly paid order alert, production-key access, and
-physical-device delivery remain unverified. Current-state order polling is
-best effort; it is not a durable payment event feed.
-
-See [plugin architecture and recovery behavior](docs/PLUGIN_RUNTIME.md),
-[example packages](examples/plugins), and the [remaining integration work](docs/REMAINING_WORK.md).
-
-## Runtime and local data
-
-- Bots run on your device. Android/OEM termination and network outages can
-  interrupt them; battery exemption does not guarantee delivery.
-- After Android force-stop, process death, or reboot, reopen Bottogram and start
-  the bots again. Saved automation progress remains available.
-- Plugin API keys use platform secure storage. Bot tokens are part of local bot
-  configuration; treat application data and configuration exports as private.
-- The inbox keeps up to 20 messages per conversation and has a configurable
-  cache limit. Clearing or evicting messages removes their local content.
-- Manual bot definitions support configuration sharing. Plugin-bot exports are
-  not implemented. Credentials and conversation histories are not plugin packages.
+The bundled **Inshopa** integration opens shop/order pages as Telegram Mini Apps
+and supports paid-order alerts to the configured admin. It uses a shop's registered
+HTTPS origin and API key. See [storefront setup and behavior](docs/STOREFRONT_NAVIGATION.md),
+[example packages](examples/plugins) and [runtime/recovery details](docs/PLUGIN_RUNTIME.md).
 
 ## Development
 
-The build toolchain uses **Flutter 3.47.9**, **Dart 3.13.7**, and **JDK 17**.
-Android requires **API 24+**; native build tools are needed for desktop targets.
+Use **Flutter 3.47.9 / Dart 3.13.7**. Android builds use **JDK 17** and support
+**API 24+** devices. Install native tools for your target platform; tests and builds
+also need a C compiler for bundled SQLite.
 
 ```sh
 git clone https://github.com/hayyaun/bottogram.git
@@ -175,31 +95,18 @@ cd bottogram
 flutter pub get --enforce-lockfile
 flutter analyze --no-pub
 flutter test --no-pub
+flutter devices
 ```
 
-Choose a configured target, then run `flutter run -d <device-id>`. For native
-SDK requirements and test packaging, see [Build artifacts](docs/BUILD_ARTIFACTS.md).
-Live Inshopa and Android background integration tests are separate, opt-in checks;
-ordinary CI does not require real Telegram tokens or shop keys.
+Choose a listed device and run `flutter run -d DEVICE_ID`. Live Telegram/shop tests
+are opt-in; ordinary tests do not require real tokens or API keys.
 
-The project uses Cubit for UI state, Hive for app configuration, a separate
-SQLite database per bot for creator-managed data, Televerse for Telegram, and a
-host-side automation registry for plugins. Native SQLite is compiled from pinned
-upstream source through Dart build hooks; a C compiler is required for tests and
-builds. See [SQLite source and security packaging](native/sqlite/README.md).
-
-Hive serializers in `lib/units/*.adapter.dart` use the public `TypeAdapter` API
-and are maintained explicitly. Keep existing type/field IDs stable and extend
-the legacy-record and round-trip tests whenever the stored model changes.
-Adapter code generation is no longer a build prerequisite.
+For implementation details, see the [action builder](docs/ACTION_BUILDER.md),
+[plugin runtime](docs/PLUGIN_RUNTIME.md), [SQLite packaging](native/sqlite/README.md)
+and [native build setup](docs/BUILD_ARTIFACTS.md).
 
 ## Contributing
 
-Issues and focused pull requests are welcome. Describe the problem, platform,
-steps to reproduce, and expected behavior. Discuss larger plugin capabilities
-before implementing them so they fit the host's declarative architecture.
-
-Never include bot tokens, API keys, private exports, or customer data in an issue,
-pull request, screenshot, or build log.
-
-Start with the [roadmap](docs/REMAINING_WORK.md) and [runtime documentation](docs/PLUGIN_RUNTIME.md).
+Issues and focused pull requests are welcome. Include your platform, reproduction
+steps and expected behavior. Discuss new host capabilities before implementing them.
+Never include tokens, API keys, private exports or customer data in reports or logs.

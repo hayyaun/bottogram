@@ -1,0 +1,10 @@
+# Upstream SQLite amalgamation; keep Bottogram's bridge and policy code.
+native/sqlite/sqlite3.c
+native/sqlite/sqlite3.h
+native/sqlite/sqlite3ext.h
+
+# Visual branding assets; this graph focuses on source code and documentation.
+*.png
+*.svg
+*.ico
+*.icns

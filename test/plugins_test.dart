@@ -727,7 +727,7 @@ void main() {
       expect(bundled.installed.map((p) => p.id).toSet(), {
         'bottogram-plugin-inshopa',
       });
-      expect(bundled.installed.single.version, '0.6.0');
+      expect(bundled.installed.single.version, '0.7.0');
       expect(bundled.installed.single.executable, isTrue);
       final reopened = PluginRepository(vault: vault);
       await reopened.ready;

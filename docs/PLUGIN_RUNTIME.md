@@ -22,8 +22,8 @@ transport. For example, the Inshopa package owns this declaration:
 ```json
 {
   "headers": {
-    "Origin": {"field": "storefrontUrl", "transform": "url.origin"},
-    "X-Storefront-Host": {"field": "storefrontUrl", "transform": "url.authority"}
+    "Origin": {"field": "apiOrigin", "transform": "url.origin"},
+    "X-Storefront-Host": {"field": "apiOrigin", "transform": "url.authority"}
   },
   "authentication": {"type": "bearer", "secretField": "apiKey"}
 }
@@ -57,11 +57,13 @@ host failure code to a resource ID. The resource must exist in that package.
 }
 ```
 
-For example, the polling trigger maps `http.unauthorized` and `http.forbidden`
-to `shopAccessDenied`, while `poll.scan_limit_exceeded` maps to the package's
-`orderScanLimit`. A Mini App reply maps `configuration.invalid_public_origin`
-to `shopUrlInvalid`. Both current 0.6.0 definitions keep all shop-specific error
-wording in these JSON resources.
+For example, a polling trigger can map `http.unauthorized` and `http.forbidden`
+to separate credential and registration guidance, while `poll.scan_limit_exceeded`
+maps to the package's `orderScanLimit`. A Mini App reply maps
+`configuration.invalid_public_origin` to `shopUrlInvalid`. The 0.7.0 Inshopa
+definitions keep their Persian messages, commands and error resources in JSON.
+Their `apiOrigin` controls API registration headers; `storefrontUrl` controls
+public Mini App links. The host gives neither field a service-specific meaning.
 
 The host controls permanence, retry timing, delivery uncertainty and stopping an
 automation. Messages cannot override those decisions. Resource text is plain
@@ -79,9 +81,10 @@ copied to the rewritten digest namespace and the originals were retained. There
 were no delivery receipts to copy. No bot was restarted. Automated checks and
 reopening the normal Linux debug preview verified the transitioned data.
 
-The current local bot remains pinned to 0.5.0. Local 0.6.0 is installed and
-available, but no reachable HTTPS shop address has been provided for its Mini App
-navigation. Installing a package does not apply it to a bot.
+That historical 0.5.0 test bot was subsequently deleted by the user. Installing
+a package does not apply it to an existing bot. The new 0.7.0 definitions add a
+required API-origin input, so the compatible updater does not silently apply
+them to 0.6.0 setups or reuse their progress without a designed transition.
 
 ## Current contract verification — 2026-11-10
 

@@ -2,36 +2,43 @@
   "manifestVersion": 2,
   "hostApiMajor": 2,
   "id": "bottogram-plugin-inshopa-local",
-  "name": "Inshopa (local development)",
-  "version": "0.6.0",
+  "name": "این شاپا (توسعه محلی)",
+  "version": "0.7.0",
   "executionStatus": "live",
-  "description": "Local development storefront navigation and seller paid-order alerts. API requests use the existing WSL loopback backend; Telegram Mini App links still require a reachable HTTPS storefront.",
+  "description": "نسخه توسعه محلی فروشگاه این شاپا با پیام های فارسی، دسترسی به فروشگاه و سفارش ها در تلگرام و اعلان سفارش های پرداخت شده از API محلی.",
   "requiresBotFields": [
     "adminTelegramUserId"
   ],
   "setupFields": [
     {
       "key": "apiKey",
-      "label": "Inshopa API key",
+      "label": "کلید API فروشگاه",
       "type": "secret",
       "required": true,
-      "helpText": "The existing seller key identifies the shop for alerts. Keep storefront:read for shop lookup and shop:orders:read for order alerts. Opening website pages needs no buyer permission."
+      "helpText": "کلید همین فروشگاه با مجوزهای storefront:read و shop:orders:read برای اعلان سفارش ها. کلید در پیام ها و آدرس عمومی فروشگاه قرار نمی گیرد."
+    },
+    {
+      "key": "apiOrigin",
+      "label": "آدرس ثبت شده برای کلید API",
+      "type": "text",
+      "required": true,
+      "helpText": "آدرس کامل دامنه ثبت شده برای این کلید با همان http:// یا https:// و پورت. دامنه بدون پیشوند با HTTPS تفسیر می شود. آدرس سرور API را اینجا وارد نکنید."
     },
     {
       "key": "storefrontUrl",
-      "label": "Storefront URL",
+      "label": "آدرس عمومی فروشگاه در تلگرام",
       "type": "text",
       "required": true,
-      "helpText": "The exact registered shop origin. Telegram Mini App buttons require HTTPS. Website login and checkout remain on the existing site."
+      "helpText": "آدرس عمومی فروشگاه برای دکمه های تلگرام. دامنه بدون پیشوند با HTTPS باز می شود. این آدرس می تواند از آدرس ثبت شده برای کلید API متفاوت باشد."
     }
   ],
   "settings": [
     {
       "key": "notifyNewSuccessfulPurchases",
       "type": "boolean",
-      "label": "آگاه شدن از آخرین خرید های موفق",
+      "label": "اعلان سفارش های پرداخت شده",
       "default": true,
-      "helpText": "Notify the admin about orders first observed as paid after the initial history scan. Requires shop:orders:read."
+      "helpText": "در نخستین بررسی، سفارش های پرداخت شده قبلی اعلان نمی شوند. پس از آن، سفارش های تازه مشاهده شده با وضعیت پرداخت شده برای مدیر ارسال می شوند."
     }
   ],
   "automations": [
@@ -42,8 +49,7 @@
         "config": {
           "commands": [
             "start",
-            "shop",
-            "products"
+            "menu"
           ],
           "chatTypes": [
             "private"
@@ -56,18 +62,20 @@
           "id": "reply-navigation",
           "type": "telegram.reply.v2",
           "config": {
-            "text": "Visit the shop or view your orders. Sign in on the shop website if asked.",
+            "text": "به فروشگاه خوش آمدید\n\nمحصولات را ببینید و خرید خود را از داخل فروشگاه انجام دهید.\nبرای مشاهده خریدها و پیگیری سفارش، «سفارش های من» را باز کنید.\n\nاز کدام بخش شروع می کنید؟",
             "inlineKeyboard": [
               [
                 {
-                  "text": "Open shop",
+                  "text": "ورود به فروشگاه",
                   "webApp": {
                     "originField": "storefrontUrl",
                     "path": "/"
                   }
-                },
+                }
+              ],
+              [
                 {
-                  "text": "My orders",
+                  "text": "سفارش های من",
                   "webApp": {
                     "originField": "storefrontUrl",
                     "path": "/orders"
@@ -78,6 +86,58 @@
           },
           "errorMap": {
             "configuration.invalid_public_origin": "shopUrlInvalid",
+            "message.too_long": "messageUnavailable",
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "buyer-shop",
+      "trigger": {
+        "type": "telegram.command.v2",
+        "config": {
+          "commands": [
+            "shop",
+            "products",
+            "store"
+          ],
+          "chatTypes": [
+            "private"
+          ],
+          "arguments": "ignore"
+        }
+      },
+      "actions": [
+        {
+          "id": "reply-shop",
+          "type": "telegram.reply.v2",
+          "config": {
+            "text": "خرید از فروشگاه\n\nبرای مشاهده محصولات، بررسی جزئیات و ثبت سفارش، فروشگاه را باز کنید.\nورود به حساب و پرداخت در همان صفحه انجام می شود.",
+            "inlineKeyboard": [
+              [
+                {
+                  "text": "ورود به فروشگاه",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "سفارش های من",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/orders"
+                  }
+                }
+              ]
+            ]
+          },
+          "errorMap": {
+            "configuration.invalid_public_origin": "shopUrlInvalid",
+            "message.too_long": "messageUnavailable",
             "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
           }
         }
@@ -89,7 +149,8 @@
         "type": "telegram.command.v2",
         "config": {
           "commands": [
-            "orders"
+            "orders",
+            "myorders"
           ],
           "chatTypes": [
             "private"
@@ -102,14 +163,23 @@
           "id": "reply-orders",
           "type": "telegram.reply.v2",
           "config": {
-            "text": "View your purchases on the shop website. Sign in there if asked.",
+            "text": "سفارش های من\n\nخریدها و وضعیت سفارش خود را از حساب کاربری فروشگاه ببینید.\nاگر وارد حساب نیستید، با همان حسابی وارد شوید که خرید را با آن انجام داده اید.",
             "inlineKeyboard": [
               [
                 {
-                  "text": "My orders",
+                  "text": "سفارش های من",
                   "webApp": {
                     "originField": "storefrontUrl",
                     "path": "/orders"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "ورود به فروشگاه",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/"
                   }
                 }
               ]
@@ -117,6 +187,7 @@
           },
           "errorMap": {
             "configuration.invalid_public_origin": "shopUrlInvalid",
+            "message.too_long": "messageUnavailable",
             "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
           }
         }
@@ -128,7 +199,8 @@
         "type": "telegram.command.v2",
         "config": {
           "commands": [
-            "help"
+            "help",
+            "guide"
           ],
           "chatTypes": [
             "private"
@@ -141,18 +213,20 @@
           "id": "reply-help",
           "type": "telegram.reply.v2",
           "config": {
-            "text": "Open the shop to browse and buy. Open My orders to see your purchases. Sign in only on the shop website. Never send passwords or sign-in codes in this chat.",
+            "text": "راهنمای خرید و پیگیری\n\nفروشگاه: /shop\nسفارش های من: /orders\nپیگیری سفارش: /support\nمنوی اصلی: /start\n\nورود به حساب و پرداخت را در فروشگاه انجام دهید.\nرمز عبور و کد ورود را در این گفتگو نفرستید.",
             "inlineKeyboard": [
               [
                 {
-                  "text": "Open shop",
+                  "text": "ورود به فروشگاه",
                   "webApp": {
                     "originField": "storefrontUrl",
                     "path": "/"
                   }
-                },
+                }
+              ],
+              [
                 {
-                  "text": "My orders",
+                  "text": "سفارش های من",
                   "webApp": {
                     "originField": "storefrontUrl",
                     "path": "/orders"
@@ -163,6 +237,56 @@
           },
           "errorMap": {
             "configuration.invalid_public_origin": "shopUrlInvalid",
+            "message.too_long": "messageUnavailable",
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "buyer-support",
+      "trigger": {
+        "type": "telegram.command.v2",
+        "config": {
+          "commands": [
+            "support"
+          ],
+          "chatTypes": [
+            "private"
+          ],
+          "arguments": "ignore"
+        }
+      },
+      "actions": [
+        {
+          "id": "reply-support",
+          "type": "telegram.reply.v2",
+          "config": {
+            "text": "راهنمای پیگیری سفارش\n\nشماره و وضعیت سفارش را از بخش «سفارش های من» ببینید.\nهنگام پیگیری از فروشگاه، شماره سفارش را اعلام کنید.\n\nاین بخش راهنمای پیگیری است و گفتگوی مستقیم با پشتیبان را آغاز نمی کند.",
+            "inlineKeyboard": [
+              [
+                {
+                  "text": "سفارش های من",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/orders"
+                  }
+                }
+              ],
+              [
+                {
+                  "text": "ورود به فروشگاه",
+                  "webApp": {
+                    "originField": "storefrontUrl",
+                    "path": "/"
+                  }
+                }
+              ]
+            ]
+          },
+          "errorMap": {
+            "configuration.invalid_public_origin": "shopUrlInvalid",
+            "message.too_long": "messageUnavailable",
             "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
           }
         }
@@ -186,11 +310,11 @@
               },
               "headers": {
                 "Origin": {
-                  "field": "storefrontUrl",
+                  "field": "apiOrigin",
                   "transform": "url.origin"
                 },
                 "X-Storefront-Host": {
-                  "field": "storefrontUrl",
+                  "field": "apiOrigin",
                   "transform": "url.authority"
                 }
               }
@@ -208,11 +332,11 @@
             },
             "headers": {
               "Origin": {
-                "field": "storefrontUrl",
+                "field": "apiOrigin",
                 "transform": "url.origin"
               },
               "X-Storefront-Host": {
-                "field": "storefrontUrl",
+                "field": "apiOrigin",
                 "transform": "url.authority"
               }
             }
@@ -235,11 +359,16 @@
         },
         "errorMap": {
           "http.unauthorized": "shopAccessDenied",
-          "http.forbidden": "shopAccessDenied",
+          "http.forbidden": "shopPermissionDenied",
           "http.credentials_unavailable": "keyUnavailable",
+          "http.invalid_origin": "apiOriginInvalid",
+          "http.invalid_headers": "headerValuesInvalid",
           "http.timeout": "connectionUnavailable",
           "http.request_failed": "connectionUnavailable",
-          "http.invalid_response": "connectionUnavailable",
+          "http.invalid_response": "orderResponseInvalid",
+          "http.rate_limited": "requestsLimited",
+          "poll.invalid_response": "orderResponseInvalid",
+          "poll.invalid_progress": "orderProgressInvalid",
           "poll.scan_limit_exceeded": "orderScanLimit"
         }
       },
@@ -248,10 +377,11 @@
           "id": "notify-admin",
           "type": "telegram.notify-admin.v1",
           "config": {
-            "text": "New paid order\nShop: {{event.shop_name}}\nOrder: {{event.id}}\nAmount: {{event.total_irr}} {{event.currency}}"
+            "text": "سفارش پرداخت شده جدید\n\nفروشگاه: {{event.shop_name}}\nشماره سفارش: {{event.id}}\nمبلغ سفارش: {{event.total_irr}} ریال\n\nبرای بررسی جزئیات و آماده سازی، به پنل فروشگاه مراجعه کنید."
           },
           "errorMap": {
-            "telegram.delivery_unconfirmed": "deliveryUnconfirmed"
+            "telegram.delivery_unconfirmed": "deliveryUnconfirmed",
+            "message.too_long": "messageUnavailable"
           }
         }
       ]
@@ -259,47 +389,107 @@
   ],
   "telegram": {
     "menuButton": {
-      "text": "Open shop",
+      "text": "ورود به فروشگاه",
       "webApp": {
         "originField": "storefrontUrl",
         "path": "/"
       }
-    }
+    },
+    "commands": [
+      {
+        "command": "start",
+        "description": "نمایش منوی اصلی فروشگاه"
+      },
+      {
+        "command": "shop",
+        "description": "مشاهده محصولات و خرید از فروشگاه"
+      },
+      {
+        "command": "orders",
+        "description": "مشاهده خریدها و وضعیت سفارش ها"
+      },
+      {
+        "command": "help",
+        "description": "راهنمای خرید و استفاده از ربات"
+      },
+      {
+        "command": "support",
+        "description": "راهنمای پیگیری سفارش از فروشگاه"
+      }
+    ]
   },
   "errorMessages": {
     "shopAccessDenied": {
-      "title": "Shop access denied",
-      "message": "Inshopa rejected the shop connection.",
-      "help": "Check the API key, its permissions and the registered shop address.",
+      "title": "کلید API فروشگاه معتبر نیست",
+      "message": "سرویس این شاپا کلید این اتصال را نپذیرفت. ممکن است کلید منقضی یا لغو شده باشد.",
+      "help": "کلید معتبر همین فروشگاه را در پارامترهای افزونه وارد کنید.",
+      "action": "editPluginParameters"
+    },
+    "shopPermissionDenied": {
+      "title": "دسترسی اتصال فروشگاه مجاز نیست",
+      "message": "کلید API یا آدرس ثبت شده، اجازه دسترسی به این فروشگاه و سفارش های آن را ندارد.",
+      "help": "پیشوند، دامنه و پورت آدرس ثبت شده برای کلید باید یکسان باشند. مجوزهای storefront:read و shop:orders:read را هم بررسی کنید.",
       "action": "editPluginParameters"
     },
     "keyUnavailable": {
-      "title": "Shop key unavailable",
-      "message": "The saved Inshopa API key could not be used.",
-      "help": "Unlock secure storage and check the saved key in the plugin parameters.",
+      "title": "کلید ذخیره شده در دسترس نیست",
+      "message": "کلید API از فضای ذخیره سازی امن دستگاه قابل استفاده نیست.",
+      "help": "قفل فضای ذخیره سازی امن را باز کنید و کلید ذخیره شده را در پارامترهای افزونه بررسی کنید.",
       "action": "editPluginParameters"
     },
     "orderScanLimit": {
-      "title": "Order scan limit reached",
-      "message": "The order history exceeds this plugin’s configured scan limit.",
-      "help": "Contact the plugin author before increasing the limit."
+      "title": "بررسی سابقه سفارش ها به محدوده افزونه رسیده است",
+      "message": "حجم سفارش ها از محدوده بررسی این نسخه بیشتر است و اعلان ها به بررسی نیاز دارند.",
+      "help": "این کد خطا را برای سازنده افزونه ارسال کنید تا روش بررسی مناسب این فروشگاه تنظیم شود."
     },
     "shopUrlInvalid": {
-      "title": "Shop link unavailable",
-      "message": "Opening the shop in Telegram requires a valid HTTPS address.",
-      "help": "Use the existing shop’s HTTPS origin without a page path, credentials, query or fragment.",
+      "title": "آدرس عمومی فروشگاه نیاز به اصلاح دارد",
+      "message": "دکمه های تلگرام به یک آدرس معتبر HTTPS برای فروشگاه نیاز دارند.",
+      "help": "دامنه ای مانند shop.example.com یا آدرس https://shop.example.com وارد کنید. مسیر صفحه، اطلاعات ورود و پارامتر اضافی ننویسید.",
+      "action": "editPluginParameters"
+    },
+    "apiOriginInvalid": {
+      "title": "آدرس ثبت شده برای کلید API معتبر نیست",
+      "message": "آدرس اتصال باید فقط شامل پیشوند، دامنه و در صورت ثبت، پورت باشد.",
+      "help": "همان آدرس ثبت شده برای کلید را وارد کنید. اگر ثبت با HTTP انجام شده، http:// را صریح بنویسید. مسیر صفحه و پارامتر اضافی ننویسید.",
+      "action": "editPluginParameters"
+    },
+    "headerValuesInvalid": {
+      "title": "پارامترهای اتصال قابل استفاده نیستند",
+      "message": "درخواست فروشگاه با مقادیر فعلی قابل آماده سازی نیست.",
+      "help": "پارامترهای اتصال را بررسی کنید. اگر مشکل ادامه داشت، نسخه تازه افزونه را نصب کنید.",
       "action": "editPluginParameters"
     },
     "connectionUnavailable": {
-      "title": "Shop connection unavailable",
-      "message": "The Inshopa API could not complete the request.",
-      "help": "Check the network and service availability, then try again.",
+      "title": "ارتباط با این شاپا برقرار نشد",
+      "message": "سرویس سفارش ها در این تلاش پاسخ قابل استفاده ای نداد.",
+      "help": "اتصال اینترنت و وضعیت سرویس را بررسی کنید، سپس دوباره تلاش کنید.",
       "action": "retry"
     },
+    "requestsLimited": {
+      "title": "درخواست های فروشگاه موقتا محدود شده اند",
+      "message": "سرویس این شاپا برای این اتصال زمان انتظار تعیین کرده است.",
+      "help": "ربات پس از زمان انتظار دوباره تلاش می کند. نیازی به شروع پیاپی ربات نیست."
+    },
+    "orderResponseInvalid": {
+      "title": "پاسخ سفارش ها قابل پردازش نیست",
+      "message": "اطلاعات دریافتی با قرارداد این نسخه از افزونه هماهنگ نیست.",
+      "help": "نسخه افزونه و وضعیت سرویس را بررسی کنید. در صورت ادامه مشکل، این کد خطا را برای پشتیبانی ارسال کنید."
+    },
+    "orderProgressInvalid": {
+      "title": "ادامه بررسی سفارش ها به بررسی نیاز دارد",
+      "message": "ربات نتوانست بررسی سفارش ها را از وضعیت ذخیره شده ادامه دهد.",
+      "help": "این کد خطا را برای سازنده افزونه ارسال کنید تا ادامه بررسی بدون از دست رفتن سابقه اعلان ها انجام شود."
+    },
+    "messageUnavailable": {
+      "title": "پیام فروشگاه آماده نشد",
+      "message": "پیام این بخش از محدودیت مجاز تلگرام بیشتر شده است.",
+      "help": "نسخه تازه افزونه را بررسی کنید. در صورت ادامه مشکل، این کد خطا را برای سازنده افزونه ارسال کنید."
+    },
     "deliveryUnconfirmed": {
-      "title": "Telegram delivery unconfirmed",
-      "message": "Telegram did not confirm this message’s delivery.",
-      "help": "Check the existing conversation before retrying; the message may already have arrived."
+      "title": "ارسال پیام تایید نشده است",
+      "message": "ارسال این پیام از طرف تلگرام تایید نشده است.",
+      "help": "پیش از تلاش دوباره، گفتگو را بررسی کنید؛ ممکن است پیام قبلا ارسال شده باشد."
     }
   }
 }

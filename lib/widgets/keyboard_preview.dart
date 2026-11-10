@@ -7,8 +7,8 @@ class KeyboardPreview extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(12),
-    decoration: const BoxDecoration(
-      color: BColors.subtle,
+    decoration: BoxDecoration(
+      color: BColors.of(context).subtle,
       borderRadius: BottogramDesign.controlRadius,
     ),
     child: Column(
@@ -62,7 +62,9 @@ class KeyboardPreviewKey extends StatelessWidget {
   Widget build(BuildContext context) => Tooltip(
     message: 'Remove $label${detail == null ? '' : '\n$detail'}',
     child: OutlinedButton(
-      style: OutlinedButton.styleFrom(backgroundColor: BColors.surface),
+      style: OutlinedButton.styleFrom(
+        backgroundColor: BColors.of(context).surface,
+      ),
       onPressed: onRemove,
       child: Text(
         label,

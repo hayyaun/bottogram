@@ -59,21 +59,18 @@ class _PluginSettingsFormState extends State<PluginSettingsForm> {
       final values = <String, Object?>{};
       for (final setting in widget.definitions) {
         final controller = _controllers[setting.key];
-        values[setting.key] =
-            controller == null
-                ? _values[setting.key]
-                : setting.parseInput(controller.text);
+        values[setting.key] = controller == null
+            ? _values[setting.key]
+            : setting.parseInput(controller.text);
       }
       await widget.onSave(values);
       if (mounted) setState(() => _saved = true);
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is PluginException
-                      ? error.message
-                      : 'Settings could not be saved. Your changes are still here.',
+          () => _error = error is PluginException
+              ? error.message
+              : 'Settings could not be saved. Your changes are still here.',
         );
       }
     } finally {
@@ -102,18 +99,18 @@ class _PluginSettingsFormState extends State<PluginSettingsForm> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: Text(setting.label),
-                subtitle:
-                    setting.helpText == null ? null : Text(setting.helpText!),
+                subtitle: setting.helpText == null
+                    ? null
+                    : Text(setting.helpText!),
                 value: _values[setting.key] as bool,
-                onChanged:
-                    (value) => setState(() {
-                      _values[setting.key] = value;
-                      _saved = false;
-                    }),
+                onChanged: (value) => setState(() {
+                  _values[setting.key] = value;
+                  _saved = false;
+                }),
               )
             else if (setting.type == PluginSettingType.choice)
               DropdownButtonFormField<String>(
-                value: _values[setting.key] as String,
+                initialValue: _values[setting.key] as String,
                 isExpanded: true,
                 decoration: InputDecoration(
                   labelText: setting.label,
@@ -126,31 +123,29 @@ class _PluginSettingsFormState extends State<PluginSettingsForm> {
                       child: Text(option.label),
                     ),
                 ],
-                onChanged:
-                    (value) => setState(() {
-                      _values[setting.key] = value!;
-                      _saved = false;
-                    }),
+                onChanged: (value) => setState(() {
+                  _values[setting.key] = value!;
+                  _saved = false;
+                }),
                 validator: setting.validate,
               )
             else
               TextFormField(
                 controller: _controllers[setting.key],
-                keyboardType:
-                    setting.type == PluginSettingType.string
-                        ? TextInputType.text
-                        : const TextInputType.numberWithOptions(
-                          signed: true,
-                          decimal: true,
-                        ),
+                keyboardType: setting.type == PluginSettingType.string
+                    ? TextInputType.text
+                    : const TextInputType.numberWithOptions(
+                        signed: true,
+                        decimal: true,
+                      ),
                 decoration: InputDecoration(
                   labelText: setting.label,
                   helperText: setting.helpText,
                   helperMaxLines: 4,
                   errorMaxLines: 3,
                 ),
-                validator:
-                    (text) => setting.validate(setting.parseInput(text ?? '')),
+                validator: (text) =>
+                    setting.validate(setting.parseInput(text ?? '')),
               ),
             const SizedBox(height: 16),
           ],

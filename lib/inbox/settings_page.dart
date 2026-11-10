@@ -205,7 +205,9 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
             const SizedBox(height: 24),
             OutlinedButton.icon(
               onPressed: _busy ? null : _clear,
-              style: OutlinedButton.styleFrom(foregroundColor: BColors.error),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: BColors.of(context).error,
+              ),
               icon: const Icon(Icons.delete_sweep_outlined),
               label: const Text('Clear message cache'),
             ),

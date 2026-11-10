@@ -17,16 +17,15 @@ Future<BEntry<T>?> showBEntryDialog<T>(
   String? Function(String)? validate,
 }) => showDialog<BEntry<T>>(
   context: context,
-  builder:
-      (_) => _EntryDialog<T>(
-        title: title,
-        fieldLabel: fieldLabel,
-        initialType: initialType,
-        types: types,
-        initialText: initialText,
-        action: action,
-        validate: validate,
-      ),
+  builder: (_) => _EntryDialog<T>(
+    title: title,
+    fieldLabel: fieldLabel,
+    initialType: initialType,
+    types: types,
+    initialText: initialText,
+    action: action,
+    validate: validate,
+  ),
 );
 
 class _EntryDialog<T> extends StatefulWidget {
@@ -77,7 +76,7 @@ class _EntryDialogState<T> extends State<_EntryDialog<T>> {
             children: [
               if (widget.types.isNotEmpty) ...[
                 DropdownButtonFormField<T>(
-                  value: _type,
+                  initialValue: _type,
                   isExpanded: true,
                   decoration: const InputDecoration(labelText: 'Type'),
                   items: [
@@ -99,11 +98,9 @@ class _EntryDialogState<T> extends State<_EntryDialog<T>> {
                 textInputAction: TextInputAction.done,
                 onFieldSubmitted: (_) => _save(),
                 decoration: InputDecoration(labelText: widget.fieldLabel),
-                validator:
-                    (value) =>
-                        value == null || value.trim().isEmpty
-                            ? 'Enter a value.'
-                            : widget.validate?.call(value),
+                validator: (value) => value == null || value.trim().isEmpty
+                    ? 'Enter a value.'
+                    : widget.validate?.call(value),
               ),
             ],
           ),
@@ -128,23 +125,22 @@ Future<bool> confirmRemoval(
 }) async =>
     await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text(title),
-            content: Text(message),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.error,
-                ),
-                onPressed: () => Navigator.pop(context, true),
-                child: Text(action),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
+          FilledButton(
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(action),
+          ),
+        ],
+      ),
     ) ??
     false;

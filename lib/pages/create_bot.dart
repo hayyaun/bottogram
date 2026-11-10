@@ -54,10 +54,9 @@ class _CreateBotPageState extends State<CreateBotPage> {
       ctrl.dispose();
     }
     _parameters.clear();
-    _plugin =
-        key == null
-            ? null
-            : widget.plugins.installed.firstWhere((p) => p.storageKey == key);
+    _plugin = key == null
+        ? null
+        : widget.plugins.installed.firstWhere((p) => p.storageKey == key);
     for (final field in _plugin?.fields ?? <PluginField>[]) {
       _parameters[field.key] = TextEditingController(
         text: field.defaultValue ?? '',
@@ -85,11 +84,9 @@ class _CreateBotPageState extends State<CreateBotPage> {
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is PluginException
-                      ? error.message
-                      : 'The bot could not be saved. Your draft is still here.',
+          () => _error = error is PluginException
+              ? error.message
+              : 'The bot could not be saved. Your draft is still here.',
         );
       }
     } finally {
@@ -147,11 +144,10 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                 labelText: 'Bot name',
                                 hintText: 'A name you will recognize',
                               ),
-                              validator:
-                                  (value) =>
-                                      value == null || value.trim().isEmpty
-                                          ? 'Enter a bot name.'
-                                          : null,
+                              validator: (value) =>
+                                  value == null || value.trim().isEmpty
+                                  ? 'Enter a bot name.'
+                                  : null,
                             ),
                             const SizedBox(height: 16),
                             SecretFormField(
@@ -160,13 +156,12 @@ class _CreateBotPageState extends State<CreateBotPage> {
                               secret: true,
                               helpText:
                                   'Create a bot with BotFather in Telegram to get its token.',
-                              validator:
-                                  (value) =>
-                                      RegExp(
-                                            r'^[0-9]+:[A-Za-z0-9_-]+$',
-                                          ).hasMatch(value?.trim() ?? '')
-                                          ? null
-                                          : 'Enter the Telegram bot token from BotFather.',
+                              validator: (value) =>
+                                  RegExp(
+                                    r'^[0-9]+:[A-Za-z0-9_-]+$',
+                                  ).hasMatch(value?.trim() ?? '')
+                                  ? null
+                                  : 'Enter the Telegram bot token from BotFather.',
                             ),
                             const SizedBox(height: 24),
                             SecretFormField(
@@ -192,15 +187,13 @@ class _CreateBotPageState extends State<CreateBotPage> {
                           children: [
                             ListenableBuilder(
                               listenable: widget.plugins,
-                              builder:
-                                  (
-                                    context,
-                                    _,
-                                  ) => DropdownButtonFormField<String>(
+                              builder: (context, _) =>
+                                  DropdownButtonFormField<String>(
                                     key: ValueKey(
                                       _plugin?.storageKey ?? 'manual',
                                     ),
-                                    value: _plugin?.storageKey ?? 'manual',
+                                    initialValue:
+                                        _plugin?.storageKey ?? 'manual',
                                     isExpanded: true,
                                     decoration: const InputDecoration(
                                       labelText: 'Setup method',
@@ -221,10 +214,8 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                           ),
                                         ),
                                     ],
-                                    onChanged:
-                                        (key) => _select(
-                                          key == 'manual' ? null : key,
-                                        ),
+                                    onChanged: (key) =>
+                                        _select(key == 'manual' ? null : key),
                                   ),
                             ),
                             Align(
@@ -238,10 +229,9 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                   await Navigator.push(
                                     context,
                                     MaterialPageRoute<void>(
-                                      builder:
-                                          (_) => PluginsPage(
-                                            repository: widget.plugins,
-                                          ),
+                                      builder: (_) => PluginsPage(
+                                        repository: widget.plugins,
+                                      ),
                                     ),
                                   );
                                   if (mounted) setState(() {});
@@ -258,10 +248,9 @@ class _CreateBotPageState extends State<CreateBotPage> {
                               ),
                               BNotice(
                                 icon: Icons.lock_outline_rounded,
-                                message:
-                                    _plugin!.executable
-                                        ? 'Credentials are saved securely. Start the bot after creating it to run its automations.'
-                                        : 'Settings will be saved securely. This plugin version is setup-only.',
+                                message: _plugin!.executable
+                                    ? 'Credentials are saved securely. Start the bot after creating it to run its automations.'
+                                    : 'Settings will be saved securely. This plugin version is setup-only.',
                               ),
                             ] else
                               const Text(
@@ -278,16 +267,13 @@ class _CreateBotPageState extends State<CreateBotPage> {
                     ],
                     FilledButton.icon(
                       onPressed: _saving ? null : _save,
-                      icon:
-                          _saving
-                              ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                ),
-                              )
-                              : const Icon(Icons.add),
+                      icon: _saving
+                          ? const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.add),
                       label: Text(_saving ? 'Saving…' : 'Create bot'),
                     ),
                     const SizedBox(height: 24),

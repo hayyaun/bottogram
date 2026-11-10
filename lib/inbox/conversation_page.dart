@@ -205,7 +205,9 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                               _messages![_messages!.length - 1 - index];
                           final attachment = message.attachment;
                           final ink =
-                              message.outgoing ? BColors.canvas : BColors.ink;
+                              message.outgoing
+                                  ? BColors.of(context).canvas
+                                  : BColors.of(context).ink;
                           return Align(
                             key: ValueKey(message.key),
                             alignment:
@@ -224,12 +226,14 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                               decoration: BoxDecoration(
                                 color:
                                     message.outgoing
-                                        ? BColors.ink
-                                        : BColors.surface,
+                                        ? BColors.of(context).ink
+                                        : BColors.of(context).surface,
                                 border:
                                     message.outgoing
                                         ? null
-                                        : Border.all(color: BColors.line),
+                                        : Border.all(
+                                          color: BColors.of(context).line,
+                                        ),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
@@ -252,8 +256,8 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                                       strong: true,
                                       color:
                                           message.outgoing
-                                              ? BColors.inverseMuted
-                                              : BColors.muted,
+                                              ? BColors.of(context).inverseMuted
+                                              : BColors.of(context).muted,
                                     ),
                                   ),
                                   if (message.text.isNotEmpty)
@@ -309,8 +313,8 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                                       13,
                                       color:
                                           message.outgoing
-                                              ? BColors.inverseMuted
-                                              : BColors.muted,
+                                              ? BColors.of(context).inverseMuted
+                                              : BColors.of(context).muted,
                                     ),
                                   ),
                                 ],
@@ -326,9 +330,11 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                 child: BNotice(message: _error!, error: true),
               ),
             Container(
-              decoration: const BoxDecoration(
-                color: BColors.surface,
-                border: Border(top: BorderSide(color: BColors.line)),
+              decoration: BoxDecoration(
+                color: BColors.of(context).surface,
+                border: Border(
+                  top: BorderSide(color: BColors.of(context).line),
+                ),
               ),
               padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
               child: Row(
@@ -352,18 +358,18 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                     child: IconButton.filled(
                       tooltip: 'Send reply',
                       style: IconButton.styleFrom(
-                        backgroundColor: BColors.ink,
-                        foregroundColor: BColors.canvas,
+                        backgroundColor: BColors.of(context).ink,
+                        foregroundColor: BColors.of(context).canvas,
                       ),
                       onPressed: _sending ? null : _send,
                       icon:
                           _sending
-                              ? const SizedBox(
+                              ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  color: BColors.canvas,
+                                  color: BColors.of(context).canvas,
                                 ),
                               )
                               : const Icon(Icons.arrow_upward_rounded),

@@ -14,9 +14,11 @@ class PluginsPage extends StatefulWidget {
     super.key,
     required this.repository,
     this.embedded = false,
+    this.scrollHeader,
   });
   final PluginRepository repository;
   final bool embedded;
+  final Widget? scrollHeader;
   @override
   State<PluginsPage> createState() => _PluginsPageState();
 }
@@ -171,9 +173,19 @@ class _PluginsPageState extends State<PluginsPage> {
             final plugins = widget.repository.installed;
             return SingleChildScrollView(
               child: BContent(
+                padding: EdgeInsets.fromLTRB(
+                  24,
+                  widget.scrollHeader == null ? 24 : 16,
+                  24,
+                  24 +
+                      (widget.embedded
+                          ? MediaQuery.paddingOf(context).bottom
+                          : 0),
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
+                    if (widget.scrollHeader != null) widget.scrollHeader!,
                     BHeading(
                       title: 'Plugins',
                       subtitle: 'Add a setup for the way your bot works.',
@@ -218,8 +230,8 @@ class _PluginsPageState extends State<PluginsPage> {
                                   Container(
                                     width: 48,
                                     height: 48,
-                                    decoration: const BoxDecoration(
-                                      color: BColors.subtle,
+                                    decoration: BoxDecoration(
+                                      color: BColors.of(context).subtle,
                                       borderRadius:
                                           BottogramDesign.controlRadius,
                                     ),

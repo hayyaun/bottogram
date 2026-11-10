@@ -1,14 +1,14 @@
-// ignore_for_file: use_build_context_synchronously
-
-import 'package:bottogram/ui/design.dart';
-import 'package:bottogram/ui/dialogs.dart';
+import 'package:bottogram/builder/engine.dart';
+import 'package:bottogram/builder/step_editor.dart';
+import 'package:bottogram/builder/store.dart';
+import 'package:bottogram/builder/values.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
-import 'package:bottogram/utils/context.dart';
-import 'package:bottogram/utils/list.dart';
+import 'package:bottogram/ui/dialogs.dart';
+import 'package:bottogram/utils/valid.dart';
 import 'package:bottogram/widgets/rmu_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -20,154 +20,168 @@ class ActPage extends StatefulWidget {
     required this.ev,
     required this.bot,
   });
-
   final VirtAct act;
   final VirtEvent ev;
   final VirtBot bot;
-
   @override
   State<ActPage> createState() => _ActPageState();
 }
 
 class _ActPageState extends State<ActPage> {
-  final ctrlText = TextEditingController();
-
+  late final draft = VirtAct(type: widget.act.type, text: widget.act.text)
+    ..config = Map.of(widget.act.config)
+    ..rmu = widget.act.rmu?.copy(widget.act.rmu?.name ?? '');
+  final _references = <String>[
+    'event.text',
+    'event.input',
+    'event.userId',
+    'event.firstName',
+    'event.username',
+    'event.chatId',
+    'event.messageId',
+    'event.arguments.0',
+    'event.callbackData',
+    'event.query',
+  ];
   @override
   void initState() {
-    ctrlText.text = widget.act.text;
     super.initState();
-  }
-
-  @override
-  void dispose() {
-    ctrlText.dispose();
-    super.dispose();
-  }
-
-  Future<void> _autoAddEventsOfRMU() async {
-    final rmu = widget.act.rmu;
-    if (rmu == null) return;
-    final bot = widget.bot;
-    final newEvs = <VirtEvent>[];
-    switch (rmu.type) {
-      case VirtRMUType.none:
-        break;
-      case VirtRMUType.keyboard:
-        for (final btn in (rmu as VirtRMUKeyboard).items) {
-          if (btn == null) continue;
-          final duplicate = bot.events.any(
-            (ev) => ev.type == VirtEventType.text && ev.query == btn,
-          );
-          if (duplicate) continue;
-          final newEv = VirtEvent(type: VirtEventType.text, query: btn);
-          bot.events.add(newEv);
-          newEvs.add(newEv);
-        }
-        break;
-      case VirtRMUType.inlineKeyboard:
-        for (final btn in (rmu as VirtRMUInlineKeyboard).items) {
-          if (btn == null) continue;
-          final duplicate = bot.events.any(
-            (ev) =>
-                ev.type == VirtEventType.callbackQuery && ev.query == btn.value,
-          );
-          if (duplicate) continue;
-          final newEv = VirtEvent(
-            type: VirtEventType.callbackQuery,
-            query: btn.value,
-          );
-          bot.events.add(newEv);
-          newEvs.add(newEv);
-        }
-        break;
+    for (final (index, act) in widget.ev.acts.indexed) {
+      if (identical(act, widget.act)) break;
+      final name = act.config['output'] ?? 'step${index + 1}';
+      _references.add(
+        'steps.$name.${act.type == VirtActType.http
+            ? 'body'
+            : act.type == VirtActType.sql
+            ? 'rows'
+            : act.type == VirtActType.renderList
+            ? 'text'
+            : act.type == VirtActType.setVariable || act.type == VirtActType.incrementVariable
+            ? 'value'
+            : 'messageId'}',
+      );
+      if (act.type == VirtActType.renderList) {
+        _references.add('steps.$name.keyboard');
+      }
     }
+    _loadVariables();
+  }
 
-    if (newEvs.isNotEmpty && mounted) {
-      final evNames = newEvs.mapToList((ev) => '${ev.type.name}/${ev.query}');
-      context.showSnackBar('Added new event: ${evNames.join(', ')}');
+  Future<void> _loadVariables() async {
+    if (!widget.bot.isInBox) return;
+    try {
+      final definitions = await BuilderStore.shared.definitions(
+        builderBotId(widget.bot.token),
+      );
+      if (mounted) {
+        setState(
+          () => _references.addAll(
+            definitions.map((d) => '${d.scope}.${d.name}'),
+          ),
+        );
+      }
+    } catch (_) {
+      /* Opening the editor does not require available state storage. */
     }
   }
 
-  Future<void> _save() async {
-    widget.act.text = ctrlText.text;
-    await _autoAddEventsOfRMU();
-    if (!mounted) return;
-    context.read<BotsCubit>().update();
-    Navigator.pop(context);
+  Future<void> _save(BuilderStep step) async {
+    if (widget.ev.acts.indexed.any(
+      (entry) =>
+          !identical(entry.$2, widget.act) &&
+          (entry.$2.config['output'] ?? 'step${entry.$1 + 1}') ==
+              step.config['output'],
+    )) {
+      throw const BuilderFailure(
+        'Another action already uses this output name.',
+      );
+    }
+    if (step.kind == 'callbackAnswer' &&
+        widget.ev.type != VirtEventType.callbackQuery) {
+      throw const BuilderFailure(
+        'Button answers require a callback-query event.',
+      );
+    }
+    if (step.kind == 'inlineAnswer' &&
+        widget.ev.type != VirtEventType.inlineQuery) {
+      throw const BuilderFailure(
+        'Inline answers require an inline-query event.',
+      );
+    }
+    final previousText = widget.act.text,
+        previousConfig = widget.act.config,
+        previousKeyboard = widget.act.rmu;
+    widget.act
+      ..text = step.text
+      ..config = step.config
+      ..rmu = draft.rmu;
+    final added = <VirtEvent>[];
+    void bind(VirtEventType type, String query) {
+      if (widget.bot.events.any((e) => e.type == type && e.query == query)) {
+        return;
+      }
+      final event = VirtEvent(type: type, query: query);
+      widget.bot.events.add(event);
+      added.add(event);
+    }
+
+    final rmu = draft.rmu;
+    if (rmu is VirtRMUKeyboard) {
+      for (final text in rmu.items.whereType<String>()) {
+        bind(VirtEventType.text, text);
+      }
+    }
+    if (rmu is VirtRMUInlineKeyboard) {
+      for (final item in rmu.items.whereType<KeyValue>()) {
+        if (!isValidUrl(item.value)) {
+          bind(VirtEventType.callbackQuery, item.value);
+        }
+      }
+    }
+    try {
+      await context.read<BotsCubit>().saveBot(widget.bot);
+    } catch (_) {
+      widget.act
+        ..text = previousText
+        ..config = previousConfig
+        ..rmu = previousKeyboard;
+      widget.bot.events.removeWhere(added.contains);
+      rethrow;
+    }
+    if (mounted) Navigator.pop(context, true);
   }
 
   Future<void> _remove() async {
-    final accepted = await confirmRemoval(
-      context,
-      title: 'Delete action?',
-      message: 'Remove this action from the event?',
-      action: 'Delete action',
-    );
-    if (!accepted || !mounted) return;
+    if (!await confirmRemoval(
+          context,
+          title: 'Delete action?',
+          message: 'Later actions referring to its output will need updating.',
+          action: 'Delete action',
+        ) ||
+        !mounted) {
+      return;
+    }
+    final index = widget.ev.acts.indexOf(widget.act);
     widget.ev.acts.remove(widget.act);
-    context.read<BotsCubit>().update();
-    Navigator.pop(context);
+    try {
+      await context.read<BotsCubit>().saveBot(widget.bot);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      widget.ev.acts.insert(index, widget.act);
+    }
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text('Action editor'),
-      actions: [
-        IconButton(
-          tooltip: 'Delete action',
-          icon: const Icon(Icons.delete_outline),
-          onPressed: _remove,
-        ),
-      ],
-    ),
-    body: SingleChildScrollView(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      child: BContent(
-        maxWidth: 840,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            BHeading(
-              title:
-                  widget.act.type == VirtActType.reply
-                      ? 'Reply message'
-                      : 'Dice action',
-              subtitle: 'For the “${widget.ev.query}” event.',
-            ),
-            const SizedBox(height: 28),
-            BPanel(
-              child: BSection(
-                title: 'Message',
-                description:
-                    widget.act.type == VirtActType.dice
-                        ? 'This action sends a dice animation. Its text is used as a label in Bottogram.'
-                        : 'Write the message your bot will send.',
-                child: TextField(
-                  controller: ctrlText,
-                  keyboardType: TextInputType.multiline,
-                  minLines: 5,
-                  maxLines: 10,
-                  decoration: const InputDecoration(
-                    labelText: 'Action text',
-                    alignLabelWithHint: true,
-                    hintText: 'Write your reply…',
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            BPanel(child: RMUEditor(act: widget.act)),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.check_rounded),
-              label: const Text('Save action'),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
-    ),
+  Widget build(BuildContext context) => BuilderStepEditor(
+    initial: BuilderStep(draft.type.name, draft.text, {
+      ...draft.config,
+      'output':
+          draft.config['output'] ??
+          'step${widget.ev.acts.indexOf(widget.act) + 1}',
+    }),
+    references: _references,
+    keyboard: RMUEditor(act: draft),
+    onSave: _save,
+    onDelete: _remove,
   );
 }

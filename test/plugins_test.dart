@@ -23,6 +23,7 @@ import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/ui/theme_preferences.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -144,6 +145,7 @@ void main() {
       await tester.runAsync(() async {
         await tester.pumpWidget(const MyApp());
         final homeContext = tester.element(find.byType(HomePage));
+        await homeContext.read<ThemePreferences>().ready;
         appRepository = homeContext.read<PluginRepository>();
         final appBots = homeContext.read<BotsCubit>();
         await appRepository.ready;

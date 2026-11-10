@@ -1,4 +1,5 @@
 import 'package:bottogram/pages/act.dart';
+import 'package:bottogram/builder/catalog.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -17,28 +18,76 @@ class EventPage extends StatefulWidget {
 }
 
 class _EventPageState extends State<EventPage> {
+  late String _match =
+      widget.ev.config['match']?.toString() ??
+      (widget.ev.type == VirtEventType.inlineQuery ? 'legacy' : 'exact');
   late final ctrlQuery = TextEditingController(text: widget.ev.query);
+  late final ctrlInterval = TextEditingController(
+    text: (widget.ev.config['intervalSeconds'] ?? 60).toString(),
+  );
   @override
   void dispose() {
     ctrlQuery.dispose();
+    ctrlInterval.dispose();
     super.dispose();
   }
 
   Future<void> _addAction() async {
-    final result = await showBEntryDialog<VirtActType>(
-      context,
-      title: 'Add action',
-      fieldLabel: 'Action text',
-      initialType: VirtActType.reply,
-      types: const {
-        VirtActType.reply: 'Reply message',
-        VirtActType.dice: 'Send dice',
-      },
-      action: 'Add action',
+    if (widget.ev.acts.length >= 64) return;
+    final type = await showModalBottomSheet<VirtActType>(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => SafeArea(
+        child: SizedBox(
+          height: MediaQuery.sizeOf(context).height * .7,
+          child: ListView(
+            children: [
+              const ListTile(
+                title: Text('Add action'),
+                subtitle: Text('Connect each action using its named output.'),
+              ),
+              for (final type in VirtActType.values)
+                if ((type != VirtActType.callbackAnswer ||
+                        widget.ev.type == VirtEventType.callbackQuery) &&
+                    (type != VirtActType.inlineAnswer ||
+                        widget.ev.type == VirtEventType.inlineQuery))
+                  ListTile(
+                    title: Text(BuilderCatalog.labels[type.name] ?? type.name),
+                    leading: Icon(
+                      type == VirtActType.http
+                          ? Icons.http
+                          : BuilderCatalog.variables.contains(type.name)
+                          ? Icons.data_object
+                          : Icons.bolt_outlined,
+                    ),
+                    onTap: () => Navigator.pop(context, type),
+                  ),
+            ],
+          ),
+        ),
+      ),
     );
-    if (result == null || !mounted) return;
-    widget.ev.acts.add(VirtAct(text: result.text, type: result.type));
-    context.read<BotsCubit>().update();
+    if (type == null || !mounted) return;
+    final names = {
+      for (final (i, a) in widget.ev.acts.indexed)
+        a.config['output'] ?? 'step${i + 1}',
+    };
+    var i = 1;
+    while (names.contains('action$i')) {
+      i++;
+    }
+    final act = VirtAct(text: '', type: type)
+      ..config = {'output': 'action$i', 'format': 'MarkdownV2'};
+    widget.ev.acts.add(act);
+    final saved = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ActPage(act: act, ev: widget.ev, bot: widget.bot),
+      ),
+    );
+    // ActPage reports a successful save; cancelled drafts never become actions.
+    if (saved != true) widget.ev.acts.remove(act);
+    if (mounted) setState(() {});
   }
 
   Future<void> _remove() async {
@@ -49,9 +98,14 @@ class _EventPageState extends State<EventPage> {
       action: 'Delete event',
     );
     if (!accepted || !mounted) return;
+    final index = widget.bot.events.indexOf(widget.ev);
     widget.bot.events.remove(widget.ev);
-    context.read<BotsCubit>().update();
-    Navigator.pop(context);
+    try {
+      await context.read<BotsCubit>().saveBot(widget.bot);
+      if (mounted) Navigator.pop(context);
+    } catch (_) {
+      widget.bot.events.insert(index, widget.ev);
+    }
   }
 
   @override
@@ -89,25 +143,120 @@ class _EventPageState extends State<EventPage> {
                   VirtEventType.callbackQuery =>
                     'A callback from an inline keyboard button.',
                   VirtEventType.inlineQuery => 'A matching inline query.',
+                  VirtEventType.polling =>
+                    'Runs while this bot is started. Missed ticks are not replayed after an offline interval.',
                 },
-                child: TextField(
-                  controller: ctrlQuery,
-                  decoration: InputDecoration(
-                    labelText: 'Query',
-                    suffixIcon: IconButton(
-                      tooltip: 'Save query',
-                      icon: const Icon(Icons.check_rounded),
-                      onPressed: () {
-                        if (ctrlQuery.text.isEmpty) return;
-                        widget.ev.query = ctrlQuery.text;
-                        context.read<BotsCubit>().update();
-                        setState(() {});
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Query saved.')),
-                        );
-                      },
+                child: Column(
+                  children: [
+                    if ({
+                      VirtEventType.text,
+                      VirtEventType.callbackQuery,
+                      VirtEventType.inlineQuery,
+                    }.contains(widget.ev.type))
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _match,
+                          decoration: const InputDecoration(labelText: 'Match'),
+                          items: [
+                            if (_match == 'legacy')
+                              const DropdownMenuItem(
+                                value: 'legacy',
+                                child: Text('Existing inline pattern'),
+                              ),
+                            const DropdownMenuItem(
+                              value: 'exact',
+                              child: Text('Exact value'),
+                            ),
+                            const DropdownMenuItem(
+                              value: 'prefix',
+                              child: Text('Starts with'),
+                            ),
+                            if (widget.ev.type == VirtEventType.text)
+                              const DropdownMenuItem(
+                                value: 'any',
+                                child: Text('Any text except commands'),
+                              ),
+                          ],
+                          onChanged: (value) {
+                            if (value != null) setState(() => _match = value);
+                          },
+                        ),
+                      ),
+                    if (widget.ev.type == VirtEventType.polling)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: TextFormField(
+                          controller: ctrlInterval,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(
+                            labelText: 'Polling interval in seconds (30–86400)',
+                          ),
+                        ),
+                      ),
+                    TextField(
+                      controller: ctrlQuery,
+                      decoration: InputDecoration(
+                        labelText: 'Query',
+                        suffixIcon: IconButton(
+                          tooltip: 'Save query',
+                          icon: const Icon(Icons.check_rounded),
+                          onPressed: () async {
+                            if (ctrlQuery.text.isEmpty && _match != 'any') {
+                              return;
+                            }
+                            if ({
+                              VirtEventType.text,
+                              VirtEventType.callbackQuery,
+                              VirtEventType.inlineQuery,
+                            }.contains(widget.ev.type)) {
+                              if (_match == 'legacy') {
+                                widget.ev.config.remove('match');
+                              } else {
+                                widget.ev.config['match'] = _match;
+                              }
+                            }
+                            if (widget.ev.type == VirtEventType.polling) {
+                              final seconds = int.tryParse(ctrlInterval.text);
+                              if (seconds == null ||
+                                  seconds < 30 ||
+                                  seconds > 86400) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Enter a polling interval from 30 to 86400 seconds.',
+                                    ),
+                                  ),
+                                );
+                                return;
+                              }
+                              widget.ev.config['intervalSeconds'] = seconds;
+                            }
+                            widget.ev.query = ctrlQuery.text;
+                            try {
+                              await context.read<BotsCubit>().saveBot(
+                                widget.bot,
+                              );
+                            } catch (_) {
+                              return;
+                            }
+                            if (!context.mounted) return;
+                            setState(() {});
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Query saved.')),
+                            );
+                          },
+                        ),
+                      ),
                     ),
-                  ),
+                    if (_match == 'prefix' || _match == 'any')
+                      const Padding(
+                        padding: EdgeInsets.only(top: 12),
+                        child: Text(
+                          'Use {{event.input}} for the remaining input. Put broad text events after specific events.',
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),
@@ -125,7 +274,8 @@ class _EventPageState extends State<EventPage> {
                     return const BEmptyState(
                       icon: Icons.chat_bubble_outline_rounded,
                       title: 'What should happen next?',
-                      message: 'Add a reply message or send a dice animation.',
+                      message:
+                          'Send content, call an API, update a variable or use an earlier action’s result.',
                     );
                   }
                   return Column(
@@ -135,40 +285,78 @@ class _EventPageState extends State<EventPage> {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: BPanel(
                             padding: EdgeInsets.zero,
-                            onTap:
-                                () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute<void>(
-                                    builder:
-                                        (_) => ActPage(
-                                          act: act,
-                                          ev: widget.ev,
-                                          bot: widget.bot,
-                                        ),
-                                  ),
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute<bool>(
+                                builder: (_) => ActPage(
+                                  act: act,
+                                  ev: widget.ev,
+                                  bot: widget.bot,
                                 ),
+                              ),
+                            ),
                             child: ListTile(
                               leading: Container(
                                 width: 36,
                                 height: 36,
                                 alignment: Alignment.center,
-                                decoration: const BoxDecoration(
-                                  color: BColors.subtle,
+                                decoration: BoxDecoration(
+                                  color: BColors.of(context).subtle,
                                   borderRadius: BottogramDesign.controlRadius,
                                 ),
                                 child: Text('${index + 1}'),
                               ),
                               title: Text(
-                                act.text,
+                                act.text.isEmpty
+                                    ? act.config['url']?.toString() ??
+                                          act.config['variable']?.toString() ??
+                                          BuilderCatalog.labels[act
+                                              .type
+                                              .name] ??
+                                          act.type.name
+                                    : act.text,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Text(
-                                act.type == VirtActType.reply
-                                    ? 'Reply message'
-                                    : 'Send dice',
+                                '${BuilderCatalog.labels[act.type.name] ?? act.type.name} · ${act.config['output'] ?? 'step${index + 1}'}',
                               ),
-                              trailing: const Icon(Icons.chevron_right_rounded),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    tooltip: 'Move action up',
+                                    visualDensity: VisualDensity.compact,
+                                    onPressed: index == 0
+                                        ? null
+                                        : () async {
+                                            setState(() {
+                                              // Stabilize legacy implicit names before changing order.
+                                              for (final (i, item)
+                                                  in widget.ev.acts.indexed) {
+                                                item.config.putIfAbsent(
+                                                  'output',
+                                                  () => 'step${i + 1}',
+                                                );
+                                              }
+                                              widget.ev.acts.removeAt(index);
+                                              widget.ev.acts.insert(
+                                                index - 1,
+                                                act,
+                                              );
+                                            });
+                                            await context
+                                                .read<BotsCubit>()
+                                                .saveBot(widget.bot);
+                                          },
+                                    icon: const Icon(
+                                      Icons.arrow_upward,
+                                      size: 18,
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right_rounded),
+                                ],
+                              ),
                             ),
                           ),
                         ),

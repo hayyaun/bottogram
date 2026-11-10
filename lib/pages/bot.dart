@@ -1,4 +1,9 @@
 import 'package:bottogram/inbox/users_page.dart';
+import 'package:bottogram/builder/console_page.dart';
+import 'package:bottogram/builder/state_page.dart';
+import 'package:bottogram/builder/store.dart';
+import 'package:bottogram/builder/database_browser_page.dart';
+import 'package:bottogram/builder/database_browser_adapter.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/plugins/settings_form.dart';
 import 'package:bottogram/plugins/parameters_page.dart';
@@ -39,17 +44,26 @@ class _BotPageState extends State<BotPage> {
         VirtEventType.text: 'Text message',
         VirtEventType.callbackQuery: 'Callback query',
         VirtEventType.inlineQuery: 'Inline query',
+        VirtEventType.polling: 'Polling timer',
       },
-      validate:
-          (query) =>
-              widget.bot.events.any((event) => event.query == query)
-                  ? 'An event with this query already exists.'
-                  : null,
+      validate: (query) =>
+          widget.bot.events.any((event) => event.query == query)
+          ? 'An event with this query already exists.'
+          : null,
       action: 'Add event',
     );
     if (result == null || !mounted) return;
-    widget.bot.addEvent(VirtEvent(query: result.text, type: result.type));
-    context.read<BotsCubit>().update();
+    final event = VirtEvent(query: result.text, type: result.type);
+    if (result.type == VirtEventType.polling) {
+      event.config['intervalSeconds'] = 60;
+    }
+    widget.bot.events.add(event);
+    try {
+      await context.read<BotsCubit>().saveBot(widget.bot);
+    } catch (_) {
+      widget.bot.events.remove(event);
+      if (mounted) context.showSnackBar('The event could not be saved.');
+    }
   }
 
   Future<void> _remove() async {
@@ -69,6 +83,29 @@ class _BotPageState extends State<BotPage> {
     }
   }
 
+  Future<void> _openDatabase() async {
+    try {
+      await BuilderStore.shared.ready;
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => DatabaseBrowserPage(
+            botName: widget.bot.name,
+            source: BotDatabaseBrowserSource(
+              botId: builderBotId(widget.bot.token),
+              inspect: BuilderStore.shared.data.inspect,
+            ),
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted) {
+        context.showSnackBar('The database browser could not be opened.');
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     context.watch<BotsCubit>();
@@ -81,15 +118,32 @@ class _BotPageState extends State<BotPage> {
         title: Text(widget.bot.name, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
+            tooltip: 'Bot database',
+            icon: const Icon(Icons.storage_outlined),
+            onPressed: _openDatabase,
+          ),
+          IconButton(
+            tooltip: 'Execution console',
+            icon: const Icon(Icons.terminal),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => BuilderConsolePage(
+                  botId: builderBotId(widget.bot.token),
+                  botName: widget.bot.name,
+                ),
+              ),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.people_outline),
             tooltip: 'Users and inbox',
-            onPressed:
-                () => Navigator.push(
-                  context,
-                  MaterialPageRoute<void>(
-                    builder: (_) => InboxUsersPage(bot: widget.bot),
-                  ),
-                ),
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<void>(
+                builder: (_) => InboxUsersPage(bot: widget.bot),
+              ),
+            ),
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
@@ -107,10 +161,9 @@ class _BotPageState extends State<BotPage> {
             children: [
               BHeading(
                 title: plugin ? 'Plugin configuration' : 'Bot configuration',
-                subtitle:
-                    plugin
-                        ? 'Your integration and its saved settings.'
-                        : 'Choose what happens when someone messages your bot.',
+                subtitle: plugin
+                    ? 'Your integration and its saved settings.'
+                    : 'Choose what happens when someone messages your bot.',
               ),
               const SizedBox(height: 28),
               if (widget.bot.setupError != null) ...[
@@ -125,30 +178,27 @@ class _BotPageState extends State<BotPage> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         BStatus(
-                          label:
-                              live
-                                  ? (widget.bot.active ? 'Active' : 'Stopped')
-                                  : 'Setup only',
-                          color: BColors.warning,
-                          background: BColors.warningWash,
+                          label: live
+                              ? (widget.bot.active ? 'Active' : 'Stopped')
+                              : 'Setup only',
+                          color: BColors.of(context).warning,
+                          background: BColors.of(context).warningWash,
                         ),
                         const SizedBox(width: 8),
                         IconButton(
                           tooltip: 'Edit parameters',
                           icon: const Icon(Icons.edit_outlined, size: 20),
-                          onPressed:
-                              manifest == null
-                                  ? null
-                                  : () => Navigator.push(
-                                    context,
-                                    MaterialPageRoute<void>(
-                                      builder:
-                                          (_) => PluginParametersPage(
-                                            bot: widget.bot,
-                                            plugin: manifest,
-                                          ),
+                          onPressed: manifest == null
+                              ? null
+                              : () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) => PluginParametersPage(
+                                      bot: widget.bot,
+                                      plugin: manifest,
                                     ),
                                   ),
+                                ),
                         ),
                       ],
                     ),
@@ -173,8 +223,8 @@ class _BotPageState extends State<BotPage> {
                             field.label,
                             field.type == PluginFieldType.secret
                                 ? (setup.secretFields.contains(field.key)
-                                    ? 'Saved securely'
-                                    : 'Not set')
+                                      ? 'Saved securely'
+                                      : 'Not set')
                                 : setup.values[field.key] ?? 'Not set',
                           ),
                       ],
@@ -183,10 +233,9 @@ class _BotPageState extends State<BotPage> {
                 ),
                 const SizedBox(height: 20),
                 BNotice(
-                  message:
-                      live
-                          ? 'This plugin runs on this device while the bot is started.'
-                          : 'Setup only. Your settings are saved; this installed version does not execute automations.',
+                  message: live
+                      ? 'This plugin runs on this device while the bot is started.'
+                      : 'Setup only. Your settings are saved; this installed version does not execute automations.',
                 ),
                 const SizedBox(height: 20),
                 if (widget.bot.runtimeError != null) ...[
@@ -300,17 +349,13 @@ class _BotPageState extends State<BotPage> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: BPanel(
                                 padding: EdgeInsets.zero,
-                                onTap:
-                                    () => Navigator.push(
-                                      context,
-                                      MaterialPageRoute<void>(
-                                        builder:
-                                            (_) => EventPage(
-                                              ev: event,
-                                              bot: widget.bot,
-                                            ),
-                                      ),
-                                    ),
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute<void>(
+                                    builder: (_) =>
+                                        EventPage(ev: event, bot: widget.bot),
+                                  ),
+                                ),
                                 child: ListTile(
                                   leading: const Icon(Icons.bolt_outlined),
                                   title: Text(
@@ -332,6 +377,19 @@ class _BotPageState extends State<BotPage> {
                     },
                   ),
                 ),
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  icon: const Icon(Icons.data_object),
+                  label: const Text('Variables and API credentials'),
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute<void>(
+                      builder: (_) => BuilderStatePage(
+                        botId: builderBotId(widget.bot.token),
+                      ),
+                    ),
+                  ),
+                ),
               ],
               const SizedBox(height: 32),
             ],
@@ -346,7 +404,7 @@ class _BotPageState extends State<BotPage> {
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: BColors.muted),
+        Icon(icon, size: 20, color: BColors.of(context).muted),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -366,6 +424,7 @@ class _BotPageState extends State<BotPage> {
     VirtEventType.text => 'Text message',
     VirtEventType.callbackQuery => 'Callback query',
     VirtEventType.inlineQuery => 'Inline query',
+    VirtEventType.polling => 'Polling timer',
   };
   int _countEventBindings(VirtEvent target) => widget.bot.events.fold(
     0,

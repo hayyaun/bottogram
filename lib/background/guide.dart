@@ -93,7 +93,7 @@ class _BackgroundSetupHostState extends State<BackgroundSetupHost> {
     children: [
       if (widget.controller.checked && widget.controller.needsGuide)
         Material(
-          color: BColors.warningWash,
+          color: BColors.of(context).warningWash,
           child: SafeArea(
             bottom: false,
             child: Padding(
@@ -105,7 +105,10 @@ class _BackgroundSetupHostState extends State<BackgroundSetupHost> {
                 children: [
                   Text(
                     backgroundRequirement(widget.controller),
-                    style: BottogramDesign.text(13, color: BColors.warning),
+                    style: BottogramDesign.text(
+                      13,
+                      color: BColors.of(context).warning,
+                    ),
                   ),
                   TextButton(
                     onPressed: _show,

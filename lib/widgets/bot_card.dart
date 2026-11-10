@@ -61,22 +61,22 @@ class _BotCardState extends State<BotCard> {
     );
     final status =
         bot.setupError != null || error != null
-            ? const BStatus(
+            ? BStatus(
               label: 'Needs attention',
-              color: BColors.error,
-              background: BColors.errorWash,
+              color: BColors.of(context).error,
+              background: BColors.of(context).errorWash,
             )
             : setupOnly
-            ? const BStatus(
+            ? BStatus(
               label: 'Setup only',
-              color: BColors.warning,
-              background: BColors.warningWash,
+              color: BColors.of(context).warning,
+              background: BColors.of(context).warningWash,
             )
             : bot.active
-            ? const BStatus(
+            ? BStatus(
               label: 'Active',
-              color: BColors.success,
-              background: BColors.successWash,
+              color: BColors.of(context).success,
+              background: BColors.of(context).successWash,
             )
             : const BStatus(label: 'Stopped');
     return BPanel(
@@ -90,14 +90,14 @@ class _BotCardState extends State<BotCard> {
                 width: 44,
                 height: 44,
                 alignment: Alignment.center,
-                decoration: const BoxDecoration(
-                  color: BColors.subtle,
+                decoration: BoxDecoration(
+                  color: BColors.of(context).subtle,
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                 ),
                 child: Icon(
                   plugin ? Icons.extension_outlined : Icons.smart_toy_outlined,
                   size: 24,
-                  color: BColors.ink,
+                  color: BColors.of(context).ink,
                 ),
               ),
               Expanded(
@@ -136,7 +136,10 @@ class _BotCardState extends State<BotCard> {
                       plugin
                           ? 'Open users and inbox'
                           : '${bot.events.length} ${bot.events.length == 1 ? 'event' : 'events'} · $actions ${actions == 1 ? 'action' : 'actions'}',
-                      style: BottogramDesign.text(13, color: BColors.muted),
+                      style: BottogramDesign.text(
+                        13,
+                        color: BColors.of(context).muted,
+                      ),
                     ),
                   ],
                 ),

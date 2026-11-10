@@ -170,9 +170,9 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
                       ),
                     ),
                 child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: BColors.subtle,
-                    foregroundColor: BColors.ink,
+                  leading: CircleAvatar(
+                    backgroundColor: BColors.of(context).subtle,
+                    foregroundColor: BColors.of(context).ink,
                     child: Icon(Icons.person_outline),
                   ),
                   title: Text(

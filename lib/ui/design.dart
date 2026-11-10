@@ -14,6 +14,62 @@ abstract final class BColors {
   static const warningWash = Color(0xFFFCF4E7);
   static const error = Color(0xFFAC3838);
   static const errorWash = Color(0xFFFFF0EE);
+
+  static BPalette of(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark
+          ? BPalette.dark
+          : BPalette.light;
+}
+
+class BPalette {
+  const BPalette({
+    required this.canvas,
+    required this.surface,
+    required this.subtle,
+    required this.ink,
+    required this.muted,
+    required this.line,
+    required this.inverseMuted,
+    required this.success,
+    required this.successWash,
+    required this.warning,
+    required this.warningWash,
+    required this.error,
+    required this.errorWash,
+  });
+  final Color canvas, surface, subtle, ink, muted, line, inverseMuted;
+  final Color success, successWash, warning, warningWash, error, errorWash;
+
+  static const light = BPalette(
+    canvas: BColors.canvas,
+    surface: BColors.surface,
+    subtle: BColors.subtle,
+    ink: BColors.ink,
+    muted: BColors.muted,
+    line: BColors.line,
+    inverseMuted: BColors.inverseMuted,
+    success: BColors.success,
+    successWash: BColors.successWash,
+    warning: BColors.warning,
+    warningWash: BColors.warningWash,
+    error: BColors.error,
+    errorWash: BColors.errorWash,
+  );
+  static const dark = BPalette(
+    canvas: Color(0xFF0E191B),
+    surface: Color(0xFF17272A),
+    subtle: Color(0xFF233A3D),
+    ink: Color(0xFFC9F0ED),
+    muted: Color(0xFF9FC6C6),
+    line: Color(0xFF365255),
+    inverseMuted: Color(0xFF325559),
+    success: Color(0xFF8CD7AD),
+    successWash: Color(0xFF183C2B),
+    warning: Color(0xFFEDC68C),
+    warningWash: Color(0xFF40311E),
+    error: Color(0xFFFFB4AB),
+    errorWash: Color(0xFF492827),
+  );
 }
 
 abstract final class BottogramDesign {
@@ -31,91 +87,97 @@ abstract final class BottogramDesign {
     fontSize: size,
     fontWeight: strong ? FontWeight.w500 : FontWeight.w400,
     fontVariations: [FontVariation('wght', strong ? 500 : 400)],
-    color: color ?? BColors.ink,
+    color: color,
     height: height ?? 1.45,
     letterSpacing: size >= 28 ? -size * .035 : -.1,
   );
 
-  static ThemeData get theme {
-    const scheme = ColorScheme.light(
-      primary: BColors.ink,
-      onPrimary: BColors.canvas,
-      primaryContainer: BColors.subtle,
-      onPrimaryContainer: BColors.ink,
-      secondary: BColors.muted,
-      onSecondary: BColors.surface,
-      secondaryContainer: BColors.subtle,
-      onSecondaryContainer: BColors.ink,
-      surface: BColors.surface,
-      onSurface: BColors.ink,
-      onSurfaceVariant: BColors.muted,
-      surfaceContainerLowest: BColors.surface,
-      surfaceContainerLow: BColors.canvas,
-      surfaceContainer: BColors.subtle,
-      surfaceContainerHigh: BColors.subtle,
-      surfaceContainerHighest: BColors.line,
-      outline: BColors.line,
-      outlineVariant: BColors.line,
-      inverseSurface: BColors.ink,
-      onInverseSurface: BColors.canvas,
-      inversePrimary: BColors.canvas,
-      error: BColors.error,
-      onError: BColors.surface,
-      errorContainer: BColors.errorWash,
-      onErrorContainer: BColors.error,
+  static ThemeData get theme => _theme(BPalette.light, Brightness.light);
+  static ThemeData get darkTheme => _theme(BPalette.dark, Brightness.dark);
+
+  static ThemeData _theme(BPalette colors, Brightness brightness) {
+    final scheme = ColorScheme(
+      brightness: brightness,
+      primary: colors.ink,
+      onPrimary: colors.canvas,
+      primaryContainer: colors.subtle,
+      onPrimaryContainer: colors.ink,
+      secondary: colors.muted,
+      onSecondary: colors.surface,
+      secondaryContainer: colors.subtle,
+      onSecondaryContainer: colors.ink,
+      surface: colors.surface,
+      onSurface: colors.ink,
+      onSurfaceVariant: colors.muted,
+      surfaceContainerLowest: colors.surface,
+      surfaceContainerLow: colors.canvas,
+      surfaceContainer: colors.subtle,
+      surfaceContainerHigh: colors.subtle,
+      surfaceContainerHighest: colors.line,
+      outline: colors.line,
+      outlineVariant: colors.line,
+      inverseSurface: colors.ink,
+      onInverseSurface: colors.canvas,
+      inversePrimary: colors.canvas,
+      error: colors.error,
+      onError: colors.surface,
+      errorContainer: colors.errorWash,
+      onErrorContainer: colors.error,
     );
-    const border = OutlineInputBorder(
+    final border = OutlineInputBorder(
       borderRadius: controlRadius,
-      borderSide: BorderSide(color: BColors.line),
+      borderSide: BorderSide(color: colors.line),
     );
     const shape = RoundedRectangleBorder(borderRadius: controlRadius);
     return ThemeData(
       useMaterial3: true,
       colorScheme: scheme,
-      scaffoldBackgroundColor: BColors.canvas,
+      scaffoldBackgroundColor: colors.canvas,
       fontFamily: 'Host Grotesk',
       fontFamilyFallback: const ['Noto Sans Arabic'],
       textTheme: TextTheme(
-        displayLarge: text(48, strong: true, height: 1.1),
-        displayMedium: text(40, strong: true, height: 1.1),
-        displaySmall: text(34, strong: true, height: 1.15),
-        headlineLarge: text(32, strong: true, height: 1.15),
-        headlineMedium: text(28, strong: true, height: 1.2),
-        headlineSmall: text(24, strong: true, height: 1.25),
-        titleLarge: text(20, strong: true),
-        titleMedium: text(18, strong: true),
-        titleSmall: text(16, strong: true),
-        bodyLarge: text(16),
-        bodyMedium: text(16),
-        bodySmall: text(14, color: BColors.muted),
-        labelLarge: text(16, strong: true),
-        labelMedium: text(14, strong: true),
-        labelSmall: text(13, strong: true),
-      ),
+            displayLarge: text(48, strong: true, height: 1.1),
+            displayMedium: text(40, strong: true, height: 1.1),
+            displaySmall: text(34, strong: true, height: 1.15),
+            headlineLarge: text(32, strong: true, height: 1.15),
+            headlineMedium: text(28, strong: true, height: 1.2),
+            headlineSmall: text(24, strong: true, height: 1.25),
+            titleLarge: text(20, strong: true),
+            titleMedium: text(18, strong: true),
+            titleSmall: text(16, strong: true),
+            bodyLarge: text(16),
+            bodyMedium: text(16),
+            bodySmall: text(14, color: colors.muted),
+            labelLarge: text(16, strong: true),
+            labelMedium: text(14, strong: true),
+            labelSmall: text(13, strong: true),
+          )
+          .apply(bodyColor: colors.ink, displayColor: colors.ink)
+          .copyWith(bodySmall: text(14, color: colors.muted)),
       appBarTheme: AppBarTheme(
-        backgroundColor: BColors.canvas,
-        foregroundColor: BColors.ink,
+        backgroundColor: colors.canvas,
+        foregroundColor: colors.ink,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         scrolledUnderElevation: 0,
         centerTitle: false,
         toolbarHeight: 72,
         titleSpacing: 16,
-        titleTextStyle: text(20, strong: true),
+        titleTextStyle: text(20, strong: true, color: colors.ink),
       ),
-      cardTheme: const CardThemeData(
-        color: BColors.surface,
+      cardTheme: CardThemeData(
+        color: colors.surface,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
           borderRadius: radius,
-          side: BorderSide(color: BColors.line),
+          side: BorderSide(color: colors.line),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: BColors.surface,
+        fillColor: colors.surface,
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 18,
@@ -124,25 +186,25 @@ abstract final class BottogramDesign {
         enabledBorder: border,
         disabledBorder: border,
         focusedBorder: border.copyWith(
-          borderSide: const BorderSide(color: BColors.ink, width: 2),
+          borderSide: BorderSide(color: colors.ink, width: 2),
         ),
         errorBorder: border.copyWith(
-          borderSide: const BorderSide(color: BColors.error),
+          borderSide: BorderSide(color: colors.error),
         ),
         focusedErrorBorder: border.copyWith(
-          borderSide: const BorderSide(color: BColors.error, width: 2),
+          borderSide: BorderSide(color: colors.error, width: 2),
         ),
-        labelStyle: text(14, color: BColors.muted),
+        labelStyle: text(14, color: colors.muted),
         floatingLabelStyle: text(13, strong: true),
-        helperStyle: text(13, color: BColors.muted),
-        errorStyle: text(13, color: BColors.error),
+        helperStyle: text(13, color: colors.muted),
+        errorStyle: text(13, color: colors.error),
         helperMaxLines: 4,
         errorMaxLines: 3,
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: BColors.ink,
-          foregroundColor: BColors.canvas,
+          backgroundColor: colors.ink,
+          foregroundColor: colors.canvas,
           minimumSize: const Size(48, 52),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
           textStyle: text(16, strong: true),
@@ -151,9 +213,9 @@ abstract final class BottogramDesign {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: BColors.ink,
+          foregroundColor: colors.ink,
           minimumSize: const Size(48, 48),
-          side: const BorderSide(color: BColors.line),
+          side: BorderSide(color: colors.line),
           textStyle: text(16, strong: true),
           shape: shape,
           padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
@@ -161,7 +223,7 @@ abstract final class BottogramDesign {
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          foregroundColor: BColors.ink,
+          foregroundColor: colors.ink,
           minimumSize: const Size(48, 48),
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
           textStyle: text(14, strong: true),
@@ -170,68 +232,67 @@ abstract final class BottogramDesign {
       ),
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
-          foregroundColor: BColors.ink,
+          foregroundColor: colors.ink,
           minimumSize: const Size(48, 48),
           shape: shape,
         ),
       ),
       floatingActionButtonTheme: FloatingActionButtonThemeData(
-        backgroundColor: BColors.ink,
-        foregroundColor: BColors.canvas,
+        backgroundColor: colors.ink,
+        foregroundColor: colors.canvas,
         elevation: 0,
         hoverElevation: 2,
         shape: shape,
         extendedTextStyle: text(16, strong: true),
       ),
       dialogTheme: DialogThemeData(
-        backgroundColor: BColors.surface,
+        backgroundColor: colors.surface,
         surfaceTintColor: Colors.transparent,
         shape: const RoundedRectangleBorder(borderRadius: radius),
-        titleTextStyle: text(24, strong: true),
-        contentTextStyle: text(16),
+        titleTextStyle: text(24, strong: true, color: colors.ink),
+        contentTextStyle: text(16, color: colors.ink),
         actionsPadding: const EdgeInsets.fromLTRB(24, 8, 24, 24),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: BColors.ink,
-        contentTextStyle: text(14, color: BColors.canvas),
+        backgroundColor: colors.ink,
+        contentTextStyle: text(14, color: colors.canvas),
         behavior: SnackBarBehavior.floating,
         shape: shape,
         elevation: 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: BColors.surface,
-        indicatorColor: BColors.subtle,
+        backgroundColor: colors.surface,
+        indicatorColor: colors.subtle,
         indicatorShape: shape,
         labelTextStyle: WidgetStatePropertyAll(text(13, strong: true)),
-        iconTheme: const WidgetStatePropertyAll(
-          IconThemeData(color: BColors.ink),
-        ),
+        iconTheme: WidgetStatePropertyAll(IconThemeData(color: colors.ink)),
       ),
       chipTheme: ChipThemeData(
-        backgroundColor: BColors.surface,
-        selectedColor: BColors.subtle,
-        labelStyle: text(14),
-        side: const BorderSide(color: BColors.line),
+        backgroundColor: colors.surface,
+        selectedColor: colors.subtle,
+        labelStyle: text(14, color: colors.ink),
+        secondaryLabelStyle: text(14, color: colors.ink),
+        side: BorderSide(color: colors.line),
         shape: shape,
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       ),
-      dividerTheme: const DividerThemeData(
-        color: BColors.line,
+      dividerTheme: DividerThemeData(
+        color: colors.line,
         thickness: 1,
         space: 1,
       ),
-      listTileTheme: const ListTileThemeData(
-        iconColor: BColors.muted,
+      listTileTheme: ListTileThemeData(
+        iconColor: colors.muted,
         contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
-        color: BColors.ink,
-        linearTrackColor: BColors.subtle,
+      progressIndicatorTheme: ProgressIndicatorThemeData(
+        color: colors.ink,
+        linearTrackColor: colors.subtle,
       ),
       tooltipTheme: TooltipThemeData(
-        textStyle: text(13, color: BColors.canvas),
+        textStyle: text(13, color: colors.canvas),
         decoration: BoxDecoration(
-          color: BColors.ink,
+          color: colors.ink,
           borderRadius: controlRadius,
         ),
       ),
@@ -343,10 +404,15 @@ class _BPanelState extends State<BPanel> {
       0,
     ),
     child: Material(
-      color: widget.color ?? BColors.surface,
+      color: widget.color ?? BColors.of(context).surface,
       shape: RoundedRectangleBorder(
         borderRadius: BottogramDesign.radius,
-        side: BorderSide(color: _hover || _focus ? BColors.ink : BColors.line),
+        side: BorderSide(
+          color:
+              _hover || _focus
+                  ? BColors.of(context).ink
+                  : BColors.of(context).line,
+        ),
       ),
       clipBehavior: Clip.antiAlias,
       child:
@@ -423,11 +489,11 @@ class BEmptyState extends StatelessWidget {
               Container(
                 width: 72,
                 height: 72,
-                decoration: const BoxDecoration(
-                  color: BColors.subtle,
+                decoration: BoxDecoration(
+                  color: BColors.of(context).subtle,
                   borderRadius: BottogramDesign.radius,
                 ),
-                child: Icon(icon, size: 32, color: BColors.ink),
+                child: Icon(icon, size: 32, color: BColors.of(context).ink),
               ),
               const SizedBox(height: 24),
               Text(
@@ -466,20 +532,25 @@ class BNotice extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
-      color: error ? BColors.errorWash : BColors.subtle,
+      color: error ? BColors.of(context).errorWash : BColors.of(context).subtle,
       borderRadius: BottogramDesign.controlRadius,
     ),
     child: Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: error ? BColors.error : BColors.ink),
+        Icon(
+          icon,
+          size: 20,
+          color: error ? BColors.of(context).error : BColors.of(context).ink,
+        ),
         const SizedBox(width: 12),
         Expanded(
           child: Text(
             message,
             style: BottogramDesign.text(
               14,
-              color: error ? BColors.error : BColors.ink,
+              color:
+                  error ? BColors.of(context).error : BColors.of(context).ink,
             ),
           ),
         ),
@@ -490,25 +561,24 @@ class BNotice extends StatelessWidget {
 }
 
 class BStatus extends StatelessWidget {
-  const BStatus({
-    super.key,
-    required this.label,
-    this.color = BColors.muted,
-    this.background = BColors.subtle,
-  });
+  const BStatus({super.key, required this.label, this.color, this.background});
   final String label;
-  final Color color;
-  final Color background;
+  final Color? color;
+  final Color? background;
   @override
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
     decoration: BoxDecoration(
-      color: background,
+      color: background ?? BColors.of(context).subtle,
       borderRadius: BorderRadius.circular(6),
     ),
     child: Text(
       label,
-      style: BottogramDesign.text(13, strong: true, color: color),
+      style: BottogramDesign.text(
+        13,
+        strong: true,
+        color: color ?? BColors.of(context).muted,
+      ),
     ),
   );
 }

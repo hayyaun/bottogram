@@ -32,8 +32,9 @@ Download a package and `SHA256SUMS.txt` from
 [GitHub Releases](https://github.com/hayyaun/bottogram/releases).
 
 - **Android:** `bottogram-android-release.apk` — install the APK.
-- **Windows x64:** `bottogram-windows-x64.zip` — extract the whole ZIP and run
-  `bottogram.exe` beside its DLLs and data.
+- **Windows x64:** run `bottogram-windows-x64-setup.exe` to install for your user,
+  or extract `bottogram-windows-x64.zip` and run `bottogram.exe` beside its DLLs
+  and data. Both include the required Visual C++ runtime DLLs.
 - **macOS 13+:** `bottogram-macos-universal.zip` — extract the ZIP for Intel or Apple
   Silicon. This test build is ad-hoc signed and is not Apple-notarized.
 - **Linux x86_64:** `bottogram-linux-x86_64.AppImage.tar.gz` — extract the tarball and run its

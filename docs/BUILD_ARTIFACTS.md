@@ -20,8 +20,11 @@ Outputs, retained for 14 days in the workflow run's **Artifacts** section:
   See [Android signing and key backup requirements](ANDROID_SIGNING.md).
 - Windows x64: `bottogram-windows-x64.zip`, containing `bottogram.exe`, DLLs,
   and data, plus a checksum. Extract the whole folder before running the EXE.
-  This is unsigned, without an installer; a clean Windows machine may need the
-  Microsoft Visual C++ runtime. Clean-machine runtime testing remains required.
+  A separate `bottogram-windows-x64-setup.exe` installs for the current user,
+  creates a Start menu shortcut, offers a desktop shortcut, and provides an
+  uninstaller. Both packages include compiler runtime DLLs through CMake's
+  `InstallRequiredSystemLibraries`. They are unsigned; clean-machine runtime
+  testing remains required. See [Windows installer details](WINDOWS_INSTALLER.md).
 - macOS Intel and Apple silicon: `bottogram-macos-universal.zip`, containing
   `bottogram.app`, plus a checksum. Packaging verifies both architectures in the
   launcher and every embedded framework, along with the app's existing ad-hoc
@@ -61,10 +64,11 @@ are scoped to that job: `actions: read` for downloading build artifacts and
 [prepare_release.py](../tool/ci/prepare_release.py) looks up a successful
 `build.yml` run triggered by a push to `main` whose commit SHA exactly equals the
 tagged commit. It does not use the latest unrelated build or a PR artifact. All
-four artifact names must be present in that one run:
+five artifact names must be present in that one run:
 
 - `bottogram-android-release`
 - `bottogram-windows-x64`
+- `bottogram-windows-x64-installer`
 - `bottogram-macos-universal`
 - `bottogram-linux-x86_64`
 
@@ -73,14 +77,15 @@ files and existing SHA-256 checksum, and prepares one flat release folder. For
 Linux it validates the executable AppImage and checksum inside the tarball
 without extracting arbitrary archive paths. The published Linux asset remains
 the tarball so its executable permission survives download. The combined release
-`SHA256SUMS.txt` covers the APK, both ZIP files, and the Linux tarball itself.
+`SHA256SUMS.txt` covers the APK, Windows installer, both ZIP files, and the Linux
+tarball itself.
 
-Only after all checks pass does `gh release create --verify-tag` publish the four
+Only after all checks pass does `gh release create --verify-tag` publish the five
 packages and combined checksum. Release notes link to the exact successful build
 and source commit. Publication stops if there is no successful exact-commit build,
 or if an artifact is missing or expired, a version differs, or a checksum fails. If a
 workflow attempt fails before creating the release, fix the stated cause and
-rerun that failed release workflow after all four artifacts are available. It
+rerun that failed release workflow after all five artifacts are available. It
 does not replace an existing release or overwrite its assets.
 
 Download a release's `SHA256SUMS.txt` beside its packages and verify them, for

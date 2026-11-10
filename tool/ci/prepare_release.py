@@ -15,6 +15,7 @@ import tarfile
 PACKAGES = {
     "bottogram-android-release": "bottogram-android-release.apk",
     "bottogram-windows-x64": "bottogram-windows-x64.zip",
+    "bottogram-windows-x64-installer": "bottogram-windows-x64-setup.exe",
     "bottogram-macos-universal": "bottogram-macos-universal.zip",
     "bottogram-linux-x86_64": "bottogram-linux-x86_64.AppImage.tar.gz",
 }
@@ -113,7 +114,7 @@ def verify_linux_archive(path: Path) -> None:
 
 def prepare_assets(downloads: Path, output: Path) -> None:
     if {path.name for path in downloads.iterdir()} != set(PACKAGES):
-        raise ValueError("All four expected platform artifact directories are required.")
+        raise ValueError("All expected platform artifact directories are required.")
     verified = []
     for artifact, filename in PACKAGES.items():
         directory = downloads / artifact
@@ -157,16 +158,18 @@ storage, bot templates, and the Persian Inshopa storefront plugin.
 
 - Android: install `bottogram-android-release.apk`, signed with Bottogram's permanent Android key.
 - Windows x64: extract the entire `bottogram-windows-x64.zip` before opening `bottogram.exe`.
+- Windows installer: run `bottogram-windows-x64-setup.exe` for a per-user installation with a Start menu shortcut and uninstaller. A desktop shortcut is optional. Uninstalling preserves saved bot data.
 - macOS Intel and Apple silicon: extract `bottogram-macos-universal.zip`. The app is ad-hoc signed, without Developer ID signing or Apple notarization; macOS may block opening it.
 - Linux x86_64: extract `bottogram-linux-x86_64.AppImage.tar.gz` and run the AppImage. A desktop keyring and FUSE are required; Ubuntu 22.04 or newer is the build target.
 
-Check each downloaded package against the attached `SHA256SUMS.txt`. Windows and
-macOS packages do not include an installer. Windows may require the Microsoft
-Visual C++ runtime. Clean-machine compatibility is not established by CI.
+Check each downloaded package against the attached `SHA256SUMS.txt`. Both Windows
+packages include the required Visual C++ runtime DLLs. The Windows installer and
+app are unsigned; Windows may show a publisher warning. macOS does not include an
+installer. Clean-machine compatibility is not established by CI.
 
 ### Build verification
 
-All four packages come from the same [successful main build]({run_url})
+All five packages come from the same [successful main build]({run_url})
 (attempt {run['run_attempt']}) for [commit `{sha}`]({source}/commit/{sha}).
 Analysis, automated tests, native SQLite/template integration, macOS credential
 storage, and released native-library probes passed in that run.
@@ -219,7 +222,7 @@ def main() -> None:
     (args.work_dir / "build-run.json").write_text(
         json.dumps(run, indent=2) + "\n", encoding="utf-8",
     )
-    print("Verified four platform packages and wrote combined SHA256SUMS.txt.")
+    print("Verified five platform packages and wrote combined SHA256SUMS.txt.")
 
 
 if __name__ == "__main__":

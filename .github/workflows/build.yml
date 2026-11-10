@@ -35,6 +35,8 @@ jobs:
       - name: Install native build compiler
         run: sudo apt-get update && sudo apt-get install -y clang
       - run: flutter analyze --no-pub
+      - name: Test release artifact validation
+        run: python3 -m unittest discover -s tool/ci -p test_prepare_release.py -v
       # Real external services remain opt-in; native flows use fixtures below.
       - run: flutter test --no-pub --concurrency=2
 
@@ -181,6 +183,15 @@ jobs:
         with:
           name: bottogram-windows-x64
           path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+      - name: Build and test Windows installer
+        shell: pwsh
+        run: ./tool/ci/package_windows_installer.ps1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bottogram-windows-x64-installer
+          path: dist-installer/*
           if-no-files-found: error
           retention-days: 14
 

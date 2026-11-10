@@ -4,7 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:televerse/telegram.dart';
 import 'package:televerse/televerse.dart';
 
-part 'virt_rmu.g.dart';
+part 'virt_rmu.adapter.dart';
 
 abstract class VirtRMU {
   String? name;
@@ -16,12 +16,9 @@ abstract class VirtRMU {
 
 enum VirtRMUType { none, keyboard, inlineKeyboard }
 
-@HiveType(typeId: 41)
 class VirtRMUKeyboard implements VirtRMU {
-  @HiveField(0)
   @override
   String? name;
-  @HiveField(1)
   List<String?> items = [];
   @override
   get type => VirtRMUType.keyboard;
@@ -50,12 +47,9 @@ class VirtRMUKeyboard implements VirtRMU {
   }
 }
 
-@HiveType(typeId: 42)
 class VirtRMUInlineKeyboard implements VirtRMU {
-  @HiveField(0)
   @override
   String? name;
-  @HiveField(1)
   List<KeyValue?> items = [];
   @override
   get type => VirtRMUType.inlineKeyboard;
@@ -92,11 +86,8 @@ class VirtRMUInlineKeyboard implements VirtRMU {
   }
 }
 
-@HiveType(typeId: 43)
 class KeyValue {
-  @HiveField(0)
   String key;
-  @HiveField(1)
   String value;
   KeyValue(this.key, this.value);
 }

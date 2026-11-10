@@ -18,7 +18,7 @@ Publishing a release is explicitly deferred until the plugin is useful to shops.
    fixtures already cover baseline, late payment, durable receipts and failures.
 3. **Physical Android operation.** 🟣 Test a real device with the screen off,
    backgrounded UI, Doze, notification Stop, permissions revoked, force-stop and
-   reopening. Include Android 6.0/minimum support and at least one current OEM.
+   reopening. Include Android 7.0/API 24 minimum support and at least one current OEM.
    Emulator background continuity passed; it does not establish OEM behavior.
 4. **Production connection.** Inshopa owns rollout and valid production-key issuance.
    🟣 Once ready, configure a production plugin bot and verify catalog and paid-order

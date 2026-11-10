@@ -7,8 +7,8 @@
 Create replies, install integrations, and answer conversations from one app.
 
 [![Build test artifacts](https://github.com/hayyaun/bottogram/actions/workflows/build.yml/badge.svg)](https://github.com/hayyaun/bottogram/actions/workflows/build.yml)
-![Flutter 3.29.1](https://img.shields.io/badge/Flutter-3.29.1-02569B?logo=flutter&logoColor=white)
-![Android 6.0+](https://img.shields.io/badge/Android-6.0%2B-3DDC84?logo=android&logoColor=white)
+![Flutter 3.47.9](https://img.shields.io/badge/Flutter-3.47.9-02569B?logo=flutter&logoColor=white)
+![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Status: experimental](https://img.shields.io/badge/status-experimental-8B5CF6)
 
 [Try a build](#try-a-build) · [Get started](#get-started) · [Plugins](#plugins) · [Development](#development) · [Roadmap](docs/REMAINING_WORK.md)
@@ -29,7 +29,9 @@ Your device still needs a network connection to Telegram and any connected servi
 ## What you can do
 
 - **Build without writing code.** Configure command, text, callback and inline-query
-  events, replies, dice actions, and reusable reply/inline keyboards.
+  events, polling timers, connected actions, external JSON API calls, persistent
+  variables, SQL and Telegram messages with a MarkdownV2 editor. See the
+  [action builder](docs/ACTION_BUILDER.md).
 - **Install integrations.** Import a declarative JSON plugin and fill in its
   generated setup form. Plugin versions stay pinned to the bots that use them.
 - **Answer from the inbox.** Open a bot's users, read retained conversations,
@@ -117,8 +119,8 @@ See [plugin architecture and recovery behavior](docs/PLUGIN_RUNTIME.md),
 
 ## Development
 
-The current build toolchain uses **Flutter 3.29.1**, **Dart 3.7**, and **JDK 17**.
-Android requires **API 23+**; native build tools are needed for desktop targets.
+The build toolchain uses **Flutter 3.47.9**, **Dart 3.13.7**, and **JDK 17**.
+Android requires **API 24+**; native build tools are needed for desktop targets.
 
 ```sh
 git clone https://github.com/hayyaun/bottogram.git
@@ -133,8 +135,16 @@ SDK requirements and test packaging, see [Build artifacts](docs/BUILD_ARTIFACTS.
 Live Inshopa and Android background integration tests are separate, opt-in checks;
 ordinary CI does not require real Telegram tokens or shop keys.
 
-The project uses Cubit for UI state, Hive for local persistence, Televerse for
-Telegram, and a host-side automation registry for plugins.
+The project uses Cubit for UI state, Hive for app configuration, a separate
+SQLite database per bot for creator-managed data, Televerse for Telegram, and a
+host-side automation registry for plugins. Native SQLite is compiled from pinned
+upstream source through Dart build hooks; a C compiler is required for tests and
+builds. See [SQLite source and security packaging](native/sqlite/README.md).
+
+Hive serializers in `lib/units/*.adapter.dart` use the public `TypeAdapter` API
+and are maintained explicitly. Keep existing type/field IDs stable and extend
+the legacy-record and round-trip tests whenever the stored model changes.
+Adapter code generation is no longer a build prerequisite.
 
 ## Contributing
 

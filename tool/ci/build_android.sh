@@ -50,5 +50,5 @@ if [[ -n "${GITHUB_RUN_NUMBER:-}" ]]; then
   build_args+=(--build-number "$GITHUB_RUN_NUMBER")
 fi
 flutter build apk "${build_args[@]}"
-"${ANDROID_HOME:?Android SDK is required}/build-tools/36.0.0/apksigner" verify \
+"${ANDROID_HOME:?Android SDK is required}/build-tools/35.0.0/apksigner" verify \
   --verbose --print-certs build/app/outputs/flutter-apk/app-release.apk

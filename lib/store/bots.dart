@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:bottogram/builder/store.dart';
+import 'package:bottogram/builder/storage_snapshot.dart';
 
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/plugins/manifest.dart';
@@ -44,6 +46,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   // Initialize Hive box
   Future<void> _initBox() async {
     _box = await Hive.openBox<VirtBot>(boxName);
+    await ensureBuilderSnapshot(_box!);
     final data = _box!.values.toList();
     debugPrint('✅ Bots: ${data.length}');
     final bots = data.cast<VirtBot>();
@@ -181,6 +184,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     try {
       await runtime.forget(bot);
       await plugins.removeSetup(key);
+      await BuilderStore.shared.remove(builderBotId(bot.token));
     } catch (_) {
       lastError =
           'The bot was removed, but settings cleanup needs a retry on restart.';
@@ -189,6 +193,25 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   });
 
   // Update the list and persist it
+  Future<void> saveBot(VirtBot bot) => _mutate(() async {
+    if (!state.contains(bot) || !bot.isInBox) {
+      throw const PluginException('This bot is no longer available.');
+    }
+    final restart = bot.active;
+    if (restart) await runtime.stop(bot);
+    await bot.save();
+    lastError = null;
+    if (restart) {
+      try {
+        await runtime.start(bot);
+      } catch (_) {
+        lastError =
+            'Changes saved. The bot could not restart; check the console and start it again.';
+      }
+    }
+    emit(List<VirtBot>.of(state));
+  });
+
   void update() {
     final updatedList = List<VirtBot>.from(state);
     emit(updatedList);
@@ -212,6 +235,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       await _box!.delete(key);
       await runtime.forget(bot);
       await plugins.removeSetup(key);
+      await BuilderStore.shared.remove(builderBotId(bot.token));
     }
     emit([]);
   });

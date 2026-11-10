@@ -19,10 +19,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.7.0
-
-dependency_overrides:
-  source_gen: ^2.0.0
+  sdk: ^3.10.0
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -43,13 +40,17 @@ dependencies:
   equatable: ^2.0.7
   share_plus: ^10.1.4
   intl: ^0.20.2
-  json_hive_generator: ^1.0.2
   path_provider: ^2.1.5
   file_picker: ^10.0.0
   path: ^1.9.1
   open_filex: 4.7.0
   crypto: ^3.0.6
   flutter_secure_storage: 10.3.4
+  sqlite3: 3.9.1
+  hooks: 2.2.0
+  code_assets: 2.2.0
+  native_toolchain_c: 0.19.6
+  ffi: ^2.1.4
 
 dev_dependencies:
   integration_test:
@@ -58,14 +59,26 @@ dev_dependencies:
     sdk: flutter
 
   flutter_lints: ^5.0.0
-  build_runner: ^2.4.15
-  hive_generator: ^2.0.1
   flutter_launcher_icons: ^0.14.3
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
 # The following section is specific to Flutter packages.
+hooks:
+  user_defines:
+    sqlite3:
+      source: source
+      path: native/sqlite/sqlite3.c
+      defines:
+        default_options: false
+        defines:
+          - SQLITE_THREADSAFE=1
+          - SQLITE_DQS=0
+          - SQLITE_TEMP_STORE=2
+          - SQLITE_ENABLE_SESSION
+          - SQLITE_ENABLE_PREUPDATE_HOOK
+
 flutter:
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

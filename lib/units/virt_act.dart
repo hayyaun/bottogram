@@ -2,16 +2,13 @@ import 'package:bottogram/units/virt_rmu.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
-part 'virt_act.g.dart';
+part 'virt_act.adapter.dart';
 
-@HiveType(typeId: 30)
 class VirtAct {
-  @HiveField(0)
   VirtActType type;
-  @HiveField(1)
   String text;
-  @HiveField(2)
   VirtRMU? rmu;
+  Map<String, dynamic> config = {};
 
   VirtAct({required this.type, required this.text});
 
@@ -22,11 +19,37 @@ class VirtAct {
         break;
       case VirtActType.dice:
         await ctx.replyWithDice();
+      default:
+        throw StateError('This action requires the builder execution session.');
     }
   }
 }
 
-enum VirtActType { reply, dice }
+// Existing indexes are part of the on-disk format. Append new kinds only.
+enum VirtActType {
+  reply,
+  dice,
+  editText,
+  editKeyboard,
+  callbackAnswer,
+  inlineAnswer,
+  photo,
+  video,
+  document,
+  audio,
+  voice,
+  animation,
+  sticker,
+  deleteMessage,
+  pinMessage,
+  http,
+  setVariable,
+  incrementVariable,
+  condition,
+  wait,
+  sql,
+  renderList,
+}
 
 class VirtActTypeAdapter extends TypeAdapter<VirtActType> {
   @override

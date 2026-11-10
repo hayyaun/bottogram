@@ -1,5 +1,9 @@
 # Plugin installation and Inshopa plugin: implementation proposal
 
+Toolchain update: native SQL source packaging now uses Flutter 3.47.9 and
+requires Android 7.0/API 24 or newer. The API 23 notes below describe the earlier
+baseline; they do not describe the current supported deployment target.
+
 Current implementation: [Plugin runtime](PLUGIN_RUNTIME.md) supersedes the setup-only implementation slice below. The approved `automations → trigger → actions` runtime, Android foreground execution, battery guide, public `/products` command and private admin alerts are implemented. Version 0.5.0 uses the existing scoped order-summary list with client-side paid filtering and persistent delivery receipts. The Inshopa permission is activated locally; production rollout is separate. Existing installed versions and bindings remain pinned.
 
 Date: 2026-11-09 (Asia/Tehran). The user approved JSON file installation, a shared creation form, bundled Inshopa, and separately declared editable plugin settings. This implementation covers those local setup features. Live execution and the real Inshopa connection remain deferred until its API is ready. Confirmed requirements are collected in [IDEAS.md](IDEAS.md#confirmed-decisions).

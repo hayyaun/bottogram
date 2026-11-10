@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:bottogram/builder/session.dart';
 
 import 'package:bottogram/inbox/repository.dart';
 import 'package:bottogram/inbox/transformer.dart';
@@ -11,9 +12,8 @@ import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
 
-part 'virt_bot.g.dart';
+part 'virt_bot.adapter.dart';
 
-@HiveType(typeId: 10)
 class VirtBot extends HiveObject {
   bool _active = false; // TODO change it to (Date? activeSince)
   Bot bot;
@@ -23,17 +23,15 @@ class VirtBot extends HiveObject {
   String? runtimeError;
   VoidCallback? onRunningChanged;
   int _runGeneration = 0;
+  BuilderSession? _builder;
   Future<InboxRepository> get inbox => InboxRepository.forToken(token);
 
   void _attachInbox() {
     bot.api.use(InboxTransformer(() => inbox));
   }
 
-  @HiveField(0)
   String name;
-  @HiveField(1)
   String token;
-  @HiveField(2)
   List<VirtEvent> events = [];
 
   VirtBot(this.name, this.token, {bool addSamples = true}) : bot = Bot(token) {
@@ -74,8 +72,9 @@ class VirtBot extends HiveObject {
     if (_active) await stop(); // stop before restart
     final generation = ++_runGeneration;
     if (!pluginRuntime) {
+      final session = _builder = BuilderSession(token, bot.api);
       for (var ev in events) {
-        ev.add(bot);
+        ev.add(bot, execute: (context) => session.receive(ev, context));
       }
     }
     bot.onError((err) {
@@ -95,12 +94,17 @@ class VirtBot extends HiveObject {
       }),
     );
     _active = true;
+    if (!pluginRuntime) _builder!.startPolling(events);
     onRunningChanged?.call();
   }
 
   Future<void> stop() async {
     _runGeneration++;
+    final builder = _builder;
+    _builder = null;
+    final drained = builder?.close();
     await bot.stop();
+    await drained;
     bot = Bot(token);
     _attachInbox();
     _active = false;

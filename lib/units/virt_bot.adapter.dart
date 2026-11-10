@@ -1,10 +1,7 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
+// Maintained Hive wire adapter. Existing type and field IDs are persistent data.
+// Update explicitly with compatibility tests; do not renumber existing fields.
 
 part of 'virt_bot.dart';
-
-// **************************************************************************
-// TypeAdapterGenerator
-// **************************************************************************
 
 class VirtBotAdapter extends TypeAdapter<VirtBot> {
   @override

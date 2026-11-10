@@ -1,17 +1,14 @@
-run: icon gen
+run: icon
 	flutter run
 
-apk: icon gen
+apk: icon
 	flutter build apk --split-per-abi
 
-apk-clean: clean pub icon gen
+apk-clean: clean pub icon
 	flutter build apk --split-per-abi
 
-linux: icon gen
+linux: icon
 	flutter build linux --release
-
-gen:
-	dart run build_runner build --delete-conflicting-outputs
 
 icon:
 	flutter pub run flutter_launcher_icons

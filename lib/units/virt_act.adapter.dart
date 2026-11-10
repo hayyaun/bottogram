@@ -1,10 +1,7 @@
-// GENERATED CODE - DO NOT MODIFY BY HAND
+// Maintained Hive wire adapter. Existing type and field IDs are persistent data.
+// Update explicitly with compatibility tests; do not renumber existing fields.
 
 part of 'virt_act.dart';
-
-// **************************************************************************
-// TypeAdapterGenerator
-// **************************************************************************
 
 class VirtActAdapter extends TypeAdapter<VirtAct> {
   @override
@@ -17,19 +14,23 @@ class VirtActAdapter extends TypeAdapter<VirtAct> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return VirtAct(type: fields[0] as VirtActType, text: fields[1] as String)
-      ..rmu = fields[2] as VirtRMU?;
+      ..rmu = fields[2] as VirtRMU?
+      ..config =
+          fields[3] == null ? {} : (fields[3] as Map).cast<String, dynamic>();
   }
 
   @override
   void write(BinaryWriter writer, VirtAct obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(4)
       ..writeByte(0)
       ..write(obj.type)
       ..writeByte(1)
       ..write(obj.text)
       ..writeByte(2)
-      ..write(obj.rmu);
+      ..write(obj.rmu)
+      ..writeByte(3)
+      ..write(obj.config);
   }
 
   @override

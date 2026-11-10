@@ -15,7 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  FLUTTER_VERSION: '3.29.1'
+  FLUTTER_VERSION: '3.47.9'
 
 jobs:
   checks:
@@ -32,9 +32,11 @@ jobs:
           channel: stable
           cache: true
       - run: flutter pub get --enforce-lockfile
+      - name: Install native build compiler
+        run: sudo apt-get update && sudo apt-get install -y clang
       - run: flutter analyze --no-pub
-      # Live/native integration tests require separate opt-in environments.
-      - run: flutter test --no-pub
+      # Real Telegram/shop integration remains opt-in; native SQL is tested below.
+      - run: flutter test --no-pub --concurrency=2
 
   android:
     name: Android APK
@@ -50,8 +52,7 @@ jobs:
           distribution: temurin
           java-version: '17'
       - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
-      - name: Install project Android SDK packages
-        run: sdkmanager 'platforms;android-36' 'build-tools;36.0.0' 'ndk;27.0.12077973'
+      # Flutter/Gradle provisions the project's SDK and pinned NDK automatically.
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -61,6 +62,7 @@ jobs:
       - name: Build permanently signed release APK
         if: github.event_name != 'pull_request'
         env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
           BOTTOGRAM_KEYSTORE_BASE64: ${{ secrets.BOTTOGRAM_KEYSTORE_BASE64 }}
           BOTTOGRAM_KEYSTORE_PASSWORD: ${{ secrets.BOTTOGRAM_KEYSTORE_PASSWORD }}
           BOTTOGRAM_KEY_ALIAS: ${{ secrets.BOTTOGRAM_KEY_ALIAS }}
@@ -68,6 +70,8 @@ jobs:
         run: bash tool/ci/build_android.sh trusted
       - name: Build release-mode APK with a temporary PR validation key
         if: github.event_name == 'pull_request'
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
         run: bash tool/ci/build_android.sh pull-request
       - name: Verify release APK is not debuggable
         run: test "$(apkanalyzer manifest debuggable build/app/outputs/flutter-apk/app-release.apk)" = 'false'
@@ -83,6 +87,56 @@ jobs:
           path: dist/*
           if-no-files-found: error
           retention-days: 14
+
+  android-sqlite-isolation:
+    name: Android SQLite isolation
+    needs: checks
+    runs-on: ubuntu-22.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
+      # Flutter/Gradle provisions the project's SDK and pinned NDK automatically.
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter pub get --enforce-lockfile
+      - name: Enable emulator KVM access on the disposable runner
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-bottogram-kvm.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          test -r /dev/kvm && test -w /dev/kvm
+      - name: Test packaged Android SQLite isolation
+        timeout-minutes: 30
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_2
+          avd-name: bottogram-sqlite-isolation
+          ndk: 28.2.13676358
+          emulator-port: 5554
+          emulator-boot-timeout: 300
+          emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
+          disable-animations: true
+          script: timeout 20m flutter test integration_test/sqlite_isolation_test.dart -d emulator-5554 --no-pub --reporter expanded
+      # The action also stops its emulator on success and failure. Keep a bounded
+      # cleanup step for cancellation or an interrupted action process.
+      - name: Stop the disposable emulator
+        if: always()
+        run: timeout 15s adb -s emulator-5554 emu kill || true
 
   windows:
     name: Windows EXE bundle
@@ -101,6 +155,10 @@ jobs:
       - run: flutter config --enable-windows-desktop
       - run: flutter pub get --enforce-lockfile
       - run: flutter build windows --release --no-pub
+      - name: Probe released Windows SQLite libraries
+        run: python tool/ci/verify_sqlite_bundle.py build/windows/x64/runner/Release
+      - name: Test packaged Windows SQLite isolation
+        run: flutter test integration_test/sqlite_isolation_test.dart -d windows --no-pub --reporter expanded
       - name: Package EXE with its runtime files
         shell: pwsh
         run: |
@@ -129,7 +187,7 @@ jobs:
       - name: Install Linux build and packaging dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev libjsoncpp-dev libfuse2 patchelf desktop-file-utils
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev libjsoncpp-dev libfuse2 patchelf desktop-file-utils xvfb
       - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ env.FLUTTER_VERSION }}
@@ -137,7 +195,11 @@ jobs:
           cache: true
       - run: flutter config --enable-linux-desktop
       - run: flutter pub get --enforce-lockfile
+      - name: Test packaged Linux SQLite isolation
+        run: xvfb-run -a flutter test integration_test/sqlite_isolation_test.dart -d linux --no-pub --reporter expanded
       - run: flutter build linux --release --no-pub
+      - name: Probe released Linux SQLite libraries
+        run: python3 tool/ci/verify_sqlite_bundle.py build/linux/x64/release/bundle/lib
       - name: Package AppImage
         run: bash tool/ci/package_appimage.sh
       # tar preserves the executable bit through Actions' ZIP artifact storage.

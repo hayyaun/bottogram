@@ -278,6 +278,14 @@ as `https://events.example.com`; a numeric port and trailing root slash are
 accepted. This rule applies only to declared origin bindings. Saved inputs,
 ordinary text bindings, credentials and fixed API URLs are not rewritten.
 
+Keep API registration and website navigation in separate setup fields when they
+represent different origins. Bind request headers to the API's registered origin
+and Mini App links to the public website origin. An API origin is not the API
+server URL: the endpoint remains the literal `request.url`. For a local HTTP
+registration, enter `http://` explicitly and retain its registered port, if any.
+Defaulting a missing scheme to HTTPS does not provision TLS or change the API's
+registration.
+
 For bearer authentication, replace the authentication object with:
 
 ```json
@@ -404,16 +412,33 @@ Origin values and declared paths are each limited to 2,048 characters.
 A scheme-less hostname uses HTTPS automatically, including in an existing saved
 setup. An explicitly entered HTTP origin still fails the Mini App check.
 
-Optional top-level `telegram` config declares a menu button:
+Optional top-level `telegram` config declares a menu button, a native command
+list, or both:
 
 ```json
 {
+  "commands": [
+    {"command": "hello", "description": "Show the welcome message"}
+  ],
   "menuButton": {
     "text": "Event portal",
     "webApp": {"originField": "portalOrigin", "path": "/"}
   }
 }
 ```
+
+`commands` contains 1–100 unique command/description objects. Names have no `/`
+and use lowercase letters, digits or underscores (1–32 characters); each must
+also be handled by a declared `telegram.command.v2` trigger that includes private
+chats. Descriptions are nonblank plain text, 1–256 characters, without control
+characters. Publish the main commands here; aliases can remain in triggers.
+Bottogram uses Telegram's supported
+[`setMyCommands`](https://core.telegram.org/bots/api#setmycommands) API with the
+all-private-chats scope and the default language. Telegram can still prefer an
+existing language-specific or narrower-scope command list; this declaration
+does not delete those overrides. It replaces the default private command list
+when the bot starts. Omit `commands` to leave it untouched. Menu and command synchronization
+are independent; a failed synchronization does not stop message automations.
 
 The website owns its authentication and sessions. A Telegram identity does not
 automatically authenticate a website account. Do not route website passwords,

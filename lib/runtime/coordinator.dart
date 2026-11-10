@@ -33,7 +33,7 @@ class BotRuntime extends ChangeNotifier {
   int get activeCount => _bots.where((bot) => bot.active).length;
   String? _firstErrorKey(VirtBot bot) {
     final keys = _errors[bot]?.keys;
-    return keys?.where((key) => key != '@telegram.menu').firstOrNull ??
+    return keys?.where((key) => !key.startsWith('@telegram.')).firstOrNull ??
         keys?.firstOrNull;
   }
 
@@ -145,9 +145,13 @@ class BotRuntime extends ChangeNotifier {
       }
       await bot.start(pluginRuntime: manifest?.executable == true);
       if (manifest?.telegram != null && setup != null && telegram != null) {
-        unawaited(
-          _synchronizeMenu(bot, telegram, manifest!.telegram!, setup.values),
-        );
+        final declaration = manifest!.telegram!;
+        if (declaration['menuButton'] != null) {
+          unawaited(_synchronizeMenu(bot, telegram, declaration, setup.values));
+        }
+        if (declaration['commands'] != null) {
+          unawaited(_synchronizeCommands(bot, telegram, declaration));
+        }
       }
     } catch (_) {
       await _stop(bot);
@@ -172,6 +176,24 @@ class BotRuntime extends ChangeNotifier {
     } else {
       _errors[bot]?[key] =
           'The Telegram menu could not be updated. Command replies and other automations remain available.';
+    }
+    bot.runtimeError = errorFor(bot);
+    notifyListeners();
+  }
+
+  Future<void> _synchronizeCommands(
+    VirtBot bot,
+    BotTelegramPort telegram,
+    Json declaration,
+  ) async {
+    final success = await telegram.synchronizeCommands(declaration);
+    if (_closed || !_bots.contains(bot) || bot.bot != telegram.bot) return;
+    const key = '@telegram.commands';
+    if (success) {
+      _errors[bot]?.remove(key);
+    } else {
+      _errors[bot]?[key] =
+          'The Telegram command list could not be updated. Command replies and other automations remain available.';
     }
     bot.runtimeError = errorFor(bot);
     notifyListeners();

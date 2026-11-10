@@ -99,6 +99,13 @@ Scheme-less hostnames (including a numeric port or root slash) resolve with
 HTTPS. This is resolution of declared origin bindings, not a rewrite of stored
 inputs, ordinary `value` bindings, credentials or fixed API endpoints.
 
+Declare separate required text inputs for an API's registered origin and a
+public website when those addresses differ. Bind headers to the former and
+Mini App targets to the latter. The API origin is not the fixed API endpoint.
+Retain the registration's exact scheme and port; local HTTP registrations need
+an explicit `http://`. HTTPS normalization does not create TLS or update a
+provider's registration.
+
 Names are HTTP tokens, maximum 128 characters, case-insensitively unique. Values
 are printable ASCII plus horizontal tab, maximum 8192 characters. At most 32
 headers including authentication. Transport-managed names such as `Host`,
@@ -262,11 +269,23 @@ for Mini Apps. Existing saved bare hostnames use the same resolution rule.
 Paths are literal, start with one `/`, stay on that origin and have no authority,
 query, fragment, whitespace, backslash or interpolation.
 
-Optional top-level menu configuration is:
+Optional top-level Telegram configuration can contain `menuButton`, `commands`,
+or both:
 
 ```json
-{"telegram":{"menuButton":{"text":"Open portal","webApp":{"originField":"portalOrigin","path":"/"}}}}
+{"telegram":{"commands":[{"command":"status","description":"Show service status"}],"menuButton":{"text":"Open portal","webApp":{"originField":"portalOrigin","path":"/"}}}}
 ```
+
+`commands` is 1–100 unique `{command, description}` objects. Names have no slash,
+match `[a-z0-9_]{1,32}`, and must be handled by a declared `telegram.command.v2`
+trigger that includes private chats. Descriptions are nonblank plain text of
+1–256 characters with no control characters. Keep aliases in triggers; list only
+the commands buyers should see. At startup the host replaces Telegram's
+all-private-chats default-language command list through `setMyCommands`.
+Telegram's existing language-specific or narrower-scope lists can override it;
+the host does not delete those lists. Omission leaves the current list untouched.
+Menu and command synchronization run
+independently and failures do not stop other automations.
 
 Opening a page does not authenticate its visitor. The website owns login and
 authorization; Telegram identity is not a substitute. Existing buttons may open

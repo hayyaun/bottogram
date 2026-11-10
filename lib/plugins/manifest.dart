@@ -315,9 +315,22 @@ class PluginManifest {
         }
 
         if (telegram != null) {
-          validateTargetFields([
-            (telegram['menuButton'] as Json)['webApp'] as Json,
-          ]);
+          validateTargetFields(webAppTargets(telegram: telegram));
+          final privateCommands = {
+            for (final automation in automations)
+              if (automation.trigger.type == 'telegram.command.v2' &&
+                  (automation.trigger.config['chatTypes'] as List).contains(
+                    'private',
+                  ))
+                ...automation.trigger.config['commands'] as List,
+          };
+          for (final entry in telegram['commands'] as List? ?? const []) {
+            if (!privateCommands.contains((entry as Json)['command'])) {
+              reject(
+                'Published Telegram commands must match a private-chat command trigger.',
+              );
+            }
+          }
         }
         for (final automation in automations) {
           if (automation.enabledBySetting != null &&

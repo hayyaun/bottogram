@@ -69,11 +69,48 @@ void validateInlineKeyboard(dynamic raw) {
 
 void validateTelegramConfig(dynamic raw) {
   final config = _object(raw);
-  _keys(config, {'menuButton'});
-  final menu = _object(config['menuButton']);
-  _keys(menu, {'text', 'webApp'});
-  _label(menu['text']);
-  validateWebAppTarget(menu['webApp']);
+  _keys(config, {'menuButton', 'commands'});
+  if (config.isEmpty) {
+    throw const FormatException(
+      'Telegram configuration requires a menu button or command list.',
+    );
+  }
+  if (config.containsKey('menuButton')) {
+    final menu = _object(config['menuButton']);
+    _keys(menu, {'text', 'webApp'});
+    _label(menu['text']);
+    validateWebAppTarget(menu['webApp']);
+  }
+  if (config.containsKey('commands')) {
+    final commands = config['commands'];
+    if (commands is! List || commands.isEmpty || commands.length > 100) {
+      throw const FormatException(
+        'Telegram command lists require 1–100 commands.',
+      );
+    }
+    final names = <String>{};
+    for (final rawCommand in commands) {
+      final entry = _object(rawCommand);
+      _keys(entry, {'command', 'description'});
+      final command = entry['command'];
+      final description = entry['description'];
+      if (command is! String ||
+          !RegExp(r'^[a-z0-9_]{1,32}$').hasMatch(command) ||
+          !names.add(command)) {
+        throw const FormatException(
+          'Telegram commands must have unique names of 1–32 lowercase letters, digits or underscores.',
+        );
+      }
+      if (description is! String ||
+          description.trim().isEmpty ||
+          description.length > 256 ||
+          RegExp(r'[\x00-\x1f\x7f-\x9f]').hasMatch(description)) {
+        throw const FormatException(
+          'Telegram command descriptions require 1–256 characters without control characters.',
+        );
+      }
+    }
+  }
 }
 
 Iterable<Json> inlineKeyboardTargets(dynamic keyboard) sync* {
@@ -88,7 +125,7 @@ Iterable<Json> webAppTargets({
   Json? telegram,
   Iterable<Json> actionConfigs = const [],
 }) sync* {
-  if (telegram != null) {
+  if (telegram != null && telegram['menuButton'] != null) {
     yield (telegram['menuButton'] as Json)['webApp'] as Json;
   }
   for (final config in actionConfigs) {

@@ -44,6 +44,7 @@ class BotTelegramPort implements TelegramPort {
     Json telegramConfig,
     Map<String, String> fields,
   ) async {
+    if (telegramConfig['menuButton'] == null) return true;
     try {
       final menu = telegramConfig['menuButton'] as Json;
       return await bot.api
@@ -57,6 +58,29 @@ class BotTelegramPort implements TelegramPort {
           )
           .timeout(const Duration(seconds: 10));
     } catch (_) {
+      return false;
+    }
+  }
+
+  /// An absent declaration leaves commands already configured in Telegram alone.
+  Future<bool> synchronizeCommands(Json telegramConfig) async {
+    if (telegramConfig['commands'] == null) return true;
+    try {
+      return await bot.api
+          .setMyCommands(
+            [
+              for (final entry in telegramConfig['commands'] as List)
+                BotCommand(
+                  command: (entry as Json)['command'] as String,
+                  description: entry['description'] as String,
+                ),
+            ],
+            scope: const BotCommandScopeAllPrivateChats(),
+            languageCode: '',
+          )
+          .timeout(const Duration(seconds: 10));
+    } catch (_) {
+      // SDK failures may include the token-bearing URL or response body.
       return false;
     }
   }

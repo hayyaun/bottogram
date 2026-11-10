@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:io';
 import 'package:bottogram/builder/store.dart';
 import 'package:bottogram/builder/storage_snapshot.dart';
+import 'package:bottogram/builder/values.dart';
+import 'package:bottogram/templates/model.dart';
 
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/plugins/manifest.dart';
@@ -84,9 +86,30 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     required String adminId,
     PluginManifest? plugin,
     Map<String, String> parameters = const {},
+    BotTemplateDraft? template,
   }) => _mutate(() async {
     if (state.any((bot) => bot.token == token)) {
       throw const PluginException('This bot token is already in your list.');
+    }
+    final builder = BuilderStore.shared;
+    final builderId = builderBotId(token);
+    if (template != null) {
+      if (plugin != null) {
+        throw const BuilderFailure('Choose either a bot template or a plugin.');
+      }
+      await builder.ready;
+      final tables = await builder.data.inspect(builderId, 'tables', {});
+      final values = await builder.data.inspect(builderId, 'count', {
+        'table': '_bottogram_values',
+      });
+      if ((tables['tables'] as List).any((t) => t['internal'] != true) ||
+          values['count'] != 0 ||
+          (await builder.definitions(builderId)).isNotEmpty ||
+          (await builder.credentials(builderId)).isNotEmpty) {
+        throw const BuilderFailure(
+          'Existing builder data was found for this token. It has been preserved; use its original configuration or a different bot token.',
+        );
+      }
     }
     final setup = await plugins.prepare(
       token: token,
@@ -94,14 +117,25 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       plugin: plugin,
       parameters: parameters,
     );
-    final bot = VirtBot(name, token, addSamples: plugin == null)..setup = setup;
+    final bot = VirtBot(
+      name,
+      token,
+      addSamples: plugin == null && template == null,
+    )..setup = setup;
+    if (template != null) bot.events = template.events;
     dynamic key;
     try {
+      if (template != null) {
+        for (final definition in template.variables) {
+          await builder.addDefinition(builderId, definition);
+        }
+      }
       key = await _box!.add(bot);
       await plugins.attach(key, setup);
     } catch (_) {
       if (key != null) await _box!.delete(key);
       await plugins.discard(setup);
+      if (template != null) await builder.remove(builderId);
       rethrow;
     }
     emit([...state, bot]);

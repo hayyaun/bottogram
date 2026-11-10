@@ -469,7 +469,8 @@ void main() {
           greaterThanOrEqualTo(0),
         );
       }
-      expect(find.text('No templates yet'), findsOneWidget);
+      expect(find.text('Bot templates'), findsOneWidget);
+      expect(find.text('Quiz with scores'), findsOneWidget);
       expect(find.byType(BotCard), findsNothing);
       if (variant.size.width == 390) await capture(tester, 'store-phone');
       await tester.tap(tab('Settings'));

@@ -122,3 +122,28 @@ The log is `build/verification/sqlite-android-native.log`.
 Windows native execution remains unverified locally; its native integration and
 release-library probe are configured in CI. No hosted workflow run or public
 release is claimed by these local checks.
+
+## Bot templates verification on 2026-11-10
+
+The full 151-test unit/widget suite passes with clean analysis. The new native
+template smoke test passes on Linux and an Android API 35 x86_64 emulator. It
+executes all seven generated action flows against real temporary per-bot SQLite
+files, including scoring, private tasks/favorites, survey submission, admin
+replies, registration capacity and API error presentation. Both platforms report
+SQLite 3.54.1 with authorization/progress hooks active.
+
+The current Linux release was rebuilt, its native SQLite probe passed, and the
+visible WSLg preview was restarted from an immutable copy of that bundle using
+normal saved app data. The updated AppImage was built and extracted for checking.
+Its compiled code, read-only data, unwind data, static data and build-ID sections
+match the release. Full ELF bytes differ because linuxdeploy updates RPATH; this
+is recorded in the packaging log. The extracted SQLite probe also passes.
+The AppImage SHA256 is
+67c89451149cff0516be095b28461947956eac749689a693f444a1388db5def8.
+The permission-preserving tarball and both checksums are in dist/.
+
+The previous package and AppDir were retained with timestamped before-templates
+names. These remain local WSL artifacts with the clean-distribution limits noted
+above. Windows native template testing is configured in CI but has not run here;
+physical Android devices, other ABIs and hosted workflow execution are unverified.
+No public release was created. Logs use the build/verification/templates- prefix.

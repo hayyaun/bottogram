@@ -35,7 +35,7 @@ jobs:
       - name: Install native build compiler
         run: sudo apt-get update && sudo apt-get install -y clang
       - run: flutter analyze --no-pub
-      # Real Telegram/shop integration remains opt-in; native SQL is tested below.
+      # Real external services remain opt-in; native flows use fixtures below.
       - run: flutter test --no-pub --concurrency=2
 
   android:
@@ -131,7 +131,9 @@ jobs:
           emulator-boot-timeout: 300
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim
           disable-animations: true
-          script: timeout 20m flutter test integration_test/sqlite_isolation_test.dart -d emulator-5554 --no-pub --reporter expanded
+          script: |
+            timeout 20m flutter test integration_test/sqlite_isolation_test.dart -d emulator-5554 --no-pub --reporter expanded
+            timeout 20m flutter test integration_test/templates_test.dart -d emulator-5554 --no-pub --reporter expanded
       # The action also stops its emulator on success and failure. Keep a bounded
       # cleanup step for cancellation or an interrupted action process.
       - name: Stop the disposable emulator
@@ -159,6 +161,8 @@ jobs:
         run: python tool/ci/verify_sqlite_bundle.py build/windows/x64/runner/Release
       - name: Test packaged Windows SQLite isolation
         run: flutter test integration_test/sqlite_isolation_test.dart -d windows --no-pub --reporter expanded
+      - name: Test packaged Windows bot templates
+        run: flutter test integration_test/templates_test.dart -d windows --no-pub --reporter expanded
       - name: Package EXE with its runtime files
         shell: pwsh
         run: |
@@ -197,6 +201,8 @@ jobs:
       - run: flutter pub get --enforce-lockfile
       - name: Test packaged Linux SQLite isolation
         run: xvfb-run -a flutter test integration_test/sqlite_isolation_test.dart -d linux --no-pub --reporter expanded
+      - name: Test packaged Linux bot templates
+        run: xvfb-run -a flutter test integration_test/templates_test.dart -d linux --no-pub --reporter expanded
       - run: flutter build linux --release --no-pub
       - name: Probe released Linux SQLite libraries
         run: python3 tool/ci/verify_sqlite_bundle.py build/linux/x64/release/bundle/lib

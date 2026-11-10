@@ -5,6 +5,13 @@ use persistent variables and run SQL against their own database. The existing
 command, text, callback-query and inline-query events remain available. A polling
 timer can run a chain immediately on Start and then at a chosen interval.
 
+The **Store** includes seven general bot templates built from the same events
+and actions. See [setup, editable samples and template behavior](BOT_TEMPLATES.md).
+The general builder also supports literal prefix/any-text matching with
+**event.input**, and **Render list** outputs **text**, **keyboard** and **count**
+for formatting SQL/API arrays. Bind **steps.list.keyboard** through the next
+message action's **Keyboard output reference**.
+
 ## Build a chain
 
 Open a bot's settings, choose an event and add an action. Each action has a unique

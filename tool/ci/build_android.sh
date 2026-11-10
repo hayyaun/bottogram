@@ -45,7 +45,8 @@ PY
   *) printf '%s\n' 'Unknown signing mode.' >&2; exit 2 ;;
 esac
 
-build_args=(--release --no-pub)
+# Regenerate release registration without development-only plugins.
+build_args=(--release)
 if [[ -n "${GITHUB_RUN_NUMBER:-}" ]]; then
   build_args+=(--build-number "$GITHUB_RUN_NUMBER")
 fi

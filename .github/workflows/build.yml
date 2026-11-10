@@ -211,15 +211,24 @@ jobs:
       - run: flutter config --enable-macos-desktop
       - run: flutter pub get --enforce-lockfile
       - name: Test packaged macOS SQLite isolation
-        run: flutter test integration_test/sqlite_isolation_test.dart -d macos --no-pub --reporter expanded
+        run: flutter test integration_test/sqlite_isolation_test.dart -d macos --no-pub --reporter expanded --verbose
       - name: Test packaged macOS bot templates
-        run: flutter test integration_test/templates_test.dart -d macos --no-pub --reporter expanded
+        run: flutter test integration_test/templates_test.dart -d macos --no-pub --reporter expanded --verbose
       - run: flutter build macos --release --no-pub
       - name: Probe released macOS SQLite frameworks
         run: python3 tool/ci/verify_sqlite_bundle.py build/macos/Build/Products/Release/bottogram.app/Contents/Frameworks
       - name: Package universal macOS app
         if: matrix.publish
         run: bash tool/ci/package_macos.sh
+      - name: Collect macOS startup diagnostics
+        if: failure()
+        run: bash tool/ci/collect_macos_diagnostics.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: failure()
+        with:
+          name: bottogram-macos-diagnostics-${{ matrix.arch }}
+          path: build/verification/macos-diagnostics
+          retention-days: 3
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         if: matrix.publish
         with:

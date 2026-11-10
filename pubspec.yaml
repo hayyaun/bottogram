@@ -73,13 +73,23 @@ hooks:
       source: source
       path: native/sqlite/sqlite3.c
       defines:
-        default_options: false
-        defines:
-          - SQLITE_THREADSAFE=1
-          - SQLITE_DQS=0
-          - SQLITE_TEMP_STORE=2
-          - SQLITE_ENABLE_SESSION
-          - SQLITE_ENABLE_PREUPDATE_HOOK
+        default:
+          default_options: false
+          defines:
+            - SQLITE_THREADSAFE=1
+            - SQLITE_DQS=0
+            - SQLITE_TEMP_STORE=2
+            - SQLITE_ENABLE_SESSION
+            - SQLITE_ENABLE_PREUPDATE_HOOK
+        windows:
+          default_options: false
+          defines:
+            - SQLITE_THREADSAFE=1
+            - SQLITE_DQS=0
+            - SQLITE_TEMP_STORE=2
+            - SQLITE_ENABLE_SESSION
+            - SQLITE_ENABLE_PREUPDATE_HOOK
+            - SQLITE_API=__declspec(dllexport)
 
 flutter:
   # The following line ensures that the Material Icons font is

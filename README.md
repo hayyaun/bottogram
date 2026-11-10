@@ -23,24 +23,26 @@ a separate Bottogram server. Use it to:
 - Install JSON plugins with generated setup forms and editable preferences.
 - Read conversations, reply manually and open attachments from the inbox.
 
-**Experimental:** test builds are available through GitHub Actions. Public
-releases and real-device verification are still in progress; see the
+**Experimental:** real-device verification is still in progress; see the
 [roadmap](docs/REMAINING_WORK.md).
 
 ## Try a build
 
-Open [GitHub Actions](https://github.com/hayyaun/bottogram/actions/workflows/build.yml),
-choose a successful run and download its artifact. GitHub may require sign-in.
+Download a package and `SHA256SUMS.txt` from
+[GitHub Releases](https://github.com/hayyaun/bottogram/releases).
 
-- **Android:** `bottogram-android-release` — install the APK.
-- **Windows x64:** `bottogram-windows-x64` — extract the whole ZIP and run
+- **Android:** `bottogram-android-release.apk` — install the APK.
+- **Windows x64:** `bottogram-windows-x64.zip` — extract the whole ZIP and run
   `bottogram.exe` beside its DLLs and data.
-- **macOS 13+:** `bottogram-macos-universal` — extract the ZIP for Intel or Apple
+- **macOS 13+:** `bottogram-macos-universal.zip` — extract the ZIP for Intel or Apple
   Silicon. This test build is ad-hoc signed and is not Apple-notarized.
-- **Linux x86_64:** `bottogram-linux-x86_64` — extract the tarball and run its
+- **Linux x86_64:** `bottogram-linux-x86_64.AppImage.tar.gz` — extract the tarball and run its
   AppImage. Plugin API keys need a desktop keyring.
 
-Artifacts expire after 14 days. See [build requirements](docs/BUILD_ARTIFACTS.md),
+Development builds are also available from successful
+[GitHub Actions runs](https://github.com/hayyaun/bottogram/actions/workflows/build.yml);
+those artifacts require sign-in and expire after 14 days.
+See [build requirements](docs/BUILD_ARTIFACTS.md),
 [Android updates](docs/ANDROID_SIGNING.md), and
 [macOS signing and Keychain](docs/MACOS_BUILD.md) before replacing an installation;
 uninstalling removes local data.

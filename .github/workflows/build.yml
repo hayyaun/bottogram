@@ -114,7 +114,12 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-bottogram-kvm.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
-          test -r /dev/kvm && test -w /dev/kvm
+          sudo udevadm settle --timeout=30
+          ls -l /dev/kvm
+          if [[ ! -r /dev/kvm || ! -w /dev/kvm ]]; then
+            echo '::error::The runner cannot access /dev/kvm after udev processing completed.'
+            exit 1
+          fi
       - name: Test packaged Android SQLite isolation
         timeout-minutes: 30
         env:
@@ -156,7 +161,7 @@ jobs:
           cache: true
       - run: flutter config --enable-windows-desktop
       - run: flutter pub get --enforce-lockfile
-      - run: flutter build windows --release --no-pub
+      - run: flutter build windows --release --no-pub --verbose
       - name: Probe released Windows SQLite libraries
         run: python tool/ci/verify_sqlite_bundle.py build/windows/x64/runner/Release
       - name: Test packaged Windows SQLite isolation
@@ -175,6 +180,50 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: bottogram-windows-x64
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 14
+
+  macos:
+    name: macOS native checks (${{ matrix.arch }})
+    needs: checks
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            publish: true
+          - runner: macos-15-intel
+            arch: x64
+            publish: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+      - run: flutter config --enable-macos-desktop
+      - run: flutter pub get --enforce-lockfile
+      - name: Test packaged macOS SQLite isolation
+        run: flutter test integration_test/sqlite_isolation_test.dart -d macos --no-pub --reporter expanded
+      - name: Test packaged macOS bot templates
+        run: flutter test integration_test/templates_test.dart -d macos --no-pub --reporter expanded
+      - run: flutter build macos --release --no-pub
+      - name: Probe released macOS SQLite frameworks
+        run: python3 tool/ci/verify_sqlite_bundle.py build/macos/Build/Products/Release/bottogram.app/Contents/Frameworks
+      - name: Package universal macOS app
+        if: matrix.publish
+        run: bash tool/ci/package_macos.sh
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        if: matrix.publish
+        with:
+          name: bottogram-macos-universal
           path: dist/*
           if-no-files-found: error
           retention-days: 14

@@ -15,7 +15,7 @@ Create replies, install integrations, and answer conversations from one app.
 
 </div>
 
-Bottogram runs Telegram bots on your Android, Windows or Linux device, without
+Bottogram runs Telegram bots on your Android, Windows, macOS or Linux device, without
 a separate Bottogram server. Use it to:
 
 - Build commands, replies, buttons and API actions with a visual editor.
@@ -35,6 +35,8 @@ choose a successful run and download its artifact. GitHub may require sign-in.
 - **Android:** `bottogram-android-release` — install the APK.
 - **Windows x64:** `bottogram-windows-x64` — extract the whole ZIP and run
   `bottogram.exe` beside its DLLs and data.
+- **macOS 13+:** `bottogram-macos-universal` — extract the ZIP for Intel or Apple
+  Silicon. This test build is ad-hoc signed and is not Apple-notarized.
 - **Linux x86_64:** `bottogram-linux-x86_64` — extract the tarball and run its
   AppImage. Plugin API keys need a desktop keyring.
 

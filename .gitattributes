@@ -1,0 +1,4 @@
+# Preserve the exact upstream bytes verified by hook/build.dart on every platform.
+native/sqlite/sqlite3.c -text
+native/sqlite/sqlite3.h -text
+native/sqlite/sqlite3ext.h -text

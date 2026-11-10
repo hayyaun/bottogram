@@ -28,8 +28,13 @@ def main():
         core_name, guard_name = "sqlite3.dll", "bottogram_sqlite_guard.dll"
     elif sys.platform == "linux":
         core_name, guard_name = "libsqlite3.so", "libbottogram_sqlite_guard.so"
+    elif sys.platform == "darwin":
+        # Flutter bundles macOS native assets as versioned frameworks. Probe
+        # their public executable symlinks, never a system SQLite library.
+        core_name = "sqlite3.framework/sqlite3"
+        guard_name = "bottogram_sqlite_guard.framework/bottogram_sqlite_guard"
     else:
-        parser.error("This desktop bundle probe supports Linux and Windows.")
+        parser.error("This desktop bundle probe supports Linux, Windows and macOS.")
     # Keep this documented Windows DLL search context alive throughout the probe.
     dll_directory = os.add_dll_directory(str(directory)) if os.name == "nt" else None
     try:

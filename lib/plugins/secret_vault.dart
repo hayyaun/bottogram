@@ -7,7 +7,9 @@ abstract interface class SecretVault {
 }
 
 class PlatformSecretVault implements SecretVault {
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    mOptions: MacOsOptions(usesDataProtectionKeychain: false),
+  );
   @override
   Future<String?> read(String key) => _storage.read(key: key);
   @override

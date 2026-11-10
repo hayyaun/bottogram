@@ -9,7 +9,7 @@ mkdir -p "$output"
 if [[ -d "$app" ]]; then
   codesign --verify --deep --strict "$app" > "$output/signature-verification.txt" 2>&1
   codesign -dvvv "$app" > "$output/signature-details.txt" 2>&1
-  codesign -d --entitlements :- "$app" > "$output/entitlements.txt" 2>&1
+  codesign -d --entitlements - --xml "$app" > "$output/entitlements.txt" 2>&1
 fi
 /usr/bin/log show --last 10m --style compact \
   --predicate 'process == "bottogram" OR eventMessage CONTAINS[c] "bottogram"' \

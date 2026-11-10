@@ -40,9 +40,10 @@ choose a successful run and download its artifact. GitHub may require sign-in.
 - **Linux x86_64:** `bottogram-linux-x86_64` — extract the tarball and run its
   AppImage. Plugin API keys need a desktop keyring.
 
-Artifacts expire after 14 days. See [build requirements and packaging](docs/BUILD_ARTIFACTS.md)
-and [Android signing and updates](docs/ANDROID_SIGNING.md) before replacing an
-older installation; uninstalling removes local data.
+Artifacts expire after 14 days. See [build requirements](docs/BUILD_ARTIFACTS.md),
+[Android updates](docs/ANDROID_SIGNING.md), and
+[macOS signing and Keychain](docs/MACOS_BUILD.md) before replacing an installation;
+uninstalling removes local data.
 
 ## Get started
 

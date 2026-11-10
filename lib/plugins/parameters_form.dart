@@ -62,11 +62,9 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is PluginException
-                      ? error.message
-                      : 'Parameters could not be saved. Check secure storage and try again.',
+          () => _error = error is PluginException
+              ? error.message
+              : 'Parameters could not be saved. Check secure storage and try again.',
         );
       }
     } finally {
@@ -96,32 +94,46 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
               for (final field in widget.plugin.fields)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 20),
-                  child: SecretFormField(
-                    controller: _fields[field.key]!,
-                    label: field.label,
-                    secret: field.type == PluginFieldType.secret,
-                    numeric: field.type == PluginFieldType.integer,
-                    helpText:
-                        field.type == PluginFieldType.secret &&
-                                widget.setup.secretFields.contains(field.key)
-                            ? 'Saved securely. Leave blank to keep the current value.'
-                            : field.helpText,
-                    validator:
-                        (value) =>
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (field.type == PluginFieldType.secret &&
+                          widget.setup.secretFields.contains(field.key)) ...[
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: BStatus(
+                            label: 'Saved securely',
+                            color: BColors.of(context).success,
+                            background: BColors.of(context).successWash,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                      ],
+                      SecretFormField(
+                        controller: _fields[field.key]!,
+                        label: field.label,
+                        secret: field.type == PluginFieldType.secret,
+                        numeric: field.type == PluginFieldType.integer,
+                        helpText:
                             field.type == PluginFieldType.secret &&
-                                    (value ?? '').isEmpty &&
-                                    widget.setup.secretFields.contains(
-                                      field.key,
-                                    )
-                                ? null
-                                : field.validate(value ?? ''),
+                                widget.setup.secretFields.contains(field.key)
+                            ? 'Leave blank to keep the saved value. Enter a new value only to replace it.'
+                            : field.helpText,
+                        validator: (value) =>
+                            field.type == PluginFieldType.secret &&
+                                (value ?? '').isEmpty &&
+                                widget.setup.secretFields.contains(field.key)
+                            ? null
+                            : field.validate(value ?? ''),
+                      ),
+                    ],
                   ),
                 ),
             ],
           ),
         ),
         const Text(
-        'Saving changed parameters restarts a running bot and resets its automation progress.',
+          'Saving changed parameters restarts a running bot and resets its automation progress.',
         ),
         const SizedBox(height: 16),
         if (_error != null) ...[

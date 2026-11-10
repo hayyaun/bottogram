@@ -261,6 +261,18 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       );
     }
     if (previous != null && previous.instanceId != bot.setup!.instanceId) {
+      if (!restart) {
+        try {
+          // A failed session can still be draining after active becomes false.
+          // Close it before removing progress and clear its obsolete failure.
+          await runtime.stop(bot);
+        } catch (_) {
+          emit(List<VirtBot>.of(state));
+          throw const PluginException(
+            'Parameters saved. The previous session could not close; stop the bot before starting it again.',
+          );
+        }
+      }
       try {
         await runtime.progress.removeInstance(previous.instanceId);
       } catch (_) {

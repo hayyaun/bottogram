@@ -158,6 +158,7 @@ Use Stop bots to keep them stopped on the next launch.
 Plugin bots can transfer their settings and credentials by QR code between
 devices with the exact plugin package installed. Treat the QR code as a
 credential. Approved plugin updates restart bots that were already running.
+The Create bot form includes illustrated help for the Telegram token and admin IDs.
 
 Bottogram includes Telegram Mini Apps, per-bot SQLite storage, bot templates, and
 the Persian Inshopa storefront plugin.

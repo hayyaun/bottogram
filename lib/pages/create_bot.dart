@@ -149,7 +149,16 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                   ? 'Enter a bot name.'
                                   : null,
                             ),
-                            const SizedBox(height: 16),
+                            const _SetupHelp(
+                              label: 'Help with the Telegram bot token',
+                              title: 'Get a Telegram bot token',
+                              description:
+                                  'Open @BotFather in Telegram and send /newbot. Choose a name and username, then copy the token from BotFather’s final reply.',
+                              illustration:
+                                  'assets/help/telegram_bot_token.png',
+                              illustrationLabel:
+                                  'BotFather’s final reply with the token masked',
+                            ),
                             SecretFormField(
                               controller: _token,
                               label: 'Telegram bot token',
@@ -163,7 +172,15 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                   ? null
                                   : 'Enter the Telegram bot token from BotFather.',
                             ),
-                            const SizedBox(height: 24),
+                            const _SetupHelp(
+                              label: 'Help with admin IDs',
+                              title: 'Find your Telegram user ID',
+                              description:
+                                  'Open @userinfobot from the Telegram account that will administer the bot. Send /start and copy the numeric user ID from its reply.',
+                              illustration: 'assets/help/telegram_admin_id.png',
+                              illustrationLabel:
+                                  'Example reply showing a numeric Telegram user ID',
+                            ),
                             AdminIdsField(controller: _admin),
                           ],
                         ),
@@ -277,6 +294,64 @@ class _CreateBotPageState extends State<CreateBotPage> {
           ),
         );
       },
+    ),
+  );
+}
+
+class _SetupHelp extends StatelessWidget {
+  const _SetupHelp({
+    required this.label,
+    required this.title,
+    required this.description,
+    required this.illustration,
+    required this.illustrationLabel,
+  });
+
+  final String label;
+  final String title;
+  final String description;
+  final String illustration;
+  final String illustrationLabel;
+
+  @override
+  Widget build(BuildContext context) => Align(
+    alignment: AlignmentDirectional.centerEnd,
+    child: IconButton(
+      tooltip: label,
+      color: BColors.of(context).muted,
+      icon: const Icon(Icons.help_outline_rounded, size: 18),
+      onPressed: () => showDialog<void>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: Text(title),
+          scrollable: true,
+          content: SizedBox(
+            width: 400,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(description),
+                const SizedBox(height: 16),
+                ClipRRect(
+                  borderRadius: BottogramDesign.controlRadius,
+                  child: Image.asset(
+                    illustration,
+                    fit: BoxFit.contain,
+                    semanticLabel: illustrationLabel,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Done'),
+            ),
+          ],
+        ),
+      ),
     ),
   );
 }

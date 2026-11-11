@@ -505,6 +505,54 @@ void main() {
     }
   });
 
+  testWidgets('Create bot shows separate illustrated help for each credential', (
+    tester,
+  ) async {
+    cleanup(tester);
+    await pumpPage(
+      tester,
+      CreateBotPage(bots: bots, plugins: catalog),
+      size: const Size(360, 640),
+      scale: 1.4,
+    );
+
+    Future<void> openHelp(
+      String label,
+      String title,
+      String instruction,
+      String asset,
+    ) async {
+      final button = find.byTooltip(label);
+      await tester.ensureVisible(button);
+      await tester.tap(button);
+      await tester.pumpAndSettle();
+      final dialog = find.byType(AlertDialog);
+      expect(find.text(title), findsOneWidget);
+      expect(find.textContaining(instruction), findsOneWidget);
+      final picture = tester.widget<Image>(
+        find.descendant(of: dialog, matching: find.byType(Image)),
+      );
+      expect((picture.image as AssetImage).assetName, asset);
+      await tester.tap(find.widgetWithText(TextButton, 'Done'));
+      await tester.pumpAndSettle();
+      expect(dialog, findsNothing);
+    }
+
+    await openHelp(
+      'Help with the Telegram bot token',
+      'Get a Telegram bot token',
+      '/newbot',
+      'assets/help/telegram_bot_token.png',
+    );
+    await openHelp(
+      'Help with admin IDs',
+      'Find your Telegram user ID',
+      'Telegram account that will administer the bot',
+      'assets/help/telegram_admin_id.png',
+    );
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'Settings opens existing data, background, about and license tools',
     (tester) async {

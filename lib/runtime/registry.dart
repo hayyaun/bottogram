@@ -23,25 +23,36 @@ Iterable<Json> _listRequests(Json config) sync* {
   if (config['lookup'] != null) yield config['lookup']['request'] as Json;
 }
 
-/// Resolves manifest-local keyboard fragments before component validation.
-class _KeyboardReferences {
-  _KeyboardReferences(dynamic rawButtons, dynamic rawRows) {
-    for (final entry in _definitions(rawButtons).entries) {
+/// Resolves manifest-local Telegram fragments before component validation.
+class _TelegramReferences {
+  _TelegramReferences({
+    required dynamic buttons,
+    required dynamic rows,
+    required dynamic lists,
+  }) {
+    for (final entry in _definitions(buttons).entries) {
       final button = AutomationRegistry.object(entry.value);
       validatePresentationButton(button);
       _buttons[entry.key] = button;
     }
-    for (final entry in _definitions(rawRows).entries) {
+    for (final entry in _definitions(rows).entries) {
       final row = _expandRow(entry.value);
       for (final button in row) {
         validatePresentationButton(button);
       }
       _rows[entry.key] = row;
     }
+    for (final entry in _definitions(lists).entries) {
+      final list = _expandList(AutomationRegistry.object(entry.value));
+      validatePresentationList(list);
+      AutomationRegistry._validateListLookup(list);
+      _lists[entry.key] = list;
+    }
   }
 
   final _buttons = <String, Json>{};
   final _rows = <String, List<Json>>{};
+  final _lists = <String, Json>{};
 
   static Json _definitions(dynamic raw) {
     if (raw == null) return const {};
@@ -87,6 +98,15 @@ class _KeyboardReferences {
     ];
   }
 
+  Json _expandList(Json list) => {
+    ...list,
+    'keyboard': _expandKeyboard(list['keyboard']),
+  };
+
+  Json _resolveList(Json list) => list.containsKey('ref')
+      ? _reference(list, _lists, 'list')
+      : _expandList(list);
+
   Json expand(String type, Json config) {
     if (type == 'telegram.reply.v2') {
       return {
@@ -100,8 +120,7 @@ class _KeyboardReferences {
         ...config,
         if (config['keyboard'] != null)
           'keyboard': _expandKeyboard(config['keyboard']),
-        if (list is Json)
-          'list': {...list, 'keyboard': _expandKeyboard(list['keyboard'])},
+        if (list is Json) 'list': _resolveList(list),
       };
     }
     return config;
@@ -213,13 +232,7 @@ class AutomationRegistry {
       presentationAction: ComponentRegistration(
         (config) {
           validatePresentation(config);
-          final lookup = config['list']?['lookup'] as Json?;
-          if (lookup != null) {
-            _request(
-              lookup['request'] as Json,
-              pathParameters: {lookup['parameter'] as String},
-            );
-          }
+          _validateListLookup(config['list'] as Json?);
         },
         TelegramPresentationAction.new,
         requests: presentationLookupRequests,
@@ -291,7 +304,7 @@ class AutomationRegistry {
 
   ComponentDefinition _component(
     dynamic raw,
-    _KeyboardReferences keyboards, {
+    _TelegramReferences telegram, {
     required bool trigger,
   }) {
     final c = object(raw);
@@ -302,7 +315,7 @@ class AutomationRegistry {
           : {'id', 'type', 'config', 'errorMap'},
     );
     final type = string(c['type'], 100);
-    final config = keyboards.expand(type, object(c['config']));
+    final config = telegram.expand(type, object(c['config']));
     final registration = trigger ? triggers[type] : actions[type];
     if (registration == null) {
       throw FormatException(
@@ -321,13 +334,13 @@ class AutomationRegistry {
 
   Map<String, ComponentDefinition> _sharedActions(
     dynamic raw,
-    _KeyboardReferences keyboards,
+    _TelegramReferences telegram,
   ) {
     if (raw == null) return const {};
     if (raw is! List || raw.length > 64) invalid();
     final shared = <String, ComponentDefinition>{};
     for (final value in raw) {
-      final action = _component(value, keyboards, trigger: false);
+      final action = _component(value, telegram, trigger: false);
       if (shared.containsKey(action.id)) {
         throw const FormatException('Shared action IDs must be unique.');
       }
@@ -339,11 +352,11 @@ class AutomationRegistry {
   ComponentDefinition _resolveAction(
     dynamic raw,
     Map<String, ComponentDefinition> shared,
-    _KeyboardReferences keyboards,
+    _TelegramReferences telegram,
   ) {
     final action = object(raw);
     if (!action.containsKey('ref')) {
-      return _component(action, keyboards, trigger: false);
+      return _component(action, telegram, trigger: false);
     }
     keys(action, {'ref', 'id'});
     identifier(action['ref']);
@@ -367,9 +380,14 @@ class AutomationRegistry {
     dynamic sharedActions,
     dynamic sharedButtons,
     dynamic sharedKeyboardRows,
+    dynamic sharedLists,
   }) {
-    final keyboards = _KeyboardReferences(sharedButtons, sharedKeyboardRows);
-    final shared = _sharedActions(sharedActions, keyboards);
+    final telegram = _TelegramReferences(
+      buttons: sharedButtons,
+      rows: sharedKeyboardRows,
+      lists: sharedLists,
+    );
+    final shared = _sharedActions(sharedActions, telegram);
     if (raw is! List || raw.isEmpty || raw.length > 16) invalid();
     final ids = <String>{};
     final commands = <String>{};
@@ -381,7 +399,7 @@ class AutomationRegistry {
         identifier(a['id']);
         if (!ids.add(a['id'])) invalid();
         if (a['enabledBySetting'] != null) identifier(a['enabledBySetting']);
-        final t = _component(a['trigger'], keyboards, trigger: true);
+        final t = _component(a['trigger'], telegram, trigger: true);
         if (t.type == interactionTrigger) {
           for (final route in interactionRoutes(t.config)) {
             routes.add((route, t.config['audience'] as String?));
@@ -400,7 +418,7 @@ class AutomationRegistry {
         if (list is! List || list.isEmpty || list.length > 16) invalid();
         final actionIds = <String>{};
         final parsed = [
-          for (final value in list) _resolveAction(value, shared, keyboards),
+          for (final value in list) _resolveAction(value, shared, telegram),
         ];
         String? destinationField;
         for (final action in parsed) {
@@ -514,6 +532,15 @@ class AutomationRegistry {
       r'^[a-zA-Z][a-zA-Z0-9_]*(\.[a-zA-Z][a-zA-Z0-9_]*)*$',
     ).hasMatch(string(v, 200))) {
       invalid();
+    }
+  }
+
+  static void _validateListLookup(Json? list) {
+    if (list?['lookup'] case final Json lookup) {
+      _request(
+        lookup['request'] as Json,
+        pathParameters: {lookup['parameter'] as String},
+      );
     }
   }
 

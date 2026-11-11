@@ -21,7 +21,7 @@ import 'plugins_test.dart' show MemoryVault;
 import 'storefront_presentation_test.dart' show PluginHarness, shipped;
 
 const package = 'inshopa.storefront.0.8.1';
-const thumbnailPackage = 'inshopa.storefront.0.8.7';
+const thumbnailPackage = 'inshopa.storefront.0.8.8';
 const productId = 'e6af6af3-a42d-4a71-87d5-aac75e232183';
 const nextId = '11111111-1111-1111-1111-111111111111';
 const otherId = '22222222-2222-2222-2222-222222222222';
@@ -219,6 +219,43 @@ class CatalogFixture implements JsonTransport, PhotoTransport {
 }
 
 void main() {
+  test('shared catalog lists cannot bypass manifest validation', () {
+    final source = File(
+      'examples/plugins/$thumbnailPackage.bottogram-plugin.json',
+    ).readAsStringSync();
+    Json catalogListReference(Json manifest) {
+      final automations = (manifest['automations'] as List).cast<Json>();
+      final widget = automations.firstWhere(
+        (automation) => automation['id'] == 'catalog-widget',
+      );
+      return widget['actions'].last['config']['list'] as Json;
+    }
+
+    final cases = <String, void Function(Json)>{
+      'unknown list': (manifest) =>
+          catalogListReference(manifest)['ref'] = 'missing-list',
+      'override on reference': (manifest) =>
+          catalogListReference(manifest)['itemsPath'] = 'event.items',
+      'undeclared HTTP header field': (manifest) {
+        final list = manifest['sharedLists']['catalog-products'] as Json;
+        list['lookup']['request']['headers']['Origin']['field'] =
+            'missingField';
+      },
+      'invalid unused list': (manifest) =>
+          manifest['sharedLists']['unused'] = {'ref': 'catalog-products'},
+    };
+
+    for (final entry in cases.entries) {
+      final manifest = jsonDecode(source) as Json;
+      entry.value(manifest);
+      expect(
+        () => PluginManifest.parse(utf8.encode(jsonEncode(manifest))),
+        throwsA(isA<PluginException>()),
+        reason: entry.key,
+      );
+    }
+  });
+
   test(
     'six priced catalog rows fit Telegram and navigation replaces the old widget',
     () async {
@@ -263,8 +300,9 @@ void main() {
           final match = RegExp(r'const products = (\[.*\]);').firstMatch(html);
           rows = (jsonDecode(match!.group(1)!) as List).cast();
         } else {
-          final match = RegExp(r'_bottogramRows \|\| \[\], (\[.*\])\);')
-              .firstMatch(html);
+          final match = RegExp(
+            r'_bottogramRows \|\| \[\], (\[.*\])\);',
+          ).firstMatch(html);
           final photos = jsonDecode(match!.group(1)!) as List;
           rows = [
             for (final (index, row) in packed.indexed)

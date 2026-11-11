@@ -180,40 +180,43 @@ void validatePresentation(Json config) {
     _data(widget['data']);
   }
   if (config['list'] != null) {
-    final list = AutomationRegistry.object(config['list']);
-    AutomationRegistry.keys(list, {
-      'itemsPath',
-      'data',
-      'keyboard',
-      'emptyText',
-      'lookup',
-    });
-    AutomationRegistry.path(list['itemsPath']);
-    AutomationRegistry.string(list['emptyText'], 200);
-    _data(list['data']);
-    if (list['lookup'] != null) {
-      final lookup = AutomationRegistry.object(list['lookup']);
-      AutomationRegistry.keys(lookup, {
-        'request',
-        'parameter',
-        'itemIdPath',
-        'minimum',
-      });
-      AutomationRegistry.object(lookup['request']);
-      AutomationRegistry.identifier(lookup['parameter']);
-      AutomationRegistry.path(lookup['itemIdPath']);
-      if (lookup['minimum'] != null) {
-        final minimum = AutomationRegistry.object(lookup['minimum']);
-        AutomationRegistry.keys(minimum, {'itemsPath', 'valuePath'});
-        AutomationRegistry.path(minimum['itemsPath']);
-        AutomationRegistry.path(minimum['valuePath']);
-      }
-    }
-    _buttons(list['keyboard'], channel: false);
+    validatePresentationList(AutomationRegistry.object(config['list']));
   }
   if (config['photo'] != null) {
     _validatePhoto(AutomationRegistry.object(config['photo']));
   }
+}
+
+void validatePresentationList(Json list) {
+  AutomationRegistry.keys(list, {
+    'itemsPath',
+    'data',
+    'keyboard',
+    'emptyText',
+    'lookup',
+  });
+  AutomationRegistry.path(list['itemsPath']);
+  AutomationRegistry.string(list['emptyText'], 200);
+  _data(list['data']);
+  if (list['lookup'] != null) {
+    final lookup = AutomationRegistry.object(list['lookup']);
+    AutomationRegistry.keys(lookup, {
+      'request',
+      'parameter',
+      'itemIdPath',
+      'minimum',
+    });
+    AutomationRegistry.object(lookup['request']);
+    AutomationRegistry.identifier(lookup['parameter']);
+    AutomationRegistry.path(lookup['itemIdPath']);
+    if (lookup['minimum'] != null) {
+      final minimum = AutomationRegistry.object(lookup['minimum']);
+      AutomationRegistry.keys(minimum, {'itemsPath', 'valuePath'});
+      AutomationRegistry.path(minimum['itemsPath']);
+      AutomationRegistry.path(minimum['valuePath']);
+    }
+  }
+  _buttons(list['keyboard'], channel: false);
 }
 
 void validateTelegramStatus(Json config) {

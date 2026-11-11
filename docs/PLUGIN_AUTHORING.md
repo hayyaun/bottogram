@@ -363,6 +363,31 @@ such as `[[{"ref": "my-orders"}]]`. The same syntax works in
 can contain inline buttons and button references. Each expanded keyboard
 must follow the limits and destination rules of the action that uses it.
 
+### Shared presentation lists
+
+In a live manifest, use `sharedLists` to define up to 64 named list
+configurations. Set `config.list` in a `telegram.present.v1` action to
+`{"ref": "catalog-products"}` to use the definition below.
+
+```json
+{
+  "sharedLists": {
+    "catalog-products": {
+      "itemsPath": "results.catalog.items",
+      "data": {"title": {"text": "{{item.title}}", "maxLength": 44}},
+      "keyboard": [[{"text": "{{item.title}}", "callback": "product:{{item.id}}"}]],
+      "emptyText": "No products on this page."
+    }
+  }
+}
+```
+
+The shared definition uses the same fields as an inline list, including
+optional `lookup` and shared button or row references in `keyboard`. The
+action still controls its own message lines and widget layout. A list
+reference takes only `ref`; define another list when its content needs
+to differ.
+
 ### Scheduled API notifications
 
 Poll triggers use an interval from 30 to 86,400 seconds and explicitly choose
@@ -674,7 +699,7 @@ are checked when a command or button is used.
 - `telegram.status.v1` can report the current destination posting permissions and a
   boolean plugin setting from an admin-only interaction.
 
-See the [Inshopa 0.8.7 package](../examples/plugins/inshopa.storefront.0.8.7.bottogram-plugin.json)
+See the [Inshopa 0.8.8 package](../examples/plugins/inshopa.storefront.0.8.8.bottogram-plugin.json)
 for complete declarations, including a Telegram deep link generated from the
 bot's username and a same-origin Mini App button with a bound path segment.
 

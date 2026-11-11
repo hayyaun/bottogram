@@ -169,6 +169,7 @@ class PluginManifest {
       'sharedActions',
       'sharedButtons',
       'sharedKeyboardRows',
+      'sharedLists',
       'errorMessages',
       'telegram',
     });
@@ -194,6 +195,7 @@ class PluginManifest {
                 data.containsKey('sharedActions') ||
                 data.containsKey('sharedButtons') ||
                 data.containsKey('sharedKeyboardRows') ||
+                data.containsKey('sharedLists') ||
                 data.containsKey('telegram')))) {
       reject(
         'This release supports setup-only plugins; live execution is not available yet.',
@@ -338,6 +340,7 @@ class PluginManifest {
           sharedActions: data['sharedActions'],
           sharedButtons: data['sharedButtons'],
           sharedKeyboardRows: data['sharedKeyboardRows'],
+          sharedLists: data['sharedLists'],
         );
         if (data['telegram'] != null) {
           validateTelegramConfig(data['telegram']);

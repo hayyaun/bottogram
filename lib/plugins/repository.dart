@@ -14,7 +14,7 @@ class PluginRepository extends ChangeNotifier {
   PluginRepository({
     SecretVault? vault,
     this.bundledAssets = const [
-      'examples/plugins/inshopa.storefront.0.8.7.bottogram-plugin.json',
+      'examples/plugins/inshopa.storefront.0.8.8.bottogram-plugin.json',
     ],
     AssetBundle? bundle,
   }) : vault = vault ?? PlatformSecretVault(),

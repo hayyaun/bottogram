@@ -3,7 +3,7 @@
   "hostApiMajor": 2,
   "id": "bottogram-plugin-inshopa",
   "name": "این شاپا",
-  "version": "0.8.7",
+  "version": "0.8.8",
   "executionStatus": "live",
   "description": "ویترین فارسی فروشگاه در تلگرام با مرور محصولات، پیگیری خرید، اعلان سفارش برای مدیر و معرفی محصولات تازه در کانال‌ها و گروه‌های انتخابی فروشگاه.",
   "requiresBotFields": [
@@ -95,6 +95,57 @@
         "unless": "item.detail.minimum"
       }
     ]
+  },
+  "sharedLists": {
+    "catalog-products": {
+      "itemsPath": "results.catalog.items",
+      "data": {
+        "title": {
+          "text": "{{item.title}}",
+          "maxLength": 44
+        },
+        "id": {
+          "text": "{{item.id}}",
+          "maxLength": 36
+        },
+        "price": {
+          "text": "{{item.detail.minimum}}",
+          "maxLength": 18
+        }
+      },
+      "keyboard": [
+        {
+          "ref": "catalog-product"
+        }
+      ],
+      "emptyText": "محصولی در این صفحه نیست.",
+      "lookup": {
+        "request": {
+          "method": "GET",
+          "url": "https://api.inshopa.ir/v1/storefront/products/{productId}",
+          "authentication": {
+            "type": "bearer",
+            "secretField": "apiKey"
+          },
+          "headers": {
+            "Origin": {
+              "field": "storefrontUrl",
+              "transform": "url.origin"
+            },
+            "X-Storefront-Host": {
+              "field": "storefrontUrl",
+              "transform": "url.authority"
+            }
+          }
+        },
+        "parameter": "productId",
+        "itemIdPath": "id",
+        "minimum": {
+          "itemsPath": "variants",
+          "valuePath": "price_irr"
+        }
+      }
+    }
   },
   "sharedActions": [
     {
@@ -522,53 +573,7 @@
               ]
             ],
             "list": {
-              "itemsPath": "results.catalog.items",
-              "data": {
-                "title": {
-                  "text": "{{item.title}}",
-                  "maxLength": 44
-                },
-                "id": {
-                  "text": "{{item.id}}",
-                  "maxLength": 36
-                },
-                "price": {
-                  "text": "{{item.detail.minimum}}",
-                  "maxLength": 18
-                }
-              },
-              "keyboard": [
-                {
-                  "ref": "catalog-product"
-                }
-              ],
-              "emptyText": "محصولی در این صفحه نیست.",
-              "lookup": {
-                "request": {
-                  "method": "GET",
-                  "url": "https://api.inshopa.ir/v1/storefront/products/{productId}",
-                  "authentication": {
-                    "type": "bearer",
-                    "secretField": "apiKey"
-                  },
-                  "headers": {
-                    "Origin": {
-                      "field": "storefrontUrl",
-                      "transform": "url.origin"
-                    },
-                    "X-Storefront-Host": {
-                      "field": "storefrontUrl",
-                      "transform": "url.authority"
-                    }
-                  }
-                },
-                "parameter": "productId",
-                "itemIdPath": "id",
-                "minimum": {
-                  "itemsPath": "variants",
-                  "valuePath": "price_irr"
-                }
-              }
+              "ref": "catalog-products"
             },
             "widget": {
               "html": "<style>\nbody { margin: 8px 10px; color: var(--tg-theme-text-color); text-align: right; }\nh2 { font-size: 19px; line-height: 24px; margin: 0; }\np { font-size: 13px; line-height: 15px; margin: 2px 0; color: var(--tg-theme-hint-color); }\n.list { display: flex; flex-direction: column; gap: 2px; margin: 5px 0; }\n.product { display: flex; width: 100%; height: 68px; box-sizing: border-box;\n  align-items: center; gap: 7px; padding: 2px 6px; border: 0; border-radius: 7px;\n  text-align: right; color: var(--tg-theme-text-color);\n  background: var(--tg-theme-secondary-bg-color); overflow: hidden; }\n.thumb { width: 64px; height: 64px; flex: none; border-radius: 5px; overflow: hidden;\n  background: var(--tg-theme-bg-color); }\n.thumb img { width: 100%; height: 100%; object-fit: contain; }\n.details { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }\n.title, .price { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.title { font-size: 13px; line-height: 16px; }\n.price { font-size: 11px; line-height: 14px;\n  color: var(--tg-theme-link-color); }\n.nav { display: flex; gap: 7px; }\n.nav button { flex: 1; height: 32px; }\n</style>\n<div dir=\"rtl\">\n  <h2>محصولات فروشگاه</h2>\n  <p id=\"page\"></p>\n  <div id=\"list\" class=\"list\"></div>\n  <div id=\"nav\" class=\"nav\"></div>\n  <p id=\"status\" aria-live=\"polite\"></p>\n</div>\n<script>\nconst products = /*widget-rows*/[];\nconst state = JSON.parse(TelegramWidget.chatData || '{}');\nconst list = document.getElementById('list');\nconst nav = document.getElementById('nav');\nconst status = document.getElementById('status');\nconst format = new Intl.NumberFormat('fa-IR');\nfunction button(parent, data) {\n  const element = document.createElement('button');\n  element.addEventListener('click', () => {\n    status.textContent = 'در حال بارگذاری…';\n    TelegramWidget.request(data).then(\n      () => { status.textContent = ''; },\n      () => { status.textContent = 'دوباره تلاش کن.'; }\n    );\n  });\n  parent.appendChild(element);\n  return element;\n}\nfunction part(parent, className, text) {\n  const element = document.createElement('span');\n  element.className = className;\n  if (text) element.textContent = text;\n  parent.appendChild(element);\n  return element;\n}\ndocument.getElementById('page').textContent = 'صفحهٔ ' + format.format(Number(state.page || 1));\nfor (const item of products) {\n  const row = button(list, 'product:' + item.id);\n  row.className = 'product';\n  const frame = part(row, 'thumb');\n  if (item.thumbnail) {\n    const photo = document.createElement('img');\n    photo.src = item.thumbnail;\n    photo.alt = '';\n    frame.appendChild(photo);\n  }\n  const details = part(row, 'details');\n  part(details, 'title', item.title);\n  if (item.price) part(details, 'price', 'از ' + format.format(Number(item.price)) + ' ریال');\n}\nif (!products.length) list.textContent = 'محصولی در این صفحه نیست.';\nif (state.previous) button(nav, 'catalog:' + state.previous).textContent = 'قبلی';\nif (state.next) button(nav, 'catalog:' + state.next).textContent = 'بعدی';\n</script>",
@@ -665,53 +670,7 @@
               ]
             ],
             "list": {
-              "itemsPath": "results.catalog.items",
-              "data": {
-                "title": {
-                  "text": "{{item.title}}",
-                  "maxLength": 44
-                },
-                "id": {
-                  "text": "{{item.id}}",
-                  "maxLength": 36
-                },
-                "price": {
-                  "text": "{{item.detail.minimum}}",
-                  "maxLength": 18
-                }
-              },
-              "keyboard": [
-                {
-                  "ref": "catalog-product"
-                }
-              ],
-              "emptyText": "محصولی در این صفحه نیست.",
-              "lookup": {
-                "request": {
-                  "method": "GET",
-                  "url": "https://api.inshopa.ir/v1/storefront/products/{productId}",
-                  "authentication": {
-                    "type": "bearer",
-                    "secretField": "apiKey"
-                  },
-                  "headers": {
-                    "Origin": {
-                      "field": "storefrontUrl",
-                      "transform": "url.origin"
-                    },
-                    "X-Storefront-Host": {
-                      "field": "storefrontUrl",
-                      "transform": "url.authority"
-                    }
-                  }
-                },
-                "parameter": "productId",
-                "itemIdPath": "id",
-                "minimum": {
-                  "itemsPath": "variants",
-                  "valuePath": "price_irr"
-                }
-              }
+              "ref": "catalog-products"
             }
           }
         }

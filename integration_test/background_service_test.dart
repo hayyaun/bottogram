@@ -18,7 +18,8 @@ void main() {
         ),
       );
       await Future<void>.delayed(const Duration(seconds: 2));
-      await platform.startService(1);
+      await platform.startService(0, 3);
+      await platform.updateService(1, 3);
       expect((await platform.readState()).serviceRunning, isTrue);
       var ticks = 0;
       final timer = Timer.periodic(

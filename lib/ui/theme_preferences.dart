@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 
+import '../store/app_preferences.dart';
+
 /// Device-local appearance preference. Missing or unknown values follow the system.
 class ThemePreferences extends ChangeNotifier {
   ThemePreferences({Box<String>? box}) {
     ready = _load(box);
   }
-  static const boxName = 'app_preferences';
+  static const boxName = appPreferencesBoxName;
   static const themeKey = 'theme_mode';
   late final Future<void> ready;
   Box<String>? _box;

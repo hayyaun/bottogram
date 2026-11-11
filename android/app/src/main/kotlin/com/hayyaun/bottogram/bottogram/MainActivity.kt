@@ -15,9 +15,9 @@ class MainActivity : FlutterActivity() {
         (application as BottogramApplication).engineFor(this)
     override fun shouldDestroyEngineWithHost() = false
     override fun onResume() {
-        super.onResume()
         foreground = true
         (application as BottogramApplication).activity = this
+        super.onResume()
     }
     override fun onPause() { foreground = false; super.onPause() }
     override fun onDestroy() {

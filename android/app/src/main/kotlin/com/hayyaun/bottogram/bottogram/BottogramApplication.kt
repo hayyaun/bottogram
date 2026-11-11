@@ -41,15 +41,26 @@ class BottogramApplication : Application() {
                         else current.requestNotifications(result)
                     }
                     "startService" -> {
-                        val count = call.argument<Int>("count") ?: 0
-                        require(count > 0)
-                        check(activity?.foreground == true) { "Open Bottogram to start bots." }
-                        ContextCompat.startForegroundService(this, Intent(this, BotService::class.java).putExtra("count", count))
+                        val active = call.argument<Int>("active") ?: 0
+                        val total = call.argument<Int>("total") ?: 0
+                        require(total > 0 && active in 0..total)
+                        val current = service
+                        if (current?.running == true) {
+                            current.updateCounts(active, total)
+                        } else {
+                            check(activity?.foreground == true) { "Open Bottogram to start bots." }
+                            val intent = Intent(this, BotService::class.java)
+                                .putExtra(BotService.ACTIVE, active)
+                                .putExtra(BotService.TOTAL, total)
+                            ContextCompat.startForegroundService(this, intent)
+                        }
                         result.success(null)
                     }
                     "updateService" -> {
                         val current = service ?: error("The bot service is no longer running.")
-                        current.updateCount(call.argument<Int>("count") ?: 0)
+                        val active = call.argument<Int>("active") ?: 0
+                        val total = call.argument<Int>("total") ?: 0
+                        current.updateCounts(active, total)
                         result.success(null)
                     }
                     "stopService" -> {
@@ -80,6 +91,7 @@ class BottogramApplication : Application() {
         host.startActivity(intent)
         return true
     }
+    fun serviceEnded() { channel?.invokeMethod("serviceEnded", null) }
     fun stateChanged() { channel?.invokeMethod("stateChanged", null) }
     fun stopBots(done: (Boolean) -> Unit) {
         val target = channel

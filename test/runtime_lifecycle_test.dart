@@ -12,16 +12,19 @@ import 'plugins_test.dart' show MemoryCatalog;
 
 class TestLease implements ExecutionLease {
   final counts = <int>[];
+  final totals = <int>[];
   bool fail = false;
   @override
-  Future<void> startService(int count) async {
+  Future<void> startService(int active, int total) async {
     if (fail) throw StateError('Service unavailable');
-    counts.add(count);
+    counts.add(active);
+    totals.add(total);
   }
 
   @override
-  Future<void> updateService(int count) async {
-    counts.add(count);
+  Future<void> updateService(int active, int total) async {
+    counts.add(active);
+    totals.add(total);
   }
 
   @override
@@ -40,7 +43,8 @@ class InitializedBot extends Fake implements Bot<Context> {
 }
 
 class RuntimeBot extends VirtBot {
-  RuntimeBot() : super('Test', '1:testing', addSamples: false) {
+  RuntimeBot([super.name = 'Test', super.token = '1:testing'])
+    : super(addSamples: false) {
     bot = InitializedBot();
   }
   bool running = false;
@@ -115,6 +119,7 @@ void main() {
       final catalog = MemoryCatalog();
       final runtime = BotRuntime(lease, catalog, progress: MemoryProgress());
       final first = RuntimeBot(), second = RuntimeBot();
+      await runtime.setTotalBots(3);
       await Future.wait([
         runtime.start(first),
         runtime.start(first),
@@ -124,7 +129,11 @@ void main() {
       expect(second.starts, 1);
       expect((first.bot as InitializedBot).initializations, 1);
       expect(runtime.activeCount, 2);
+      expect(lease.counts, [0, 1, 1, 2]);
+      expect(lease.totals, [3, 3, 3, 3]);
+      await runtime.setTotalBots(4);
       expect(lease.counts.last, 2);
+      expect(lease.totals.last, 4);
       await runtime.stop(first);
       expect(runtime.activeCount, 1);
       expect(lease.counts.last, 1);

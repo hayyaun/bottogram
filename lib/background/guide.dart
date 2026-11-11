@@ -121,7 +121,7 @@ class BackgroundGuide extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 const Text(
-                  'Bottogram keeps a foreground service and a visible notification while bots are started. This uses battery and data. The notification includes Stop bots.',
+                  'Bottogram keeps running bots in a foreground service when you leave the app. The notification shows how many bots are active and includes Stop bots. Running bots use battery and data.',
                 ),
                 const SizedBox(height: 24),
                 BPanel(
@@ -185,7 +185,7 @@ class BackgroundGuide extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
                 const Text(
-                  'Force-stop, device restart, or Android ending the app process stops bots. Reopen Bottogram and start them again. Saved automation progress is retained. Battery exemption cannot guarantee that every device will keep an app alive.',
+                  'If Android ends Bottogram or your device restarts, reopen Bottogram to resume the bots you left enabled. Stop bots in Bottogram or its notification to keep them off.',
                 ),
                 const SizedBox(height: 24),
                 OutlinedButton(

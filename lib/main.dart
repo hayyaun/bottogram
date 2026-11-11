@@ -2,6 +2,7 @@ import 'package:bottogram/pages/home.dart';
 import 'package:bottogram/inbox/diagnostics.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
+import 'package:bottogram/store/app_preferences.dart';
 import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -78,8 +79,14 @@ class _MyAppState extends State<MyApp> {
                 platform,
                 context.read<PluginRepository>(),
               );
-              platform.onStopRequested = runtime.stopAll;
-              return BotsCubit(context, runtime: runtime);
+              final bots = BotsCubit(
+                context,
+                runtime: runtime,
+                runPreferences: platform.supported ? BotRunPreferences() : null,
+              );
+              platform.onStopRequested = bots.stopAll;
+              platform.onServiceEnded = runtime.stopAll;
+              return bots;
             },
           ),
         ],

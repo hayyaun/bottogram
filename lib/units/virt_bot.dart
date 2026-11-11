@@ -25,6 +25,7 @@ class VirtBot extends HiveObject {
   BotSetup? setup;
   String? setupError;
   String? runtimeError;
+  bool resumeOnLaunch = false;
   VoidCallback? onRunningChanged;
   int _runGeneration = 0;
   BuilderSession? _builder;

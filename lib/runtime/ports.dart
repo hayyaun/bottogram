@@ -21,8 +21,8 @@ class RuntimeFailure implements Exception {
 }
 
 abstract interface class ExecutionLease {
-  Future<void> startService(int count);
-  Future<void> updateService(int count);
+  Future<void> startService(int active, int total);
+  Future<void> updateService(int active, int total);
   Future<void> stopService();
 }
 

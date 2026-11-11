@@ -36,6 +36,7 @@ class BackgroundSnapshot {
 
 abstract class BackgroundPlatform implements ExecutionLease {
   Future<void> Function()? onStopRequested;
+  Future<void> Function()? onServiceEnded;
   void Function()? onStateChanged;
   bool get supported;
   Future<BackgroundSnapshot> readState();
@@ -43,16 +44,15 @@ abstract class BackgroundPlatform implements ExecutionLease {
   Future<bool> openAppSettings();
   Future<void> requestNotifications();
   @override
-  Future<void> startService(int count);
+  Future<void> startService(int active, int total);
   @override
-  Future<void> updateService(int count);
+  Future<void> updateService(int active, int total);
   @override
   Future<void> stopService();
   void dispose() {}
-  static BackgroundPlatform create() =>
-      Platform.isAndroid
-          ? AndroidBackgroundPlatform()
-          : DesktopBackgroundPlatform();
+  static BackgroundPlatform create() => Platform.isAndroid
+      ? AndroidBackgroundPlatform()
+      : DesktopBackgroundPlatform();
 }
 
 class DesktopBackgroundPlatform extends BackgroundPlatform {
@@ -68,9 +68,9 @@ class DesktopBackgroundPlatform extends BackgroundPlatform {
   @override
   Future<void> requestNotifications() async {}
   @override
-  Future<void> startService(int count) async {}
+  Future<void> startService(int active, int total) async {}
   @override
-  Future<void> updateService(int count) async {}
+  Future<void> updateService(int active, int total) async {}
   @override
   Future<void> stopService() async {}
 }
@@ -81,6 +81,8 @@ class AndroidBackgroundPlatform extends BackgroundPlatform {
     _channel.setMethodCallHandler((call) async {
       if (call.method == 'stopBots') {
         await onStopRequested?.call();
+      } else if (call.method == 'serviceEnded') {
+        await onServiceEnded?.call();
       } else if (call.method == 'stateChanged') {
         onStateChanged?.call();
       }
@@ -108,8 +110,11 @@ class AndroidBackgroundPlatform extends BackgroundPlatform {
   Future<void> requestNotifications() =>
       _channel.invokeMethod<void>('requestNotifications');
   @override
-  Future<void> startService(int count) async {
-    await _channel.invokeMethod<void>('startService', {'count': count});
+  Future<void> startService(int active, int total) async {
+    await _channel.invokeMethod<void>('startService', {
+      'active': active,
+      'total': total,
+    });
     // Starting an Android component is not proof it reached the foreground.
     for (var attempt = 0; attempt < 40; attempt++) {
       if ((await readState()).serviceRunning == true) return;
@@ -123,8 +128,8 @@ class AndroidBackgroundPlatform extends BackgroundPlatform {
   }
 
   @override
-  Future<void> updateService(int count) =>
-      _channel.invokeMethod<void>('updateService', {'count': count});
+  Future<void> updateService(int active, int total) => _channel
+      .invokeMethod<void>('updateService', {'active': active, 'total': total});
   @override
   Future<void> stopService() => _channel.invokeMethod<void>('stopService');
   @override

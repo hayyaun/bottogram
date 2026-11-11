@@ -379,10 +379,16 @@ class _BotPageState extends State<BotPage> {
                         const SizedBox(height: 20),
                         FilledButton.icon(
                           icon: Icon(
-                            widget.bot.active ? Icons.stop : Icons.play_arrow,
+                            widget.bot.active || widget.bot.resumeOnLaunch
+                                ? Icons.stop
+                                : Icons.play_arrow,
                           ),
                           label: Text(
-                            widget.bot.active ? 'Stop bot' : 'Start bot',
+                            widget.bot.active
+                                ? 'Stop bot'
+                                : widget.bot.resumeOnLaunch
+                                ? 'Turn off auto-start'
+                                : 'Start bot',
                           ),
                           onPressed: () async {
                             try {

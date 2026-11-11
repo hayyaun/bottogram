@@ -30,9 +30,9 @@ class FakeBackground extends BackgroundPlatform {
   @override
   Future<void> requestNotifications() async {}
   @override
-  Future<void> startService(int count) async {}
+  Future<void> startService(int active, int total) async {}
   @override
-  Future<void> updateService(int count) async {}
+  Future<void> updateService(int active, int total) async {}
   @override
   Future<void> stopService() async {}
 }

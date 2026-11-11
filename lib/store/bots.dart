@@ -7,6 +7,7 @@ import 'package:bottogram/templates/model.dart';
 
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
+import 'package:bottogram/plugins/bot_setup.dart';
 import 'package:bottogram/plugins/bot_transfer.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
@@ -21,6 +22,8 @@ import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
+import 'app_preferences.dart';
+
 // Cubit for managing state
 class BotsCubit extends Cubit<List<VirtBot>> {
   static const String boxName = 'botsbox';
@@ -32,24 +35,135 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   late final Future<void> ready;
   String? lastError;
   Future<void> _tail = Future.value();
-  BotsCubit(BuildContext ctx, {PluginRepository? plugins, BotRuntime? runtime})
-    : plugins = plugins ?? ctx.read<PluginRepository>(),
-      super([]) {
+  final BotRunPreferences? _runPreferences;
+  final _awaitingRestore = <String>{};
+  Set<String> _runningBots = {};
+  AppLifecycleListener? _lifecycle;
+  bool _restoring = false;
+  bool _closing = false;
+
+  BotsCubit(
+    BuildContext ctx, {
+    PluginRepository? plugins,
+    BotRuntime? runtime,
+    BotRunPreferences? runPreferences,
+  }) : plugins = plugins ?? ctx.read<PluginRepository>(),
+       _runPreferences = runPreferences,
+       super([]) {
     this.runtime =
         runtime ?? BotRuntime(DesktopBackgroundPlatform(), this.plugins);
     this.runtime.addListener(_runtimeChanged);
     ready = _initBox();
+    if (_runPreferences != null) {
+      _lifecycle = AppLifecycleListener(onResume: _restoreOnResume);
+      _restoreOnResume();
+    }
   }
   void _runtimeChanged() {
     if (!isClosed) emit(List<VirtBot>.of(state));
   }
 
+  String _runKey(VirtBot bot) =>
+      '${bot.key}:${BotSetup.fingerprint(bot.token)}';
+
+  Future<void> _setRunIntent(VirtBot bot, bool running) async {
+    final preferences = _runPreferences;
+    if (preferences == null || bot.resumeOnLaunch == running) return;
+    final key = _runKey(bot);
+    final next = {..._runningBots};
+    if (running) {
+      next.add(key);
+    } else {
+      next.remove(key);
+    }
+    await preferences.write(next);
+    _runningBots = next;
+    _awaitingRestore.remove(key);
+    bot.resumeOnLaunch = running;
+  }
+
+  Future<void> _clearRunIntents() async {
+    if (_runningBots.isEmpty) return;
+    await _runPreferences!.write({});
+    _runningBots = {};
+    _awaitingRestore.clear();
+    for (final bot in state) {
+      bot.resumeOnLaunch = false;
+    }
+  }
+
+  void _restoreOnResume() {
+    if (!_restoring && !_closing) unawaited(_restoreForegroundBots());
+  }
+
+  // An existing foreground service can keep restoring bots after the activity
+  // closes. Only a resumed activity can start a fresh service.
+  bool get _canRestore =>
+      runtime.activeCount > 0 ||
+      WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed;
+
+  Future<void> _restoreForegroundBots() async {
+    _restoring = true;
+    try {
+      await ready;
+      if (_awaitingRestore.isEmpty) return;
+      for (final bot in state) {
+        if (_closing || !_canRestore) break;
+        await _mutate(() async {
+          if (_closing || !_canRestore || !bot.isInBox) return;
+          final key = _runKey(bot);
+          if (!_awaitingRestore.remove(key) || bot.active) return;
+          try {
+            await runtime.start(bot);
+          } catch (_) {
+            if (!_canRestore) {
+              _awaitingRestore.add(key);
+              return;
+            }
+            bot.runtimeError =
+                'Automatic start failed. Check the bot and try again.';
+            emit(List<VirtBot>.of(state));
+          }
+        });
+      }
+    } catch (_) {
+      if (!_closing) {
+        lastError = 'Saved bots could not be restored. Check local storage.';
+        emit(List<VirtBot>.of(state));
+      }
+    } finally {
+      _restoring = false;
+    }
+  }
+
+  Future<void> _startRequested(VirtBot bot) async {
+    final wasEnabled = bot.resumeOnLaunch;
+    await _setRunIntent(bot, true);
+    try {
+      await runtime.start(bot);
+    } catch (_) {
+      if (!wasEnabled && !bot.active) await _setRunIntent(bot, false);
+      emit(List<VirtBot>.of(state));
+      rethrow;
+    }
+  }
+
   Future<void> toggle(VirtBot bot) => _mutate(() async {
-    if (bot.active) {
+    if (!state.contains(bot) || !bot.isInBox) {
+      throw const PluginException('This bot is no longer available.');
+    }
+    if (bot.active || bot.resumeOnLaunch) {
+      await _setRunIntent(bot, false);
       await runtime.stop(bot);
       return;
     }
-    await runtime.start(bot);
+    await _startRequested(bot);
+  });
+
+  Future<void> stopAll() => _mutate(() async {
+    await _clearRunIntents();
+    await runtime.stopAll();
+    emit(List<VirtBot>.of(state));
   });
 
   Future<void> retryBot(VirtBot bot) => _mutate(() async {
@@ -57,7 +171,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       throw const PluginException('This bot is no longer available.');
     }
     await runtime.stop(bot);
-    await runtime.start(bot);
+    await _startRequested(bot);
   });
 
   Future<void> upgradePlugin(
@@ -145,7 +259,33 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       }
       lastError = 'Bot settings storage could not be loaded.';
     }
+    final preferences = _runPreferences;
+    if (preferences != null) {
+      try {
+        final saved = await preferences.read();
+        for (final bot in bots) {
+          final key = _runKey(bot);
+          if (saved.contains(key)) {
+            _runningBots.add(key);
+            _awaitingRestore.add(key);
+            bot.resumeOnLaunch = true;
+          }
+        }
+      } catch (_) {
+        lastError = 'Automatic start preferences could not be loaded.';
+      }
+    }
+    await _publishBots(bots);
+  }
+
+  Future<void> _publishBots(List<VirtBot> bots) async {
     emit(bots);
+    try {
+      await runtime.setTotalBots(bots.length);
+    } catch (_) {
+      lastError = 'The running-bot notification could not be updated.';
+      emit(List<VirtBot>.of(state));
+    }
   }
 
   Future<T> _mutate<T>(Future<T> Function() operation) {
@@ -242,7 +382,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       if (template != null) await builder.remove(builderId);
       rethrow;
     }
-    emit([...state, bot]);
+    await _publishBots([...state, bot]);
   });
 
   // Persist plugin preferences independently of initial credentials.
@@ -342,17 +482,18 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   void add(VirtBot bot) async {
     await _mutate(() async {
       await _box!.add(bot);
-      emit([...state, bot]);
+      await _publishBots([...state, bot]);
     });
   }
 
   // Remove a bot from the list and persist it
   Future<void> remove(VirtBot bot) => _mutate(() async {
+    await _setRunIntent(bot, false);
     await runtime.stop(bot);
     final key = bot.key;
     await _box!.delete(key);
     final updatedList = List<VirtBot>.from(state)..remove(bot);
-    emit(updatedList);
+    await _publishBots(updatedList);
     try {
       await runtime.forget(bot);
       await plugins.removeSetup(key);
@@ -401,6 +542,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
 
   // Reset the list and persist it
   Future<void> reset() => _mutate(() async {
+    await _clearRunIntents();
     for (final bot in state) {
       await runtime.stop(bot);
       final key = bot.key;
@@ -409,7 +551,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       await plugins.removeSetup(key);
       await BuilderStore.shared.remove(builderBotId(bot.token));
     }
-    emit([]);
+    await _publishBots([]);
   });
 
   // Other methods
@@ -482,7 +624,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
           bots.add(bot);
         }
         final updatedList = List<VirtBot>.from(state)..addAll(bots);
-        emit(updatedList);
+        await _publishBots(updatedList);
       });
     } catch (err) {
       lastError = 'The bot configuration could not be imported.';
@@ -510,6 +652,8 @@ class BotsCubit extends Cubit<List<VirtBot>> {
 
   @override
   Future<void> close() async {
+    _closing = true;
+    _lifecycle?.dispose();
     await ready;
     await _tail;
     runtime.removeListener(_runtimeChanged);

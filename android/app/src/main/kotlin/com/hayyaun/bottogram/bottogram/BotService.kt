@@ -14,10 +14,17 @@ import androidx.core.app.NotificationCompat
 
 /** Holds the user-started automation runtime, never another Flutter engine. */
 class BotService : Service() {
-    companion object { const val CHANNEL = "bot_runtime"; const val NOTICE = 8101; const val STOP = "bottogram.STOP_BOTS" }
+    companion object {
+        const val CHANNEL = "bot_runtime"
+        const val NOTICE = 8101
+        const val STOP = "bottogram.STOP_BOTS"
+        const val ACTIVE = "active"
+        const val TOTAL = "total"
+    }
     var running = false
         private set
-    private var count = 0
+    private var active = 0
+    private var total = 0
     private var explicitStop = false
     private var wakeLock: PowerManager.WakeLock? = null
     private val app get() = application as BottogramApplication
@@ -32,12 +39,16 @@ class BotService : Service() {
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP) {
-            app.stopBots { success -> if (success) stopExplicitly() else updateCount(count) }
+            app.stopBots { success -> if (success) stopExplicitly() }
             return START_NOT_STICKY
         }
-        count = intent?.getIntExtra("count", 0) ?: 0
-        // A service may not resurrect stopped bots or create an unowned engine.
-        if (count <= 0) { stopSelf(); return START_NOT_STICKY }
+        active = intent?.getIntExtra(ACTIVE, 0) ?: 0
+        total = intent?.getIntExtra(TOTAL, 0) ?: 0
+        // Startup can hold the service while the first bot connects.
+        if (total <= 0 || active !in 0..total) {
+            stopSelf()
+            return START_NOT_STICKY
+        }
         try {
             if (Build.VERSION.SDK_INT >= 34) startForeground(NOTICE, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
             else startForeground(NOTICE, notification())
@@ -48,16 +59,17 @@ class BotService : Service() {
             }
             running = true; app.service = this; app.stateChanged()
         } catch (_: Exception) { stopSelf() }
-        // After process death, reboot or force-stop the user explicitly starts
-        // again. Persisted automation progress survives; active state does not.
+        // A new Flutter engine restores saved starts when the app is reopened.
         return START_NOT_STICKY
     }
-    fun updateCount(value: Int) {
-        if (value <= 0) { stopExplicitly(); return }
-        count = value
+    fun updateCounts(active: Int, total: Int) {
+        require(total > 0 && active in 0..total)
+        this.active = active
+        this.total = total
         getSystemService(NotificationManager::class.java).notify(NOTICE, notification())
     }
     fun stopExplicitly() {
+        if (explicitStop) return
         explicitStop = true
         running = false
         if (app.service === this) app.service = null
@@ -75,18 +87,26 @@ class BotService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_bot_service)
-            .setContentTitle("Bottogram is running")
-            .setContentText("$count ${if (count == 1) "bot" else "bots"} started · tap to open")
-            .setContentIntent(open).setOngoing(true).setOnlyAlertOnce(true)
+            .setContentTitle("Telegram bots")
+            .setContentText("$active of $total ${if (total == 1) "bot" else "bots"} active")
+            .setProgress(total, active, false)
+            .setColor(0xFF006F68.toInt())
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
+            .setContentIntent(open)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setShowWhen(false)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .addAction(0, "Stop bots", stop).build()
     }
     override fun onDestroy() {
+        val currentService = app.service === this
         running = false
-        if (app.service === this) app.service = null
+        if (currentService) app.service = null
         if (wakeLock?.isHeld == true) wakeLock?.release()
         wakeLock = null
-        if (!explicitStop) app.stopBots { }
+        if (currentService && !explicitStop) app.serviceEnded()
         app.stateChanged(); super.onDestroy()
     }
 }

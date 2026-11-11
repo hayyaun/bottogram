@@ -151,8 +151,16 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
     run_url = f"{source}/actions/runs/{run['id']}"
     return f"""Bottogram {version} runs Telegram bots on your own device.
 
-This release includes plugin-defined commands, Telegram Mini Apps, per-bot SQLite
-storage, bot templates, and the Persian Inshopa storefront plugin.
+On Android, the foreground notification shows active and total bots. Reopening
+Bottogram after a process kill or device restart resumes the bots left enabled.
+Use Stop bots to keep them stopped on the next launch.
+
+Plugin bots can transfer their settings and credentials by QR code between
+devices with the exact plugin package installed. Treat the QR code as a
+credential. Approved plugin updates restart bots that were already running.
+
+Bottogram includes Telegram Mini Apps, per-bot SQLite storage, bot templates, and
+the Persian Inshopa storefront plugin.
 
 ### Downloads
 
@@ -171,8 +179,9 @@ installer. Clean-machine compatibility is not established by CI.
 
 All five packages come from the same [successful main build]({run_url})
 (attempt {run['run_attempt']}) for [commit `{sha}`]({source}/commit/{sha}).
-Analysis, automated tests, native SQLite/template integration, macOS credential
-storage, and released native-library probes passed in that run.
+Analysis, automated tests, native SQLite/template integration, Android service
+continuity, macOS credential storage, and released native-library probes passed
+in that run.
 
 See the [build and distribution guide]({source}/blob/{sha}/docs/BUILD_ARTIFACTS.md)
 and [plugin authoring guide]({source}/blob/{sha}/docs/PLUGIN_AUTHORING.md).

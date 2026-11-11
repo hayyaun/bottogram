@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import '../plugins/repository.dart';
 import '../plugins/manifest.dart';
@@ -33,6 +34,7 @@ class BotRuntime extends ChangeNotifier {
   final Map<VirtBot, Map<String, FailurePresentation>> _failureDetails = {};
   Future<void> _tail = Future.value();
   bool _closed = false;
+  int _totalBots = 0;
   int get activeCount => _bots.where((bot) => bot.active).length;
   String? _firstErrorKey(VirtBot bot) {
     final keys = _errors[bot]?.keys;
@@ -65,6 +67,11 @@ class BotRuntime extends ChangeNotifier {
     return result;
   }
 
+  Future<void> setTotalBots(int count) => _queue(() async {
+    _totalBots = count;
+    if (activeCount > 0) await _sync();
+  });
+
   Future<void> start(VirtBot bot) => _queue(() async {
     if (bot.active) return;
     if (bot.setupError != null) throw PluginException(bot.setupError!);
@@ -79,7 +86,8 @@ class BotRuntime extends ChangeNotifier {
     // Clean up a previous session that ended unexpectedly before replacing it.
     await _stop(bot);
     try {
-      await lease.startService(activeCount + 1);
+      final active = activeCount;
+      await lease.startService(active, max(_totalBots, active + 1));
     } catch (_) {
       await _sync();
       rethrow;
@@ -328,8 +336,13 @@ class BotRuntime extends ChangeNotifier {
     if (id != null) await progress.removeInstance(id);
   }
 
-  Future<void> _sync() =>
-      activeCount == 0 ? lease.stopService() : lease.updateService(activeCount);
+  Future<void> _sync() {
+    final active = activeCount;
+    return active == 0
+        ? lease.stopService()
+        : lease.updateService(active, max(_totalBots, active));
+  }
+
   Future<void> close() async {
     await stopAll();
     await _tail;

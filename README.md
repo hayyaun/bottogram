@@ -61,8 +61,9 @@ uninstalling removes local data.
 Tap a bot card for its users and inbox; use its **Settings** gear for configuration.
 
 Bots need a network connection and a running Bottogram process. Android's
-foreground service supports background operation, but device shutdown, force-stop
-or OS termination can interrupt it. Reopen Bottogram and start the bots again.
+foreground service keeps bots running when the activity closes. Its ongoing
+notification shows active and total bots. After a device restart, force-stop,
+or process termination, reopen Bottogram to resume the bots you left enabled.
 Keep local data and exports private: they can contain bot tokens and conversations.
 
 ## Plugins

@@ -4,7 +4,8 @@ The [build workflow](../.github/workflows/build.yml) runs on pushes to `main`,
 pull requests targeting `main`, and manual dispatch. Analysis and unit/widget
 tests must pass before the four platform builds run. Packaged SQLite isolation
 and bot-template tests also run on a headless Android emulator, Linux under Xvfb,
-Windows, and both Intel and Apple silicon macOS runners. macOS additionally tests
+Windows, and both Intel and Apple silicon macOS runners. Android also tests the
+foreground service after the activity closes. macOS additionally tests
 native credential storage. Live
 Telegram/shop integration tests stay opt-in and receive no customer credentials
 in CI.

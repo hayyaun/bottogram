@@ -122,7 +122,7 @@ jobs:
             echo '::error::The runner cannot access /dev/kvm after udev processing completed.'
             exit 1
           fi
-      - name: Test packaged Android SQLite isolation
+      - name: Test Android SQLite isolation, templates, and background execution
         timeout-minutes: 30
         env:
           ANDROID_NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/28.2.13676358
@@ -141,6 +141,7 @@ jobs:
           script: |
             timeout 20m flutter test integration_test/sqlite_isolation_test.dart -d emulator-5554 --no-pub --reporter expanded
             timeout 20m flutter test integration_test/templates_test.dart -d emulator-5554 --no-pub --reporter expanded
+            timeout 10m flutter test integration_test/background_service_test.dart -d emulator-5554 --no-pub --reporter expanded
       # The action also stops its emulator on success and failure. Keep a bounded
       # cleanup step for cancellation or an interrupted action process.
       - name: Stop the disposable emulator

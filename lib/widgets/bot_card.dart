@@ -197,6 +197,8 @@ class _BotCardState extends State<BotCard> {
                     ? 'Configure plugin'
                     : bot.active
                     ? 'Stop bot'
+                    : bot.resumeOnLaunch
+                    ? 'Turn off auto-start'
                     : 'Start bot',
                 onPressed: _busy
                     ? null
@@ -214,6 +216,8 @@ class _BotCardState extends State<BotCard> {
                             ? Icons.tune_rounded
                             : bot.active
                             ? Icons.pause_rounded
+                            : bot.resumeOnLaunch
+                            ? Icons.stop_circle_outlined
                             : Icons.play_arrow_rounded,
                       ),
               ),

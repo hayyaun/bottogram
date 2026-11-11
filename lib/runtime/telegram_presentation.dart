@@ -347,23 +347,24 @@ class TelegramPresentationAction implements AutomationAction {
       if (list != null && thumbnails == null) data['items'] = projected;
       if (utf8.encode(jsonEncode(data)).length <= 1024) {
         final template = widget['html'] as String;
-        final html = thumbnails == null
-            ? template
+        final content = thumbnails == null
+            ? (html: template, data: data)
             : await embedWidgetRows(
                 template,
+                data,
                 projected,
                 await _loadThumbnails(thumbnails, items),
                 allowWebp: thumbnails['allowWebp'] == true,
               );
-        if (html != null) {
+        if (content != null) {
           await context.interactions.widget(
             {
               ...event,
               'editWidget': widget['editOnWidget'] == true,
               'replaceWidget': thumbnails != null,
             },
-            html,
-            data,
+            content.html,
+            content.data,
             _truncate(text, 1024),
             _markup(rows),
           );

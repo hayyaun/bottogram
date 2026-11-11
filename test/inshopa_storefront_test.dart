@@ -143,14 +143,14 @@ class ThumbnailHttp extends FakeHttp implements PhotoTransport {
     final seed = ids.indexOf(id);
     if (id == otherId) return Uint8List.fromList([255, 216, 255, 217]);
     if (seed == 6) {
-      final photo = image.Image(width: 84, height: 64);
+      final photo = image.Image(width: 168, height: 128);
       image.fill(photo, color: image.ColorRgb8(245, 245, 245));
       image.fillRect(
         photo,
-        x1: 12,
-        y1: 20,
-        x2: 72,
-        y2: 44,
+        x1: 24,
+        y1: 40,
+        x2: 144,
+        y2: 88,
         color: image.ColorRgb8(36, 46, 68),
       );
       return image.encodeJpg(photo);
@@ -254,17 +254,29 @@ void main() {
           ZLibEncoder(level: 9).convert(bytes).length,
           lessThanOrEqualTo(4096),
         );
-        final rows =
-            (jsonDecode(
-                      RegExp(
-                        r'const products = (\[.*\]);',
-                      ).firstMatch(html)!.group(1)!,
-                    )
-                    as List)
-                .cast<Map<String, dynamic>>();
+        final chatData = payload['chat_data'] as String;
+        expect(utf8.encode(chatData).length, lessThanOrEqualTo(1024));
+        final state = jsonDecode(chatData) as Map<String, dynamic>;
+        final packed = state['_bottogramRows'] as List?;
+        final List<Map<String, dynamic>> rows;
+        if (packed == null) {
+          final match = RegExp(r'const products = (\[.*\]);').firstMatch(html);
+          rows = (jsonDecode(match!.group(1)!) as List).cast();
+        } else {
+          final match = RegExp(r'_bottogramRows \|\| \[\], (\[.*\])\);')
+              .firstMatch(html);
+          final photos = jsonDecode(match!.group(1)!) as List;
+          rows = [
+            for (final (index, row) in packed.indexed)
+              {
+                ...row as Map<String, dynamic>,
+                if (photos[index] != null) 'thumbnail': photos[index],
+              },
+          ];
+        }
         for (final url
             in rows.map((row) => row['thumbnail']).whereType<String>()) {
-          expect(thumbnailSize(url), lessThanOrEqualTo(64));
+          expect(thumbnailSize(url), lessThanOrEqualTo(128));
         }
         return rows;
       }
@@ -304,8 +316,8 @@ void main() {
       final sizes = secondRows
           .map((row) => thumbnailSize(row['thumbnail'] as String))
           .toList();
-      expect(sizes.first, 64);
-      expect(sizes.skip(1), anyElement(lessThan(64)));
+      expect(sizes.first, 128);
+      expect(sizes.skip(1), everyElement(lessThanOrEqualTo(64)));
       expect(secondRows.last['price'], '19000011');
       expect(jsonDecode(second['chat_data'])['previous'], '1');
       expect(jsonDecode(second['chat_data'])['next'], isEmpty);

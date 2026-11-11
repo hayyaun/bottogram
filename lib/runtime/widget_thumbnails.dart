@@ -9,7 +9,11 @@ import 'ports.dart';
 
 const widgetRowsSlot = '/*widget-rows*/[]';
 const maxWidgetRows = 10;
-const _maxPreviewSize = 64;
+const _previewSize = 64;
+const _highResolutionSize = 128;
+const _widgetRowsDataKey = '_bottogramRows';
+
+typedef WidgetRows = ({String html, Json data});
 
 bool widgetHtmlFits(String html) {
   final bytes = utf8.encode(html);
@@ -18,22 +22,46 @@ bool widgetHtmlFits(String html) {
       ZLibEncoder(level: 9).convert(bytes).length <= 4096;
 }
 
-Future<String?> embedWidgetRows(
+Future<WidgetRows?> embedWidgetRows(
   String html,
+  Json data,
   List<Json> rows,
   List<Uint8List?> sources, {
   bool allowWebp = false,
 }) => Isolate.run(
-  () => _embedWidgetRows(html, rows, sources, allowWebp: allowWebp),
+  () => _embedWidgetRows(html, data, rows, sources, allowWebp: allowWebp),
 );
 
-String? _embedWidgetRows(
+WidgetRows? _embedWidgetRows(
   String html,
+  Json data,
   List<Json> rows,
   List<Uint8List?> sources, {
   required bool allowWebp,
 }) {
+  final previews = sources
+      .map((source) => _preview(source, allowWebp: allowWebp))
+      .toList(growable: false);
+  final hasHighResolution = previews.any(
+    (photo) => photo?.highResolution != null,
+  );
+  final packedData = {...data, _widgetRowsDataKey: rows};
+  final usePackedData =
+      hasHighResolution &&
+      !data.containsKey(_widgetRowsDataKey) &&
+      utf8.encode(jsonEncode(packedData)).length <= 1024;
+  final widgetData = usePackedData ? packedData : data;
+
   String insert(List<String?> images) {
+    if (usePackedData) {
+      final photos = jsonEncode(images);
+      return html.replaceFirst(
+        widgetRowsSlot,
+        '''((rows, photos) => rows.map((row, i) =>
+  photos[i] ? {...row, thumbnail: photos[i]} : row
+))(JSON.parse(TelegramWidget.chatData || '{}').$_widgetRowsDataKey || [], $photos)''',
+      );
+    }
     final encoded = jsonEncode([
       for (final (index, row) in rows.indexed)
         {
@@ -47,19 +75,28 @@ String? _embedWidgetRows(
 
   final plain = insert([]);
   if (!widgetHtmlFits(plain)) return null;
-  final previews = sources.map(_preview).toList(growable: false);
-  if (previews.every((preview) => preview == null)) return plain;
+  if (previews.every((preview) => preview == null)) {
+    return (html: plain, data: widgetData);
+  }
 
   final levels = <List<String?>>[];
   String? fitted;
   for (final (size, quality, format) in [
-    (_maxPreviewSize, 62, 'jpeg'),
-    if (allowWebp) (_maxPreviewSize, 65, 'webp'),
-    (_maxPreviewSize, 46, 'jpeg'),
+    if (hasHighResolution) ...[
+      (_highResolutionSize, 50, 'webp'),
+      (_highResolutionSize, 20, 'webp'),
+    ],
+    (_previewSize, 62, 'jpeg'),
+    if (allowWebp) (_previewSize, 65, 'webp'),
+    if (hasHighResolution) ...[
+      (_highResolutionSize, 5, 'webp'),
+      (_highResolutionSize, 2, 'webp'),
+    ],
+    (_previewSize, 46, 'jpeg'),
     if (allowWebp) ...[
-      (_maxPreviewSize, 45, 'webp'),
-      (_maxPreviewSize, 35, 'webp'),
-      (_maxPreviewSize, 25, 'webp'),
+      (_previewSize, 45, 'webp'),
+      (_previewSize, 35, 'webp'),
+      (_previewSize, 25, 'webp'),
       (48, 55, 'webp'),
     ],
     (48, 44, 'jpeg'),
@@ -72,11 +109,21 @@ String? _embedWidgetRows(
   ]) {
     final images = previews.map((preview) {
       if (preview == null) return null;
-      final resized = size == _maxPreviewSize
-          ? preview
-          : _resize(preview, size);
+      final highResolution = size == _highResolutionSize
+          ? preview.highResolution
+          : null;
+      final resized = size >= _previewSize
+          ? highResolution ?? preview.standard
+          : _resize(preview.standard, size);
       final bytes = format == 'webp'
-          ? image.encodeWebP(resized, lossless: false, quality: quality)
+          ? image.encodeWebP(
+              resized,
+              lossless: false,
+              quality: size == _highResolutionSize && highResolution == null
+                  ? 35
+                  : quality,
+              method: highResolution == null ? 4 : 6,
+            )
           : image.encodeJpg(
               resized,
               quality: quality,
@@ -122,10 +169,13 @@ String? _embedWidgetRows(
       images[index] = original;
     }
   }
-  return best;
+  return (html: best, data: widgetData);
 }
 
-image.Image? _preview(Uint8List? bytes) {
+({image.Image standard, image.Image? highResolution})? _preview(
+  Uint8List? bytes, {
+  required bool allowWebp,
+}) {
   if (bytes == null) return null;
   try {
     final decoder = image.JpegDecoder(maxPixels: 4096 * 4096);
@@ -133,7 +183,15 @@ image.Image? _preview(Uint8List? bytes) {
     if (info == null || info.width * info.height > 4096 * 4096) return null;
     final source = decoder.decodeFrame(0);
     if (source == null) return null;
-    return _resize(source, _maxPreviewSize)..exif = image.ExifData();
+    return (
+      standard: _resize(source, _previewSize)..exif = image.ExifData(),
+      highResolution:
+          allowWebp &&
+              (source.width >= _highResolutionSize ||
+                  source.height >= _highResolutionSize)
+          ? (_resize(source, _highResolutionSize)..exif = image.ExifData())
+          : null,
+    );
   } catch (_) {
     return null;
   }

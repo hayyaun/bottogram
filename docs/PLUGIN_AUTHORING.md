@@ -654,7 +654,10 @@ To show photos in a widget list, declare the photo source under
 widget script as an array expression. Bottogram fills the array from the
 `list.data` bindings and adds a resized JPEG data URL as `thumbnail` when
 available. Set `widget.thumbnails.allowWebp` to `true` to also allow WebP
-when choosing a quality and resolution that fit the widget limit. To look up extra fields per row, declare `list.lookup` with a GET
+when choosing a quality and resolution that fit the widget limit. With WebP
+enabled, Bottogram can use images up to 128 px and include row values in
+`chat_data` when they fit its byte limit. To look up extra fields per row,
+declare `list.lookup` with a GET
 `request`, URL path `parameter` and `itemIdPath`. Its response is available
 under `item.detail`. An optional `minimum` computes the lowest nonnegative
 number in a response list. Bottogram packs up to ten rows, keeps them available

@@ -223,7 +223,7 @@ Mini Apps. Its JSON uses generic `telegram.command.v2`, `telegram.reply.v2`, and
 the optional `telegram.menuButton` configuration. It does not request a catalog
 for these commands. Website authentication and sessions remain in Telegram's
 browser and Inshopa; no buyer scope, buyer account API or Inshopa change is added.
-The bundled [Inshopa 0.8.6 package](../examples/plugins/inshopa.storefront.0.8.6.bottogram-plugin.json)
+The bundled [Inshopa 0.8.7 package](../examples/plugins/inshopa.storefront.0.8.7.bottogram-plugin.json)
 adds HTML widgets and product broadcasts. See [Storefront navigation](STOREFRONT_NAVIGATION.md)
 for client verification.
 

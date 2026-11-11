@@ -334,6 +334,35 @@ Inline actions and references can appear in the same list. Each occurrence
 must have a unique ID within its automation and must meet that automation's
 trigger and configuration rules. References reuse the full definition.
 
+### Shared buttons and keyboard rows
+
+Declare reusable definitions by ID in `sharedButtons` and
+`sharedKeyboardRows`, with up to 64 entries in each map.
+
+```json
+{
+  "sharedButtons": {
+    "my-orders": {
+      "text": "My orders",
+      "webApp": {"originField": "storefrontUrl", "path": "/orders"}
+    }
+  },
+  "sharedKeyboardRows": {
+    "orders-and-support": [
+      {"ref": "my-orders"},
+      {"text": "Support", "callback": "support"}
+    ]
+  }
+}
+```
+
+In `telegram.present.v1`, both `keyboard` and `list.keyboard` can use a row
+reference such as `[{"ref": "orders-and-support"}]` or a button reference
+such as `[[{"ref": "my-orders"}]]`. The same syntax works in
+`telegram.reply.v2`'s `inlineKeyboard` for Mini App buttons. A named row
+can contain inline buttons and button references. Each expanded keyboard
+must follow the limits and destination rules of the action that uses it.
+
 ### Scheduled API notifications
 
 Poll triggers use an interval from 30 to 86,400 seconds and explicitly choose
@@ -645,7 +674,7 @@ are checked when a command or button is used.
 - `telegram.status.v1` can report the current destination posting permissions and a
   boolean plugin setting from an admin-only interaction.
 
-See the [Inshopa 0.8.6 package](../examples/plugins/inshopa.storefront.0.8.6.bottogram-plugin.json)
+See the [Inshopa 0.8.7 package](../examples/plugins/inshopa.storefront.0.8.7.bottogram-plugin.json)
 for complete declarations, including a Telegram deep link generated from the
 bot's username and a same-origin Mini App button with a bound path segment.
 

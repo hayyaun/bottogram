@@ -47,46 +47,48 @@ void _buttons(dynamic raw, {required bool channel}) {
       AutomationRegistry.invalid();
     }
     for (final button in row.map(AutomationRegistry.object)) {
-      AutomationRegistry.keys(button, {
-        'text',
-        'when',
-        'unless',
-        'callback',
-        'url',
-        'deepLink',
-        'webApp',
-      });
-      _template(button['text'], 150);
-      if (button['when'] != null) AutomationRegistry.path(button['when']);
-      if (button['unless'] != null) AutomationRegistry.path(button['unless']);
-      final types = [
-        'callback',
-        'url',
-        'deepLink',
-        'webApp',
-      ].where(button.containsKey).toList();
-      if (types.length != 1 ||
-          channel && {'callback', 'webApp'}.contains(types.single)) {
+      validatePresentationButton(button, channel: channel);
+    }
+  }
+}
+
+void validatePresentationButton(Json button, {bool channel = false}) {
+  AutomationRegistry.keys(button, {
+    'text',
+    'when',
+    'unless',
+    'callback',
+    'url',
+    'deepLink',
+    'webApp',
+  });
+  _template(button['text'], 150);
+  if (button['when'] != null) AutomationRegistry.path(button['when']);
+  if (button['unless'] != null) AutomationRegistry.path(button['unless']);
+  final types = [
+    'callback',
+    'url',
+    'deepLink',
+    'webApp',
+  ].where(button.containsKey).toList();
+  if (types.length != 1 ||
+      channel && {'callback', 'webApp'}.contains(types.single)) {
+    AutomationRegistry.invalid();
+  }
+  switch (types.single) {
+    case 'callback':
+    case 'deepLink':
+      _template(button[types.single], 150);
+    case 'url':
+      final url = Uri.tryParse(AutomationRegistry.string(button['url'], 2048));
+      if (url == null ||
+          url.scheme != 'https' ||
+          url.host.isEmpty ||
+          url.userInfo.isNotEmpty) {
         AutomationRegistry.invalid();
       }
-      switch (types.single) {
-        case 'callback':
-        case 'deepLink':
-          _template(button[types.single], 150);
-        case 'url':
-          final url = Uri.tryParse(
-            AutomationRegistry.string(button['url'], 2048),
-          );
-          if (url == null ||
-              url.scheme != 'https' ||
-              url.host.isEmpty ||
-              url.userInfo.isNotEmpty) {
-            AutomationRegistry.invalid();
-          }
-        case 'webApp':
-          validateWebAppTarget(button['webApp'], allowArgument: true);
-      }
-    }
+    case 'webApp':
+      validateWebAppTarget(button['webApp'], allowArgument: true);
   }
 }
 

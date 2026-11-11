@@ -23,6 +23,91 @@ Iterable<Json> _listRequests(Json config) sync* {
   if (config['lookup'] != null) yield config['lookup']['request'] as Json;
 }
 
+/// Resolves manifest-local keyboard fragments before component validation.
+class _KeyboardReferences {
+  _KeyboardReferences(dynamic rawButtons, dynamic rawRows) {
+    for (final entry in _definitions(rawButtons).entries) {
+      final button = AutomationRegistry.object(entry.value);
+      validatePresentationButton(button);
+      _buttons[entry.key] = button;
+    }
+    for (final entry in _definitions(rawRows).entries) {
+      final row = _expandRow(entry.value);
+      for (final button in row) {
+        validatePresentationButton(button);
+      }
+      _rows[entry.key] = row;
+    }
+  }
+
+  final _buttons = <String, Json>{};
+  final _rows = <String, List<Json>>{};
+
+  static Json _definitions(dynamic raw) {
+    if (raw == null) return const {};
+    final definitions = AutomationRegistry.object(raw);
+    if (definitions.length > 64) AutomationRegistry.invalid();
+    for (final name in definitions.keys) {
+      AutomationRegistry.identifier(name);
+    }
+    return definitions;
+  }
+
+  static T _reference<T>(Json ref, Map<String, T> definitions, String kind) {
+    AutomationRegistry.keys(ref, {'ref'});
+    final name = ref['ref'];
+    AutomationRegistry.identifier(name);
+    final definition = definitions[name];
+    if (definition == null) {
+      throw FormatException('Unknown shared $kind: $name.');
+    }
+    return definition;
+  }
+
+  List<Json> _expandRow(dynamic raw) {
+    if (raw is! List || raw.isEmpty || raw.length > 8) {
+      AutomationRegistry.invalid();
+    }
+    return raw.map(AutomationRegistry.object).map((button) {
+      if (!button.containsKey('ref')) return button;
+      return _reference(button, _buttons, 'button');
+    }).toList();
+  }
+
+  List<List<Json>> _expandKeyboard(dynamic raw) {
+    if (raw is! List || raw.isEmpty || raw.length > 8) {
+      AutomationRegistry.invalid();
+    }
+    return [
+      for (final row in raw)
+        if (row is Json)
+          _reference(row, _rows, 'keyboard row')
+        else
+          _expandRow(row),
+    ];
+  }
+
+  Json expand(String type, Json config) {
+    if (type == 'telegram.reply.v2') {
+      return {
+        ...config,
+        'inlineKeyboard': _expandKeyboard(config['inlineKeyboard']),
+      };
+    }
+    if (type == presentationAction) {
+      final list = config['list'];
+      return {
+        ...config,
+        if (config['keyboard'] != null)
+          'keyboard': _expandKeyboard(config['keyboard']),
+        if (list is Json)
+          'list': {...list, 'keyboard': _expandKeyboard(list['keyboard'])},
+      };
+    }
+    return config;
+  }
+}
+
 class ComponentRegistration<T> {
   const ComponentRegistration(
     this.validate,
@@ -204,7 +289,11 @@ class AutomationRegistry {
     }),
   );
 
-  ComponentDefinition _component(dynamic raw, {required bool trigger}) {
+  ComponentDefinition _component(
+    dynamic raw,
+    _KeyboardReferences keyboards, {
+    required bool trigger,
+  }) {
     final c = object(raw);
     keys(
       c,
@@ -213,7 +302,7 @@ class AutomationRegistry {
           : {'id', 'type', 'config', 'errorMap'},
     );
     final type = string(c['type'], 100);
-    final config = object(c['config']);
+    final config = keyboards.expand(type, object(c['config']));
     final registration = trigger ? triggers[type] : actions[type];
     if (registration == null) {
       throw FormatException(
@@ -230,12 +319,15 @@ class AutomationRegistry {
     );
   }
 
-  Map<String, ComponentDefinition> _sharedActions(dynamic raw) {
+  Map<String, ComponentDefinition> _sharedActions(
+    dynamic raw,
+    _KeyboardReferences keyboards,
+  ) {
     if (raw == null) return const {};
     if (raw is! List || raw.length > 64) invalid();
     final shared = <String, ComponentDefinition>{};
     for (final value in raw) {
-      final action = _component(value, trigger: false);
+      final action = _component(value, keyboards, trigger: false);
       if (shared.containsKey(action.id)) {
         throw const FormatException('Shared action IDs must be unique.');
       }
@@ -247,9 +339,12 @@ class AutomationRegistry {
   ComponentDefinition _resolveAction(
     dynamic raw,
     Map<String, ComponentDefinition> shared,
+    _KeyboardReferences keyboards,
   ) {
     final action = object(raw);
-    if (!action.containsKey('ref')) return _component(action, trigger: false);
+    if (!action.containsKey('ref')) {
+      return _component(action, keyboards, trigger: false);
+    }
     keys(action, {'ref', 'id'});
     identifier(action['ref']);
     final reference = action['ref'] as String;
@@ -267,8 +362,14 @@ class AutomationRegistry {
     );
   }
 
-  List<AutomationDefinition> parse(dynamic raw, {dynamic sharedActions}) {
-    final shared = _sharedActions(sharedActions);
+  List<AutomationDefinition> parse(
+    dynamic raw, {
+    dynamic sharedActions,
+    dynamic sharedButtons,
+    dynamic sharedKeyboardRows,
+  }) {
+    final keyboards = _KeyboardReferences(sharedButtons, sharedKeyboardRows);
+    final shared = _sharedActions(sharedActions, keyboards);
     if (raw is! List || raw.isEmpty || raw.length > 16) invalid();
     final ids = <String>{};
     final commands = <String>{};
@@ -280,7 +381,7 @@ class AutomationRegistry {
         identifier(a['id']);
         if (!ids.add(a['id'])) invalid();
         if (a['enabledBySetting'] != null) identifier(a['enabledBySetting']);
-        final t = _component(a['trigger'], trigger: true);
+        final t = _component(a['trigger'], keyboards, trigger: true);
         if (t.type == interactionTrigger) {
           for (final route in interactionRoutes(t.config)) {
             routes.add((route, t.config['audience'] as String?));
@@ -299,7 +400,7 @@ class AutomationRegistry {
         if (list is! List || list.isEmpty || list.length > 16) invalid();
         final actionIds = <String>{};
         final parsed = [
-          for (final value in list) _resolveAction(value, shared),
+          for (final value in list) _resolveAction(value, shared, keyboards),
         ];
         String? destinationField;
         for (final action in parsed) {

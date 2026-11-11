@@ -70,6 +70,22 @@ Json actionConfig(Json package) =>
 Json buttonTarget(Json package) =>
     actionConfig(package)['inlineKeyboard'][0][0]['webApp'] as Json;
 
+Json sharedKeyboardPackage() {
+  final package = arbitraryPackage();
+  package['sharedButtons'] = {
+    'passes': actionConfig(package)['inlineKeyboard'][0][0],
+  };
+  package['sharedKeyboardRows'] = {
+    'pass-row': [
+      {'ref': 'passes'},
+    ],
+  };
+  actionConfig(package)['inlineKeyboard'] = [
+    {'ref': 'pass-row'},
+  ];
+  return package;
+}
+
 class MarkupTelegram extends FakeTelegram {
   Json? markup;
   @override
@@ -83,7 +99,13 @@ void main() {
   test(
     'an unrelated plugin owns aliases, copy, field names, routes and menu',
     () async {
-      final manifest = parse(arbitraryPackage());
+      final package = sharedKeyboardPackage();
+      final automation = package['automations'][0] as Json;
+      package['sharedActions'] = [automation['actions'].single];
+      automation['actions'] = [
+        {'ref': 'show-tickets'},
+      ];
+      final manifest = parse(package);
       expect(manifest.telegram?['menuButton']['text'], 'Open event');
       final definition = manifest.automations.single;
       final telegram = MarkupTelegram();
@@ -149,6 +171,36 @@ void main() {
       }
     },
   );
+
+  test('shared keyboard references keep action validation in force', () {
+    final inline = sharedKeyboardPackage();
+    actionConfig(inline)['inlineKeyboard'] = [
+      [
+        {'ref': 'passes'},
+      ],
+    ];
+    expect(
+      parse(inline).automations.single.actions.single.config,
+      actionConfig(arbitraryPackage()),
+    );
+
+    final mutations = <void Function(Json)>[
+      (p) => actionConfig(p)['inlineKeyboard'][0]['ref'] = 'missing-row',
+      (p) => p['sharedKeyboardRows']['pass-row'][0]['ref'] = 'missing-button',
+      (p) => actionConfig(p)['inlineKeyboard'][0]['text'] = 'Override',
+      (p) => p['sharedKeyboardRows']['pass-row'][0]['ref'] = 'pass-row',
+      (p) => p['sharedButtons']['passes'] = {
+        'text': 'View passes',
+        'callback': 'passes',
+      },
+      (p) => p['sharedButtons']['passes']['webApp']['originField'] = 'missing',
+    ];
+    for (final mutate in mutations) {
+      final package = jsonDecode(jsonEncode(sharedKeyboardPackage())) as Json;
+      mutate(package);
+      expect(() => parse(package), throwsA(isA<PluginException>()));
+    }
+  });
 
   test(
     'invalid URL references, undeclared keys and non-private Mini Apps fail at import',

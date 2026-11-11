@@ -167,6 +167,8 @@ class PluginManifest {
       'settings',
       'automations',
       'sharedActions',
+      'sharedButtons',
+      'sharedKeyboardRows',
       'errorMessages',
       'telegram',
     });
@@ -190,6 +192,8 @@ class PluginManifest {
         (!live &&
             (data.containsKey('automations') ||
                 data.containsKey('sharedActions') ||
+                data.containsKey('sharedButtons') ||
+                data.containsKey('sharedKeyboardRows') ||
                 data.containsKey('telegram')))) {
       reject(
         'This release supports setup-only plugins; live execution is not available yet.',
@@ -332,6 +336,8 @@ class PluginManifest {
         automations = registry.parse(
           data['automations'],
           sharedActions: data['sharedActions'],
+          sharedButtons: data['sharedButtons'],
+          sharedKeyboardRows: data['sharedKeyboardRows'],
         );
         if (data['telegram'] != null) {
           validateTelegramConfig(data['telegram']);

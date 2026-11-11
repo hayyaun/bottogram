@@ -3,7 +3,7 @@
   "hostApiMajor": 2,
   "id": "bottogram-plugin-inshopa",
   "name": "این شاپا",
-  "version": "0.8.6",
+  "version": "0.8.7",
   "executionStatus": "live",
   "description": "ویترین فارسی فروشگاه در تلگرام با مرور محصولات، پیگیری خرید، اعلان سفارش برای مدیر و معرفی محصولات تازه در کانال‌ها و گروه‌های انتخابی فروشگاه.",
   "requiresBotFields": [
@@ -46,6 +46,56 @@
       "helpText": "در نخستین بررسی، سفارش های پرداخت شده قبلی اعلان نمی شوند. پس از آن، سفارش های تازه مشاهده شده با وضعیت پرداخت شده برای مدیر ارسال می شوند."
     }
   ],
+  "sharedButtons": {
+    "show-products": {
+      "text": "مشاهده محصولات",
+      "callback": "catalog"
+    },
+    "my-orders": {
+      "text": "خریدهای من",
+      "webApp": {
+        "originField": "storefrontUrl",
+        "path": "/orders"
+      }
+    },
+    "support": {
+      "text": "پشتیبانی",
+      "callback": "support"
+    },
+    "seller-dashboard": {
+      "text": "پنل مدیریت این‌شاپا",
+      "url": "https://inshopa.ir/dashboard"
+    },
+    "open-shop": {
+      "text": "باز کردن فروشگاه",
+      "webApp": {
+        "originField": "storefrontUrl",
+        "path": "/"
+      }
+    }
+  },
+  "sharedKeyboardRows": {
+    "orders-and-support": [
+      {
+        "ref": "my-orders"
+      },
+      {
+        "ref": "support"
+      }
+    ],
+    "catalog-product": [
+      {
+        "text": "{{item.detail.minimum}} ریال · {{item.title}}",
+        "callback": "product:{{item.id}}",
+        "when": "item.detail.minimum"
+      },
+      {
+        "text": "{{item.title}}",
+        "callback": "product:{{item.id}}",
+        "unless": "item.detail.minimum"
+      }
+    ]
+  },
   "sharedActions": [
     {
       "id": "shop-profile",
@@ -158,23 +208,12 @@
             "keyboard": [
               [
                 {
-                  "text": "مشاهده محصولات",
-                  "callback": "catalog"
+                  "ref": "show-products"
                 }
               ],
-              [
-                {
-                  "text": "خریدهای من",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/orders"
-                  }
-                },
-                {
-                  "text": "پشتیبانی",
-                  "callback": "support"
-                }
-              ]
+              {
+                "ref": "orders-and-support"
+              }
             ],
             "widget": {
               "html": "<style>\nbody { margin: 12px; color: var(--tg-theme-text-color); text-align: right; }\nh2 { font-size: 23px; line-height: 1.2; margin: 0 0 8px; overflow-wrap: anywhere; }\np { line-height: 1.45; margin: 5px 0; overflow-wrap: anywhere; }\n.muted { color: var(--tg-theme-hint-color); }\n</style>\n<style>\n.hero { padding: 14px; border-radius: 14px; background: var(--tg-theme-secondary-bg-color); }\n.hero h2 { color: var(--tg-theme-accent-text-color); }\n</style>\n<div dir=\"rtl\" class=\"hero\">\n  <h2 id=\"shop\"></h2>\n  <p id=\"greeting\"></p>\n  <p id=\"intro\" class=\"muted\"></p>\n</div>\n<script>\nfunction draw() {\n  const data = JSON.parse(TelegramWidget.chatData || '{}');\n  document.getElementById('shop').textContent = data.shop || 'فروشگاه';\n  document.getElementById('greeting').textContent =\n    data.name ? data.name + ' جان، خوش اومدی!' : 'خوش اومدی!';\n  document.getElementById('intro').textContent =\n    data.intro || 'محصولات را ببین و هر وقت آماده بودی، خریدت را از همین‌جا شروع کن.';\n}\nTelegramWidget.onEvent('chatDataChanged', draw);\ndraw();\n</script>",
@@ -254,19 +293,9 @@
                   "callback": "catalog-text"
                 }
               ],
-              [
-                {
-                  "text": "خریدهای من",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/orders"
-                  }
-                },
-                {
-                  "text": "پشتیبانی",
-                  "callback": "support"
-                }
-              ]
+              {
+                "ref": "orders-and-support"
+              }
             ]
           }
         }
@@ -343,8 +372,7 @@
             "keyboard": [
               [
                 {
-                  "text": "پنل مدیریت این‌شاپا",
-                  "url": "https://inshopa.ir/dashboard"
+                  "ref": "seller-dashboard"
                 }
               ],
               [
@@ -355,23 +383,12 @@
               ],
               [
                 {
-                  "text": "مشاهده محصولات",
-                  "callback": "catalog"
+                  "ref": "show-products"
                 }
               ],
-              [
-                {
-                  "text": "خریدهای من",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/orders"
-                  }
-                },
-                {
-                  "text": "پشتیبانی",
-                  "callback": "support"
-                }
-              ]
+              {
+                "ref": "orders-and-support"
+              }
             ]
           }
         }
@@ -435,8 +452,7 @@
             "keyboard": [
               [
                 {
-                  "text": "پنل مدیریت این‌شاپا",
-                  "url": "https://inshopa.ir/dashboard"
+                  "ref": "seller-dashboard"
                 }
               ]
             ]
@@ -501,11 +517,7 @@
               ],
               [
                 {
-                  "text": "باز کردن فروشگاه",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/"
-                  }
+                  "ref": "open-shop"
                 }
               ]
             ],
@@ -526,18 +538,9 @@
                 }
               },
               "keyboard": [
-                [
-                  {
-                    "text": "{{item.detail.minimum}} ریال · {{item.title}}",
-                    "callback": "product:{{item.id}}",
-                    "when": "item.detail.minimum"
-                  },
-                  {
-                    "text": "{{item.title}}",
-                    "callback": "product:{{item.id}}",
-                    "unless": "item.detail.minimum"
-                  }
-                ]
+                {
+                  "ref": "catalog-product"
+                }
               ],
               "emptyText": "محصولی در این صفحه نیست.",
               "lookup": {
@@ -657,11 +660,7 @@
               ],
               [
                 {
-                  "text": "باز کردن فروشگاه",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/"
-                  }
+                  "ref": "open-shop"
                 }
               ]
             ],
@@ -682,18 +681,9 @@
                 }
               },
               "keyboard": [
-                [
-                  {
-                    "text": "{{item.detail.minimum}} ریال · {{item.title}}",
-                    "callback": "product:{{item.id}}",
-                    "when": "item.detail.minimum"
-                  },
-                  {
-                    "text": "{{item.title}}",
-                    "callback": "product:{{item.id}}",
-                    "unless": "item.detail.minimum"
-                  }
-                ]
+                {
+                  "ref": "catalog-product"
+                }
               ],
               "emptyText": "محصولی در این صفحه نیست.",
               "lookup": {
@@ -873,17 +863,12 @@
             "keyboard": [
               [
                 {
-                  "text": "خریدهای من",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/orders"
-                  }
+                  "ref": "my-orders"
                 }
               ],
               [
                 {
-                  "text": "مشاهده محصولات",
-                  "callback": "catalog"
+                  "ref": "show-products"
                 }
               ]
             ]
@@ -929,11 +914,7 @@
             "keyboard": [
               [
                 {
-                  "text": "خریدهای من",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/orders"
-                  }
+                  "ref": "my-orders"
                 }
               ],
               [
@@ -992,23 +973,12 @@
             "keyboard": [
               [
                 {
-                  "text": "مشاهده محصولات",
-                  "callback": "catalog"
+                  "ref": "show-products"
                 }
               ],
-              [
-                {
-                  "text": "خریدهای من",
-                  "webApp": {
-                    "originField": "storefrontUrl",
-                    "path": "/orders"
-                  }
-                },
-                {
-                  "text": "پشتیبانی",
-                  "callback": "support"
-                }
-              ]
+              {
+                "ref": "orders-and-support"
+              }
             ]
           }
         }

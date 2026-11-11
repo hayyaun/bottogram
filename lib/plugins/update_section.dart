@@ -59,8 +59,8 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                   const SizedBox(height: 12),
                   Text(
                     active
-                        ? 'This bot will keep running. The update will apply on its next normal Start. The queued selection is kept only for this app session; review it again if the app restarts.'
-                        : 'The update will apply to this stopped bot. It will not start the bot.',
+                        ? 'The bot will pause while the update is applied, then start again.'
+                        : 'The bot will stay stopped after the update.',
                   ),
                   const SizedBox(height: 12),
                   const Text(
@@ -96,7 +96,7 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(active ? 'Queue for next Start' : 'Apply update'),
+              child: Text(active ? 'Apply and restart' : 'Apply update'),
             ),
           ],
         ),
@@ -117,19 +117,14 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
 
   @override
   Widget build(BuildContext context) {
-    final bots = context.watch<BotsCubit>();
-    final pending = bots.pendingUpgradeFor(widget.bot);
     final candidates = context.watch<PluginRepository>().newerLiveVersions(
       widget.plugin,
     );
-    if (candidates.isEmpty && pending == null && _error == null) {
+    if (candidates.isEmpty && _error == null) {
       return const SizedBox.shrink();
     }
     final selected =
         candidates.where((p) => p.storageKey == _selectedKey).firstOrNull ??
-        candidates
-            .where((p) => p.storageKey == pending?.storageKey)
-            .firstOrNull ??
         PluginUpgradePlan.firstCompatibleTarget(
           widget.plugin,
           widget.bot.setup!,
@@ -148,18 +143,6 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                 'Plugin updates',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              if (pending != null) ...[
-                const SizedBox(height: 12),
-                Text(
-                  'Version ${pending.version} is queued for the next normal Start. This selection is session-only; restarting the app discards it.',
-                ),
-                TextButton(
-                  onPressed: _busy
-                      ? null
-                      : () => bots.cancelPendingUpgrade(widget.bot),
-                  child: const Text('Cancel queued update'),
-                ),
-              ],
               if (selected != null) ...[
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(

@@ -6,6 +6,7 @@ import 'package:bottogram/builder/state_page.dart';
 import 'package:bottogram/builder/store.dart';
 import 'package:bottogram/builder/database_browser_page.dart';
 import 'package:bottogram/builder/database_browser_adapter.dart';
+import 'package:bottogram/plugins/bot_qr.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/plugins/settings_form.dart';
 import 'package:bottogram/plugins/setup_fields.dart';
@@ -42,6 +43,7 @@ class BotPage extends StatefulWidget {
 class _BotPageState extends State<BotPage> {
   late final ctrlName = TextEditingController(text: widget.bot.name);
   final _errorAnchor = GlobalKey();
+  bool _sharingQr = false;
   late final _pluginUpdateAnchor = GlobalKey();
 
   @override
@@ -123,6 +125,15 @@ class _BotPageState extends State<BotPage> {
       if (mounted) Navigator.pop(context);
     } catch (_) {
       if (mounted) context.showSnackBar('The bot could not be removed.');
+    }
+  }
+
+  Future<void> _shareQr() async {
+    setState(() => _sharingQr = true);
+    try {
+      await showPluginBotQr(context, widget.bot);
+    } finally {
+      if (mounted) setState(() => _sharingQr = false);
     }
   }
 
@@ -267,6 +278,17 @@ class _BotPageState extends State<BotPage> {
                           'Version ${setup.pluginKey!.split('@').last}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
+                        if (manifest != null) ...[
+                          const SizedBox(height: 12),
+                          Align(
+                            alignment: AlignmentDirectional.centerStart,
+                            child: OutlinedButton.icon(
+                              onPressed: _sharingQr ? null : _shareQr,
+                              icon: const Icon(Icons.qr_code_2),
+                              label: const Text('Share as QR code'),
+                            ),
+                          ),
+                        ],
                         const SizedBox(height: 24),
                         _detail(
                           Icons.person_outline,

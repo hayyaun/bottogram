@@ -1,9 +1,12 @@
 import 'dart:ui' show ImageFilter;
 
+import 'package:bottogram/background/controller.dart';
+import 'package:bottogram/background/guide.dart';
 import 'package:bottogram/dialogs/share_dialog.dart';
 import 'package:bottogram/pages/create_bot.dart';
 import 'package:bottogram/pages/settings.dart';
 import 'package:bottogram/pages/store.dart';
+import 'package:bottogram/plugins/bot_qr.dart';
 import 'package:bottogram/plugins/plugins_page.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
@@ -43,18 +46,32 @@ class _HomePageState extends State<HomePage> {
   void _share() =>
       showDialog<void>(context: context, builder: (_) => const ShareDialog());
 
-  List<Widget> _botActions() => [
-    IconButton(
-      tooltip: 'Import bots',
-      onPressed: context.read<BotsCubit>().import,
-      icon: const Icon(Icons.file_download_outlined),
-    ),
-    IconButton(
-      tooltip: 'Share bots',
-      onPressed: _share,
-      icon: const Icon(Icons.ios_share_outlined),
-    ),
-  ];
+  List<Widget> _botActions() {
+    final background = context.watch<BackgroundController?>();
+    return [
+      if (background != null && background.checked && background.needsGuide)
+        IconButton(
+          tooltip: backgroundRequirement(background),
+          color: BColors.of(context).warning,
+          icon: const Icon(Icons.warning_amber_rounded),
+          onPressed: () => Navigator.of(context).push<void>(
+            MaterialPageRoute(
+              builder: (_) => BackgroundGuide(controller: background),
+            ),
+          ),
+        ),
+      IconButton(
+        tooltip: 'Import bots',
+        icon: const Icon(Icons.file_download_outlined),
+        onPressed: () => chooseBotImport(context),
+      ),
+      IconButton(
+        tooltip: 'Share bots',
+        onPressed: _share,
+        icon: const Icon(Icons.ios_share_outlined),
+      ),
+    ];
+  }
 
   Widget _brand({bool inverse = false}) => Row(
     mainAxisSize: MainAxisSize.min,

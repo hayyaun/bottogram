@@ -19,7 +19,6 @@ import 'package:bottogram/pages/templates.dart';
 import 'package:bottogram/plugins/plugins_page.dart';
 import 'package:bottogram/plugins/bot_setup.dart';
 import 'package:bottogram/plugins/repository.dart';
-import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/ui/design.dart';
@@ -48,8 +47,6 @@ class PreviewBots extends Cubit<List<VirtBot>> implements BotsCubit {
   Future<void> get ready async {}
   @override
   String? lastError;
-  @override
-  PluginManifest? pendingUpgradeFor(VirtBot bot) => null;
   int importCalls = 0;
   bool failImport = false;
   @override
@@ -522,14 +519,28 @@ void main() {
           child: const HomePage(title: 'Bottogram'),
         ),
       );
+      final warning = find.byTooltip('Battery optimization can interrupt your bots.');
+      expect(warning, findsOneWidget);
+      expect(find.byTooltip('Import bots'), findsOneWidget);
+      await tester.tap(warning);
+      await tester.pumpAndSettle();
+      expect(find.text('Keep bots running'), findsOneWidget);
+      await tester.pageBack();
+      await tester.pumpAndSettle();
       await tester.tap(find.byTooltip('Settings'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Import bots'));
       await tester.tap(find.text('Import bots'));
       await tester.pumpAndSettle();
+      expect(find.text('Scan QR code'), findsOneWidget);
+      await tester.tap(find.text('Backup file'));
+      await tester.pumpAndSettle();
       expect(bots.importCalls, 1);
       bots.failImport = true;
       await tester.tap(find.text('Import bots'));
+      await tester.pumpAndSettle();
+      expect(find.text('Scan QR code'), findsOneWidget);
+      await tester.tap(find.text('Backup file'));
       await tester.pumpAndSettle();
       expect(
         find.text('The bot configuration could not be imported.'),

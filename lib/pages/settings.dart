@@ -2,6 +2,7 @@ import 'package:bottogram/background/controller.dart';
 import 'package:bottogram/background/guide.dart';
 import 'package:bottogram/dialogs/share_dialog.dart';
 import 'package:bottogram/inbox/users_page.dart';
+import 'package:bottogram/plugins/bot_qr.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
@@ -41,7 +42,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final store = context.read<BotsCubit>();
     try {
       store.lastError = null;
-      await store.import();
+      await chooseBotImport(context);
       if (mounted) setState(() => _error = store.lastError);
     } catch (_) {
       if (mounted) {
@@ -225,7 +226,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           title:
                               _importing ? 'Importing bots...' : 'Import bots',
                           description:
-                              'Restore bot configurations from a file.',
+                              'Restore a backup file or scan a plugin bot QR code.',
                           onTap: ready && !_importing ? _import : null,
                         ),
                         const Divider(),

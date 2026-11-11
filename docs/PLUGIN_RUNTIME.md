@@ -206,11 +206,18 @@ state reuse or skip the host's compatibility checks. Existing storage schemas
 and format versions are unchanged; no schema migration or startup backfill is
 used. The explicit one-time offline data transition is recorded above.
 
-Stopped bots apply an approved compatible update immediately. Active bots can
-queue the reviewed target for their next normal Start without being stopped.
-The queue is in memory for the current app session, is revalidated at application,
-and is discarded if Bottogram restarts. Invalid/HTTP Mini App origins reject an
-update without modifying the older bot or silently rewriting its configuration.
+Approved compatible updates apply immediately. A running bot pauses while its
+old session drains and restarts with the new pin once the update is saved.
+Stopped bots stay stopped. If application fails after pausing a running bot,
+Bottogram attempts to restart its previous version.
+
+Plugin bots can transfer their inputs using **Share as QR code** in bot
+settings. The QR link contains the bot token, admin IDs, plugin parameters
+including secrets, and saved preferences. Treat the code and any image of it as
+credentials. **Import bots → Scan QR code** checks the installed plugin ID,
+version and package digest. Import creates a stopped bot with a new runtime
+identity. Plugin secrets are saved in the device's secure storage. The transfer
+covers configuration inputs only.
 
 The common form still asks for name, Telegram bot token and numeric admin ID. The Inshopa plugin adds `apiKey` and the approved `storefrontUrl`. The key selects its one shop; the storefront URL supplies the registration headers. The authenticated `/v1/storefront` lookup provides the shop ID, so no additional shop-ID input is needed.
 
@@ -302,7 +309,7 @@ The declared `specialUse` foreground subtype describes the app's continuous user
 
 No boot receiver or automatic bot restart is installed. Force-stop, process death and reboot require reopening the app and explicitly starting bots again; durable progress is retained. Keeping a wake lock and network polling uses battery. Android/OEM process termination and network outages remain possible.
 
-The guide checks actual battery exemption, background restriction and notification state on every opening and settings return. Unknown state is incomplete. Skipping applies only to this opening; the warning stays fixed outside navigation/scrolling. Settings visits recheck state without an immediate duplicate prompt. Only documented Android settings intents are used.
+The guide checks actual battery exemption, background restriction and notification state on every opening and settings return. Unknown state is incomplete. Skipping applies only to this opening. The warning icon next to import and export on the Bots screen reopens the guide. Settings visits recheck state without an immediate duplicate prompt. Only documented Android settings intents are used.
 
 ## Verification
 

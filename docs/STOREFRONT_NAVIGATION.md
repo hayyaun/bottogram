@@ -102,10 +102,8 @@ paid-order baseline or re-enable a disabled notification preference. The
 current-state polling and ambiguous-delivery limits in
 [Plugin runtime](PLUGIN_RUNTIME.md) continue to apply.
 
-A stopped bot applies a reviewed update immediately. An active bot can queue
-the reviewed selection for its next normal Start, without being stopped. The
-queue belongs to the current app session: restarting Bottogram discards the
-selection and requires another review. The update is revalidated when applied.
+A reviewed update applies immediately. A running bot pauses while its previous
+session drains and restarts with the new version. A stopped bot stays stopped.
 An invalid or HTTP target Mini App origin rejects that update; the older pinned
 bot and its alerts remain intact. No shop/domain or protocol rewrite is inferred.
 

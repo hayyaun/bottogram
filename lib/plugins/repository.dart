@@ -7,6 +7,7 @@ import 'package:hive/hive.dart';
 
 import 'admin_ids.dart';
 import 'bot_setup.dart';
+import 'bot_transfer.dart';
 import 'manifest.dart';
 import 'secret_vault.dart';
 import 'upgrade.dart';
@@ -121,17 +122,82 @@ class PluginRepository extends ChangeNotifier {
     notifyListeners();
   });
 
+  Future<PluginBotTransfer> exportBot(
+    dynamic botKey, {
+    required String name,
+    required String token,
+  }) => _serialize(() async {
+    final setup = await setupFor(botKey, token);
+    if (setup == null || !setup.usesPlugin) {
+      throw const PluginException('Only plugin bots can be shared by QR code.');
+    }
+    final parameters = Map<String, String>.of(setup.values);
+    for (final field in setup.secretFields) {
+      final String? value;
+      try {
+        value = await vault.read(setup.secretKey(field));
+      } catch (_) {
+        throw const PluginException('The saved plugin keys are unavailable.');
+      }
+      if (value == null || value.isEmpty) {
+        throw const PluginException('The saved plugin keys are unavailable.');
+      }
+      parameters[field] = value;
+    }
+    return PluginBotTransfer(
+      name: name,
+      token: token,
+      adminIds: setup.adminIds,
+      pluginKey: setup.pluginKey!,
+      pluginDigest: setup.pluginDigest!,
+      parameters: parameters,
+      settings: setup.settings,
+    );
+  });
+
+  Future<PluginManifest> reviewBotTransfer(PluginBotTransfer transfer) async {
+    await ready;
+    final source = _packages!.get(transfer.pluginKey);
+    final package = source == null
+        ? null
+        : PluginManifest.parse(Uint8List.fromList(utf8.encode(source)));
+    if (package == null || package.digest != transfer.pluginDigest) {
+      throw PluginException(
+        'Install the exact plugin package (${transfer.pluginKey}) to import this bot.',
+      );
+    }
+    _validateTransferInputs(package, transfer.parameters);
+    package.settingValues(transfer.settings);
+    return package;
+  }
+
+  void _validateTransferInputs(
+    PluginManifest plugin,
+    Map<String, String> parameters,
+  ) {
+    if (parameters.keys.any((key) => !plugin.fields.any((f) => f.key == key)) ||
+        plugin.fields.any(
+          (field) => field.validate(parameters[field.key] ?? '') != null,
+        )) {
+      throw const PluginException(
+        'The QR code parameters do not match the installed plugin.',
+      );
+    }
+  }
+
   Future<BotSetup> prepare({
     required String token,
     required String adminIds,
     PluginManifest? plugin,
     Map<String, String> parameters = const {},
+    Map<String, Object?> settings = const {},
   }) => _serialize(
     () => _prepare(
       token: token,
       adminIds: adminIds,
       plugin: plugin,
       parameters: parameters,
+      settings: settings,
     ),
   );
 
@@ -140,6 +206,7 @@ class PluginRepository extends ChangeNotifier {
     required String adminIds,
     PluginManifest? plugin,
     Map<String, String> parameters = const {},
+    Map<String, Object?> settings = const {},
   }) async {
     final ids = parseAdminIds(adminIds);
     if (ids == null) {
@@ -180,7 +247,7 @@ class PluginRepository extends ChangeNotifier {
       pluginName: plugin?.name,
       values: values,
       secretFields: secretValues.keys.toList(),
-      settings: plugin?.settingValues(const {}) ?? const {},
+      settings: plugin?.settingValues(settings) ?? const {},
     );
     // Journal contains only references, never secret values. It permits recovery
     // if the process stops between creating the bot and attaching its settings.

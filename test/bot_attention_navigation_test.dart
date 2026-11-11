@@ -45,9 +45,6 @@ class AttentionBots extends Cubit<List<VirtBot>> implements BotsCubit {
   final AttentionRuntime runtime = AttentionRuntime();
 
   @override
-  PluginManifest? pendingUpgradeFor(VirtBot bot) => null;
-
-  @override
   void update() => emit(List.of(state));
 
   @override

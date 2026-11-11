@@ -614,8 +614,8 @@ background execution definitions, including progress and receipts. Error
 catalogs/maps are presentation metadata, excluded from execution comparison.
 Changed setup semantics, setting defaults or background automations require a
 separately designed transition; do not promise automatic state reuse. Navigation
-commands may be replaced by the reviewed update path. An active bot can queue
-an update for its next normal Start; this queue is lost when the app restarts.
+commands may be replaced by the reviewed update path. Approving an update
+pauses a running bot and restarts it after the new version is applied.
 Invalid Mini App origins reject the update without rewriting saved values.
 
 See [runtime and recovery details](PLUGIN_RUNTIME.md) for implementation notes.

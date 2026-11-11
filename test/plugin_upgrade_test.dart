@@ -53,12 +53,14 @@ class QueueRuntime extends BotRuntime {
   QueueRuntime(PluginRepository plugins, NamespaceProgressStore progress)
     : super(TestLease(), plugins, progress: progress);
   int starts = 0;
+  bool failStart = false;
   int stops = 0;
   Completer<void>? stopDrain;
   bool waitingForDrain = false;
   @override
   Future<void> start(VirtBot bot) async {
     starts++;
+    if (failStart) throw StateError('Injected start failure');
     (bot as QueueBot).running = true;
   }
 
@@ -449,7 +451,7 @@ void main() {
   );
 
   test(
-    'active updates wait for a normal Start; failed application retains the queued review and original state',
+    'active updates drain old work, restore the previous version on failure, and restart on success',
     () async {
       // BotsCubit reconciliation operates on real setup records and bot keys.
       // This test-only adapter supplies controllable running state without any
@@ -484,23 +486,14 @@ void main() {
       final to = '${attached.instanceId}:${target.digest}:monitor';
       await progress.write(from, {'initialized': true, 'pageCursor': 'resume'});
       try {
-        await bots.upgradePlugin(bot, target);
-        expect(bot.active, isTrue);
-        expect(peer.active, isTrue);
-        expect(runtime.stops, 0);
-        expect(bots.pendingUpgradeFor(bot)?.digest, target.digest);
-        expect(bot.setup!.pluginDigest, old.digest);
-        expect(await progress.read(to), isEmpty);
-
-        await bots.toggle(bot);
-        expect(bot.active, isFalse);
-        expect(peer.active, isTrue);
         progress.fail = true;
         runtime.stopDrain = Completer<void>();
-        final starting = bots.toggle(bot);
+        final updating = bots.upgradePlugin(bot, target);
+        final failure = expectLater(updating, throwsA(isA<PluginException>()));
         await until(() => runtime.waitingForDrain);
         expect(progress.copies, 0);
         expect(runtime.starts, 0);
+        expect(peer.active, isTrue);
         // A final old-session acknowledgement arrives while cleanup drains.
         final drainedState = {
           'initialized': true,
@@ -509,25 +502,45 @@ void main() {
         };
         await progress.write(from, drainedState);
         runtime.stopDrain!.complete();
-        await expectLater(starting, throwsA(isA<PluginException>()));
-        expect(bot.active, isFalse);
-        expect(runtime.starts, 0);
-        expect(bots.pendingUpgradeFor(bot)?.digest, target.digest);
+        await failure;
+        expect(bot.active, isTrue);
+        expect(runtime.starts, 1);
         expect(
           (await repository.setupFor(bot.key, token))!.pluginDigest,
           old.digest,
         );
         expect(await progress.read(from), drainedState);
+        expect(await progress.read(to), isEmpty);
 
         progress.fail = false;
-        await bots.toggle(bot);
+        await bots.upgradePlugin(bot, target);
         expect(bot.active, isTrue);
         expect(peer.active, isTrue);
-        expect(runtime.stops, 1);
-        expect(runtime.starts, 1);
-        expect(bots.pendingUpgradeFor(bot), isNull);
+        expect(runtime.stops, 2);
+        expect(runtime.starts, 2);
         expect(bot.setup!.pluginDigest, target.digest);
         expect(await progress.read(to), drainedState);
+
+        final later = nextDefinition()..['version'] = '1.2.0';
+        final next = manifest(later);
+        await repository.install(next);
+        runtime.failStart = true;
+        await expectLater(
+          bots.upgradePlugin(bot, next),
+          throwsA(
+            isA<PluginException>().having(
+              (error) => error.message,
+              'message',
+              contains('Plugin update saved'),
+            ),
+          ),
+        );
+        expect(bot.active, isFalse);
+        expect(peer.active, isTrue);
+        expect(
+          (await repository.setupFor(bot.key, token))!.pluginDigest,
+          next.digest,
+        );
       } finally {
         await bots.close();
       }

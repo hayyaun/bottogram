@@ -61,8 +61,10 @@ class _ShareDialogState extends State<ShareDialog> {
                   subtitle:
                       exportable.contains(index)
                           ? null
-                          : const Text(
-                            'Plugin and incomplete setups cannot be exported.',
+                          : Text(
+                            bot.setup?.usesPlugin == true
+                                ? 'Share this plugin bot as a QR code from its settings.'
+                                : 'Complete this bot’s setup before exporting.',
                           ),
                   onChanged:
                       _sharing || !exportable.contains(index)

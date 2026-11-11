@@ -7,6 +7,7 @@ import 'package:bottogram/templates/model.dart';
 
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
+import 'package:bottogram/plugins/bot_transfer.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/runtime/coordinator.dart';
@@ -31,10 +32,6 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   late final Future<void> ready;
   String? lastError;
   Future<void> _tail = Future.value();
-  // A reviewed active-bot update is session-only until its next normal Start.
-  // Nullable storage also permits a state-preserving Flutter hot reload.
-  Map<VirtBot, PluginManifest>? _pendingPluginUpgrades;
-
   BotsCubit(BuildContext ctx, {PluginRepository? plugins, BotRuntime? runtime})
     : plugins = plugins ?? ctx.read<PluginRepository>(),
       super([]) {
@@ -52,53 +49,29 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       await runtime.stop(bot);
       return;
     }
-    final target = pendingUpgradeFor(bot);
-    if (target != null) await _applyPluginUpgrade(bot, target);
     await runtime.start(bot);
   });
-
-  PluginManifest? pendingUpgradeFor(VirtBot bot) =>
-      _pendingPluginUpgrades?[bot];
 
   Future<void> retryBot(VirtBot bot) => _mutate(() async {
     if (!state.contains(bot) || !bot.isInBox) {
       throw const PluginException('This bot is no longer available.');
     }
     await runtime.stop(bot);
-    final target = pendingUpgradeFor(bot);
-    if (target != null) await _applyPluginUpgrade(bot, target);
     await runtime.start(bot);
   });
 
-  void cancelPendingUpgrade(VirtBot bot) {
-    _pendingPluginUpgrades?.remove(bot);
-    emit(List<VirtBot>.of(state));
-  }
-
-  Future<void> upgradePlugin(VirtBot bot, PluginManifest target) =>
-      _mutate(() async {
-        if (!state.contains(bot) || !bot.isInBox) {
-          throw const PluginException('This bot is no longer available.');
-        }
-        await plugins.reviewUpgrade(bot.key, bot.token, target);
-        if (bot.active) {
-          (_pendingPluginUpgrades ??= {})[bot] = target;
-          emit(List<VirtBot>.of(state));
-          return;
-        }
-        await _applyPluginUpgrade(bot, target);
-      });
-
-  Future<void> _applyPluginUpgrade(VirtBot bot, PluginManifest target) async {
-    if (bot.active) {
-      throw const PluginException(
-        'The bot must be stopped before its plugin update can be applied.',
-      );
+  Future<void> upgradePlugin(
+    VirtBot bot,
+    PluginManifest target,
+  ) => _mutate(() async {
+    if (!state.contains(bot) || !bot.isInBox) {
+      throw const PluginException('This bot is no longer available.');
     }
+    await plugins.reviewUpgrade(bot.key, bot.token, target);
+    final restart = bot.active;
     try {
-      // A polling failure can clear active before the coordinator finishes
-      // draining actions. Serialize and drain that stopped session before
-      // taking the source progress snapshot.
+      // Drain the old session, including one whose polling has failed,
+      // before copying its automation progress and publishing the new pin.
       await runtime.stop(bot);
       bot.setup = await plugins.upgrade(
         bot.key,
@@ -114,16 +87,35 @@ class BotsCubit extends Cubit<List<VirtBot>> {
           await progress.copyNamespace(source, destination);
         },
       );
-      _pendingPluginUpgrades?.remove(bot);
-      lastError = null;
-      emit(List<VirtBot>.of(state));
     } catch (_) {
-      lastError =
-          'The plugin update could not be applied. The current bot configuration is unchanged; review the queued update and retry before starting.';
+      if (restart) {
+        try {
+          await runtime.start(bot);
+        } catch (_) {
+          throw const PluginException(
+            'The update failed. The previous version is saved, but it could not restart.',
+          );
+        }
+      }
+      throw PluginException(
+        restart
+            ? 'The update failed. The previous version is running again.'
+            : 'The update failed. The previous version is still saved.',
+      );
+    } finally {
       emit(List<VirtBot>.of(state));
-      throw PluginException(lastError!);
     }
-  }
+    lastError = null;
+    if (restart) {
+      try {
+        await runtime.start(bot);
+      } catch (_) {
+        throw const PluginException(
+          'Plugin update saved. The bot could not restart. Check its connection and start it again.',
+        );
+      }
+    }
+  });
 
   // Initialize Hive box
   Future<void> _initBox() async {
@@ -165,12 +157,32 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     return result;
   }
 
+  Future<PluginBotTransfer> exportPluginBot(VirtBot bot) => _mutate(() async {
+    if (!state.contains(bot) || !bot.isInBox) {
+      throw const PluginException('This bot is no longer available.');
+    }
+    return plugins.exportBot(bot.key, name: bot.name, token: bot.token);
+  });
+
+  Future<void> importPluginBot(PluginBotTransfer transfer) async {
+    final plugin = await plugins.reviewBotTransfer(transfer);
+    await create(
+      name: transfer.name,
+      token: transfer.token,
+      adminIds: transfer.adminIds.join('\n'),
+      plugin: plugin,
+      parameters: transfer.parameters,
+      pluginSettings: transfer.settings,
+    );
+  }
+
   Future<void> create({
     required String name,
     required String token,
     required String adminIds,
     PluginManifest? plugin,
     Map<String, String> parameters = const {},
+    Map<String, Object?> pluginSettings = const {},
     BotTemplateDraft? template,
   }) => _mutate(() async {
     if (state.any((bot) => bot.token == token)) {
@@ -201,6 +213,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       adminIds: adminIds,
       plugin: plugin,
       parameters: parameters,
+      settings: pluginSettings,
     );
     final bot = VirtBot(
       name,
@@ -338,7 +351,6 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     await runtime.stop(bot);
     final key = bot.key;
     await _box!.delete(key);
-    _pendingPluginUpgrades?.remove(bot);
     final updatedList = List<VirtBot>.from(state)..remove(bot);
     emit(updatedList);
     try {
@@ -410,7 +422,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
             (state[i].setup?.usesPlugin ?? false),
       )) {
         lastError =
-            'Plugin bot export is not available yet. Plugin API keys are never included in configuration shares.';
+            'Plugin bots use Share as QR code in their settings. Backup file exports cover manual bots.';
         emit(List<VirtBot>.from(state));
         return null;
       }
@@ -500,7 +512,6 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   Future<void> close() async {
     await ready;
     await _tail;
-    _pendingPluginUpgrades?.clear();
     runtime.removeListener(_runtimeChanged);
     await runtime.close();
     return super.close();

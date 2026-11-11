@@ -64,9 +64,8 @@ trigger/action capabilities instead of adding Inshopa conditions to the runtime.
    and component `errorMap` presentation metadata. It stages compatible progress
    and delivery receipts before committing the selected bot's new package pin,
    and retains the old package/source progress. Verify recovery and UI behavior
-   on real installations. An active bot queues a reviewed update in memory for
-   its next normal Start; restarting Bottogram discards that selection and
-   requires another review. Invalid/HTTP Mini App origins reject the update
+   on real installations. An approved update pauses a running bot and restarts
+   it after saving the new version. Invalid/HTTP Mini App origins reject the update
    without rewriting the old bot. Automatic package switching is not implemented.
    The current breaking HTTP/error contract intentionally has no legacy decoder.
    The approved offline catalog transition is complete, with external exact-file
@@ -75,9 +74,9 @@ trigger/action capabilities instead of adding Inshopa conditions to the runtime.
    pins. Local 0.6.0 is installed, but the current local bot remains on
    0.5.0 because its HTTP shop address cannot launch a Telegram Mini App. No bot
    was restarted.
-7. **Protected backup/import for plugin bots.** Currently unavailable; existing
-   configuration sharing supports manual bots only. Define secret handling and
-   restoration before implementing it. Any new database migration needs separate
+7. **Protected backup/import for plugin bots.** Private QR transfer moves bot
+   inputs and credentials when the exact plugin package is installed. Encrypted
+   file backups and transfer of runtime history are outside the QR flow. Any new database migration needs separate
    approval under the project's migration policy.
 
 ## Later, before the first public release

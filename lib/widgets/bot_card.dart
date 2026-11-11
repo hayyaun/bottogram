@@ -62,18 +62,13 @@ class _BotCardState extends State<BotCard> {
     final repository = context.watch<PluginRepository>();
     final manifest = repository.manifestFor(setup);
     final setupOnly = plugin && manifest?.executable != true;
-    final queued = plugin
-        ? context.watch<BotsCubit>().pendingUpgradeFor(bot)
-        : null;
-    final available =
-        manifest?.executable == true && bot.setupError == null && queued == null
+    final update = manifest?.executable == true && bot.setupError == null
         ? PluginUpgradePlan.firstCompatibleTarget(
             manifest!,
             setup!,
             repository.newerLiveVersions(manifest),
           )
         : null;
-    final update = queued ?? available;
     final error = bot.runtimeError;
     final actions = bot.events.fold<int>(
       0,
@@ -166,9 +161,7 @@ class _BotCardState extends State<BotCard> {
                     ),
                     if (update != null)
                       Tooltip(
-                        message: queued == null
-                            ? 'Review version ${update.version}'
-                            : 'Version ${update.version} applies on the next Start',
+                        message: 'Review version ${update.version}',
                         child: TextButton(
                           onPressed: () => _settings(focusPluginUpdate: true),
                           style: TextButton.styleFrom(
@@ -176,11 +169,7 @@ class _BotCardState extends State<BotCard> {
                             padding: EdgeInsets.zero,
                             alignment: Alignment.centerLeft,
                           ),
-                          child: Text(
-                            queued == null
-                                ? 'Update available'
-                                : 'Update queued',
-                          ),
+                          child: const Text('Update available'),
                         ),
                       )
                     else ...[

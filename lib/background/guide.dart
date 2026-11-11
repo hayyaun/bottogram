@@ -89,39 +89,7 @@ class _BackgroundSetupHostState extends State<BackgroundSetupHost> {
   }
 
   @override
-  Widget build(BuildContext context) => Column(
-    children: [
-      if (widget.controller.checked && widget.controller.needsGuide)
-        Material(
-          color: BColors.of(context).warningWash,
-          child: SafeArea(
-            bottom: false,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Wrap(
-                alignment: WrapAlignment.spaceBetween,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                spacing: 12,
-                children: [
-                  Text(
-                    backgroundRequirement(widget.controller),
-                    style: BottogramDesign.text(
-                      13,
-                      color: BColors.of(context).warning,
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: _show,
-                    child: const Text('Read instructions'),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      Expanded(child: widget.child),
-    ],
-  );
+  Widget build(BuildContext context) => widget.child;
 }
 
 class BackgroundGuide extends StatelessWidget {

@@ -1,6 +1,8 @@
 import 'dart:io';
 
 import 'package:bottogram/pages/bot.dart';
+import 'package:bottogram/plugins/bot_setup.dart';
+import 'package:bottogram/plugins/bot_transfer.dart';
 import 'package:bottogram/plugins/capability_review.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
@@ -8,12 +10,14 @@ import 'package:bottogram/plugins/update_section.dart';
 import 'package:bottogram/runtime/progress_store.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/widgets/bot_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import 'automation_runtime_test.dart' show until;
 import 'plugin_upgrade_test.dart'
@@ -24,7 +28,7 @@ import 'plugin_upgrade_test.dart'
         definition,
         manifest,
         nextDefinition;
-import 'plugins_test.dart' show MemoryVault, TestContext;
+import 'plugins_test.dart' show MemoryCatalog, MemoryVault, TestContext;
 
 Map<String, dynamic> eventUpdate() {
   final value = nextDefinition();
@@ -181,6 +185,23 @@ Future<void> tapAndWaitForIo(
   await tester.pumpAndSettle();
 }
 
+class QrShareBots extends Cubit<List<VirtBot>> implements BotsCubit {
+  QrShareBots(VirtBot bot, this.transfer) : super([bot]);
+
+  final PluginBotTransfer transfer;
+  int exports = 0;
+
+  @override
+  Future<PluginBotTransfer> exportPluginBot(VirtBot bot) async {
+    exports++;
+    return transfer;
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) =>
+      throw UnsupportedError(invocation.memberName.toString());
+}
+
 void main() {
   testWidgets(
     'capability review renders arbitrary commands, destinations and menu declarations',
@@ -250,9 +271,9 @@ void main() {
           () => find.byType(AlertDialog).evaluate().isNotEmpty,
         );
         expect(find.text('Apply update'), findsOneWidget);
-        expect(find.text('Queue for next Start'), findsNothing);
+        expect(find.text('Apply and restart'), findsNothing);
         expect(
-          find.textContaining('It will not start the bot.'),
+          find.textContaining('The bot will stay stopped'),
           findsOneWidget,
         );
         expect(
@@ -287,7 +308,6 @@ void main() {
         expect(fixture.bot.active, isFalse);
         expect(fixture.runtime.starts, 0);
         expect(fixture.bot.setup!.instanceId, identity);
-        expect(fixture.bots.pendingUpgradeFor(fixture.bot), isNull);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox());
@@ -353,7 +373,7 @@ void main() {
   );
 
   testWidgets(
-    'running bot review queues a session-only selection and allows cancellation',
+    'confirming an active update immediately applies it and restarts the bot',
     (tester) async {
       final fixture = (await tester.runAsync(
         () => UpdateUiFixture.create(active: true),
@@ -365,31 +385,18 @@ void main() {
           find.text('Review update'),
           () => find.byType(AlertDialog).evaluate().isNotEmpty,
         );
-        expect(find.text('Queue for next Start'), findsOneWidget);
-        expect(find.text('Apply update'), findsNothing);
-        expect(
-          find.textContaining('This bot will keep running.'),
-          findsOneWidget,
-        );
-        expect(
-          find.textContaining('kept only for this app session'),
-          findsOneWidget,
-        );
+        expect(find.textContaining('then start again'), findsOneWidget);
+        expect(fixture.bot.setup!.pluginDigest, fixture.old.digest);
+        expect(fixture.runtime.stops, 0);
         await tapAndWaitForIo(
           tester,
-          find.text('Queue for next Start'),
-          () => fixture.bots.pendingUpgradeFor(fixture.bot) != null,
+          find.text('Apply and restart'),
+          () =>
+              fixture.bot.setup!.pluginDigest == fixture.target.digest &&
+              fixture.bot.active,
         );
-        expect(fixture.bot.active, isTrue);
-        expect(fixture.runtime.stops, 0);
-        expect(fixture.bot.setup!.pluginDigest, fixture.old.digest);
-        expect(find.textContaining('Version 1.1.0 is queued'), findsOneWidget);
-        await tester.tap(find.text('Cancel queued update'));
-        await tester.pumpAndSettle();
-        expect(fixture.bots.pendingUpgradeFor(fixture.bot), isNull);
-        expect(fixture.bot.active, isTrue);
-        expect(fixture.bot.setup!.pluginDigest, fixture.old.digest);
-        expect(fixture.runtime.stops, 0);
+        expect(fixture.runtime.stops, 1);
+        expect(fixture.runtime.starts, 1);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox());
@@ -397,6 +404,61 @@ void main() {
       }
     },
   );
+
+  testWidgets('bot settings reveal the private QR only after two approvals', (
+    tester,
+  ) async {
+    final plugin = manifest(definition());
+    final repository = MemoryCatalog()..entries.add(plugin);
+    final bot = VirtBot('Example bot', '1:fixture', addSamples: false)
+      ..setup = BotSetup(
+        instanceId: 'fixture',
+        tokenFingerprint: BotSetup.fingerprint('1:fixture'),
+        adminIds: const ['123'],
+        pluginKey: plugin.storageKey,
+        pluginDigest: plugin.digest,
+        pluginName: plugin.name,
+      );
+    final bots = QrShareBots(
+      bot,
+      PluginBotTransfer(
+        name: bot.name,
+        token: bot.token,
+        adminIds: bot.setup!.adminIds,
+        pluginKey: plugin.storageKey,
+        pluginDigest: plugin.digest,
+        parameters: const {'credential': 'test-key'},
+        settings: const {},
+      ),
+    );
+    addTearDown(bots.close);
+    addTearDown(repository.dispose);
+    await tester.pumpWidget(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider<PluginRepository>.value(value: repository),
+          BlocProvider<BotsCubit>.value(value: bots),
+        ],
+        child: MaterialApp(home: BotPage(bot: bot)),
+      ),
+    );
+    await tester.tap(find.text('Share as QR code'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Do not share this code'), findsOneWidget);
+    expect(bots.exports, 0);
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reveal the private QR code?'), findsOneWidget);
+    expect(bots.exports, 0);
+    expect(find.byType(QrImageView), findsNothing);
+    await tester.tap(find.text('Show QR code'));
+    await tester.pumpAndSettle();
+    expect(bots.exports, 1);
+    expect(find.byType(QrImageView), findsOneWidget);
+    expect(find.text('Private bot QR code'), findsOneWidget);
+    expect(find.textContaining('test-key'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets(
     'unsupported HTTP origin shows a sanitized review error and leaves the running bot pinned',
@@ -420,7 +482,6 @@ void main() {
         expect(find.textContaining('valid HTTPS origin'), findsOneWidget);
         expect(find.textContaining('private-marker'), findsNothing);
         expect(fixture.bot.setup!.toMap(), before);
-        expect(fixture.bots.pendingUpgradeFor(fixture.bot), isNull);
         expect(fixture.bot.active, isTrue);
         expect(fixture.runtime.stops, 0);
         expect(tester.takeException(), isNull);

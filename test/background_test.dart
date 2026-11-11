@@ -39,7 +39,7 @@ class FakeBackground extends BackgroundPlatform {
 
 void main() {
   testWidgets(
-    'guide once per opening; skip leaves warning across navigation; settings do not loop',
+    'guide once per opening; settings do not loop; no global banner',
     (tester) async {
       final platform = FakeBackground();
       final controller = BackgroundController(platform);
@@ -64,14 +64,14 @@ void main() {
       navigator.currentState!.pop();
       await tester.pumpAndSettle();
       expect(find.text('Keep bots running'), findsNothing);
-      expect(find.text('Read instructions'), findsOneWidget);
+      expect(find.text('Read instructions'), findsNothing);
       navigator.currentState!.push(
         MaterialPageRoute<void>(
           builder: (_) => const Scaffold(body: Text('Other page')),
         ),
       );
       await tester.pumpAndSettle();
-      expect(find.text('Read instructions'), findsOneWidget);
+      expect(find.text('Read instructions'), findsNothing);
       await controller.openSettings(battery: true);
       controller.didChangeAppLifecycleState(AppLifecycleState.paused);
       controller.didChangeAppLifecycleState(AppLifecycleState.resumed);
@@ -102,7 +102,7 @@ void main() {
       await controller.refresh();
       await tester.pumpAndSettle();
       expect(controller.snapshot.ready, isFalse);
-      expect(find.text('Read instructions'), findsOneWidget);
+      expect(find.text('Read instructions'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
       controller.dispose();
     },

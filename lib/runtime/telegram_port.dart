@@ -5,7 +5,8 @@ import 'package:televerse/telegram.dart';
 import 'ports.dart';
 import 'telegram_config.dart';
 
-class BotTelegramPort implements TelegramPort, TelegramInteractions {
+class BotTelegramPort
+    implements TelegramPort, TelegramInteractions, TelegramNotifications {
   BotTelegramPort(this.bot);
   final Bot bot;
   final _commands = <String, List<void Function(Json)>>{};
@@ -221,14 +222,42 @@ class BotTelegramPort implements TelegramPort, TelegramInteractions {
   }
 
   @override
-  Future<void> send(String chatId, String text, {Json? replyMarkup}) async {
+  Future<void> send(String chatId, String text, {Json? replyMarkup}) =>
+      _send(chatId, text, replyMarkup: replyMarkup);
+
+  @override
+  Future<void> notify(String chatId, String text) =>
+      _send(chatId, text, notification: true);
+
+  Future<void> _send(
+    String chatId,
+    String text, {
+    Json? replyMarkup,
+    bool notification = false,
+  }) async {
     try {
-      await bot.api.sendMessage(
-        ID.create(int.parse(chatId)),
-        text,
-        replyMarkup: replyMarkup == null
+      await bot.api
+          .sendMessage(
+            ID.create(int.parse(chatId)),
+            text,
+            replyMarkup: replyMarkup == null
+                ? null
+                : InlineKeyboard.fromJson(replyMarkup),
+          )
+          .timeout(const Duration(seconds: 25));
+    } on TelegramException catch (error) {
+      if (notification && (error.code == 400 || error.code == 403)) {
+        throw const RuntimeFailure(
+          'Telegram refused delivery to this chat.',
+          code: 'telegram.recipient_rejected',
+        );
+      }
+      throw RuntimeFailure(
+        'Telegram did not confirm delivery. Retrying may duplicate a message.',
+        code: 'telegram.delivery_unconfirmed',
+        retryAfter: error.parameters?.retryAfter == null
             ? null
-            : InlineKeyboard.fromJson(replyMarkup),
+            : Duration(seconds: error.parameters!.retryAfter!),
       );
     } catch (_) {
       // SDK exceptions can contain authenticated URLs; never surface them.
@@ -265,7 +294,10 @@ class BotTelegramPort implements TelegramPort, TelegramInteractions {
   }
 
   /// An absent declaration leaves commands already configured in Telegram alone.
-  Future<bool> synchronizeCommands(Json config, {String? adminId}) async {
+  Future<bool> synchronizeCommands(
+    Json config, {
+    Iterable<String> adminIds = const [],
+  }) async {
     final public = config['commands'] as List?;
     if (public == null) return true;
     List<BotCommand> commands(List entries) => [
@@ -275,25 +307,26 @@ class BotTelegramPort implements TelegramPort, TelegramInteractions {
           description: entry['description'],
         ),
     ];
-    try {
-      final success = await bot.api
-          .setMyCommands(
-            commands(public),
-            scope: const BotCommandScopeAllPrivateChats(),
-            languageCode: '',
-          )
-          .timeout(const Duration(seconds: 10));
-      if (!success || adminId == null) return success;
-      return await bot.api
-          .setMyCommands(
-            commands([...public, ...config['adminCommands'] as List]),
-            scope: BotCommandScopeChat(chatId: ID.create(int.parse(adminId))),
-            languageCode: '',
-          )
-          .timeout(const Duration(seconds: 10));
-    } catch (_) {
-      return false;
+    Future<bool> set(List entries, BotCommandScope scope) async {
+      try {
+        return await bot.api
+            .setMyCommands(commands(entries), scope: scope, languageCode: '')
+            .timeout(const Duration(seconds: 10));
+      } catch (_) {
+        return false;
+      }
     }
+
+    var success = await set(public, const BotCommandScopeAllPrivateChats());
+    final adminCommands = config['adminCommands'] as List? ?? const [];
+    for (final admin in adminIds) {
+      final published = await set([
+        ...public,
+        ...adminCommands,
+      ], BotCommandScopeChat(chatId: ID.create(int.parse(admin))));
+      success = success && published;
+    }
+    return success;
   }
 
   Future<bool> clearAdminCommands(String adminId) async {

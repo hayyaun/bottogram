@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:hive/hive.dart';
 
+import 'admin_ids.dart';
 import 'bot_setup.dart';
 import 'manifest.dart';
 import 'secret_vault.dart';
@@ -122,13 +123,13 @@ class PluginRepository extends ChangeNotifier {
 
   Future<BotSetup> prepare({
     required String token,
-    required String adminId,
+    required String adminIds,
     PluginManifest? plugin,
     Map<String, String> parameters = const {},
   }) => _serialize(
     () => _prepare(
       token: token,
-      adminId: adminId,
+      adminIds: adminIds,
       plugin: plugin,
       parameters: parameters,
     ),
@@ -136,12 +137,15 @@ class PluginRepository extends ChangeNotifier {
 
   Future<BotSetup> _prepare({
     required String token,
-    required String adminId,
+    required String adminIds,
     PluginManifest? plugin,
     Map<String, String> parameters = const {},
   }) async {
-    if (validateAdminId(adminId) != null) {
-      throw const PluginException('A valid admin ID is required.');
+    final ids = parseAdminIds(adminIds);
+    if (ids == null) {
+      throw const PluginException(
+        'Enter at least one valid Telegram admin ID.',
+      );
     }
     if (plugin != null && _packages!.get(plugin.storageKey) != plugin.source) {
       throw const PluginException(
@@ -170,7 +174,7 @@ class PluginRepository extends ChangeNotifier {
     final setup = BotSetup(
       instanceId: id,
       tokenFingerprint: BotSetup.fingerprint(token),
-      adminTelegramUserId: adminId.trim(),
+      adminIds: ids,
       pluginKey: plugin?.storageKey,
       pluginDigest: plugin?.digest,
       pluginName: plugin?.name,
@@ -290,7 +294,7 @@ class PluginRepository extends ChangeNotifier {
     final updated = BotSetup(
       instanceId: current.instanceId,
       tokenFingerprint: current.tokenFingerprint,
-      adminTelegramUserId: current.adminTelegramUserId,
+      adminIds: current.adminIds,
       pluginKey: target.storageKey,
       pluginDigest: target.digest,
       pluginName: target.name,
@@ -310,7 +314,7 @@ class PluginRepository extends ChangeNotifier {
   Future<BotSetup> updateParameters(
     dynamic botKey,
     String token, {
-    required String adminId,
+    required String adminIds,
     required Map<String, String> parameters,
   }) => _serialize(() async {
     final current = await setupFor(botKey, token);
@@ -331,15 +335,16 @@ class PluginRepository extends ChangeNotifier {
       }
       values[field.key] = value;
     }
-    if (validateAdminId(adminId) != null ||
+    final ids = parseAdminIds(adminIds);
+    if (ids == null ||
         manifest.fields.any(
           (field) => field.validate(values[field.key] ?? '') != null,
         )) {
       throw const PluginException(
-        'Complete the plugin parameters and admin ID.',
+        'Complete the plugin parameters and admin IDs.',
       );
     }
-    final sameAdmin = current.adminTelegramUserId == adminId.trim();
+    final sameAdmin = listEquals(current.adminIds, ids);
     final changed = <String>{};
     for (final field in manifest.fields) {
       final previous = field.type == PluginFieldType.secret
@@ -348,8 +353,9 @@ class PluginRepository extends ChangeNotifier {
       if (previous != values[field.key]) changed.add(field.key);
     }
     if (sameAdmin && changed.isEmpty) return current;
-    if (sameAdmin && changed.every(manifest.destinationFields.contains)) {
+    if (changed.every(manifest.destinationFields.contains)) {
       final updated = current.copyWith(
+        adminIds: ids,
         values: {
           ...current.values,
           for (final field in changed) field: values[field]!.trim(),
@@ -361,7 +367,7 @@ class PluginRepository extends ChangeNotifier {
     }
     final staged = await _prepare(
       token: token,
-      adminId: adminId,
+      adminIds: adminIds,
       plugin: manifest,
       parameters: values,
     );
@@ -381,6 +387,28 @@ class PluginRepository extends ChangeNotifier {
     } catch (_) {
       // A cleanup failure must not misreport the saved configuration as lost.
     }
+    notifyListeners();
+    return updated;
+  });
+
+  Future<BotSetup> updateAdmins(
+    dynamic botKey,
+    String token,
+    String adminIds,
+  ) => _serialize(() async {
+    final ids = parseAdminIds(adminIds);
+    if (ids == null) {
+      throw const PluginException(
+        'Enter at least one valid Telegram admin ID.',
+      );
+    }
+    final current = await setupFor(botKey, token);
+    if (current != null && listEquals(current.adminIds, ids)) return current;
+    final updated =
+        current?.copyWith(adminIds: ids) ??
+        await _prepare(token: token, adminIds: adminIds);
+    await _setups!.put(botKey, updated.toMap());
+    if (current == null) await _setups!.delete('pending:${updated.instanceId}');
     notifyListeners();
     return updated;
   });

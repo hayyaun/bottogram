@@ -189,7 +189,7 @@ class CommandHarness {
       ..setup = BotSetup(
         instanceId: 'command-instance',
         tokenFingerprint: BotSetup.fingerprint('199:fake-token'),
-        adminTelegramUserId: '123',
+        adminIds: ['123'],
         pluginKey: manifest.storageKey,
         pluginDigest: manifest.digest,
         pluginName: manifest.name,
@@ -213,6 +213,58 @@ class CommandHarness {
 }
 
 void main() {
+  test(
+    'admin command scopes follow every admin and remove revoked scopes',
+    () async {
+      final definition = commandDefinition()
+        ..['requiresBotFields'] = ['adminIds'];
+      definition['telegram']['adminCommands'] = [
+        {'command': 'staff', 'description': 'Staff menu'},
+      ];
+      (definition['automations'] as List).add({
+        'id': 'staff',
+        'trigger': {
+          'type': 'telegram.interaction.v1',
+          'config': {
+            'audience': 'admin',
+            'failureText': 'Try again.',
+            'routes': [
+              {'kind': 'command', 'name': 'staff', 'argument': 'none'},
+            ],
+          },
+        },
+        'actions': [
+          {
+            'id': 'menu',
+            'type': 'telegram.present.v1',
+            'config': {
+              'lines': [
+                {'text': 'Staff menu', 'maxLength': 20},
+              ],
+            },
+          },
+        ],
+      });
+      final h = await CommandHarness.create(definition);
+      addTearDown(h.close);
+      h.bot.setup = h.bot.setup!.copyWith(adminIds: ['123', '456']);
+      Iterable<dynamic> scopes(String method) => h.api.calls
+          .where((call) => call.$1 == method)
+          .map((call) => call.$2['scope']['chat_id'])
+          .where((id) => id != null);
+
+      await h.runtime.start(h.bot);
+      await until(() => scopes('setMyCommands').length == 2);
+      expect(scopes('setMyCommands'), [123, 456]);
+      await h.runtime.stop(h.bot);
+      h.bot.setup = h.bot.setup!.copyWith(adminIds: ['456', '789']);
+      await h.runtime.start(h.bot);
+      await until(() => scopes('deleteMyCommands').isNotEmpty);
+      expect(scopes('setMyCommands'), [123, 456, 456, 789]);
+      expect(scopes('deleteMyCommands'), [123]);
+    },
+  );
+
   test(
     'commands-only metadata publishes the declared private default-language list through the SDK',
     () async {

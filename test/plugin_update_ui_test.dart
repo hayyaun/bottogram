@@ -116,7 +116,7 @@ class UpdateUiFixture {
     await until(() => bots.state.length == 1);
     final setup = await repository.prepare(
       token: bot.token,
-      adminId: '123',
+      adminIds: '123',
       plugin: old,
       parameters: {'credential': 'test-key', 'publicOrigin': origin},
     );

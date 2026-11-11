@@ -60,6 +60,13 @@ and footer of **Render list**. Editing a shared row updates every action
 that links to it. Add the appropriate callback handler in each bot when a
 row uses dynamic callback data. Bot backups carry copies of all linked pieces.
 
+## Bot admins
+
+Enter Telegram user IDs separated by commas or new lines in the shared **Admins**
+field when creating or editing a bot. In manual actions, use `{{event.isAdmin}}`
+in a condition to check whether the sender is on that list. A reply action can
+use **Send to all admins** to deliver to every ID on the list.
+
 ## References and types
 
 - `{{event.text}}`, `{{event.firstName}}`, `{{event.username}}`

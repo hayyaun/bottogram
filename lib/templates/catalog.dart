@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../builder/values.dart';
+import '../plugins/admin_ids.dart';
 import 'model.dart';
 import 'quiz.dart';
 import 'crypto.dart';
@@ -267,8 +268,8 @@ abstract final class BotTemplates {
         );
       }
     }
-    if (template.requiresAdmin && !RegExp(r'^[1-9][0-9]*$').hasMatch(admin)) {
-      throw const BuilderFailure('Enter the admin’s numeric Telegram ID.');
+    if (template.requiresAdmin && parseAdminIds(admin) == null) {
+      throw const BuilderFailure('Enter at least one valid Telegram admin ID.');
     }
     if (template.dataset != null) {
       if (rows.isEmpty || rows.length > 20) {

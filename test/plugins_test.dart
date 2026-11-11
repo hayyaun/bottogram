@@ -372,7 +372,7 @@ void main() {
         await bots.create(
           name: 'Shop $i',
           token: '$i:testing',
-          adminId: '$i',
+          adminIds: '$i',
           plugin: plugin,
           parameters: {'apiKey': 'test-secret-$i'},
         );
@@ -393,8 +393,8 @@ void main() {
         (await repository.setupFor(
           first.key,
           first.token,
-        ))!.adminTelegramUserId,
-        '1',
+        ))!.adminIds,
+        ['1'],
       );
       await expectLater(first.start(), throwsA(isA<PluginException>()));
       await expectLater(
@@ -402,7 +402,7 @@ void main() {
         throwsA(isA<PluginException>()),
       );
       await expectLater(
-        bots.create(name: 'Duplicate', token: '1:testing', adminId: '1'),
+        bots.create(name: 'Duplicate', token: '1:testing', adminIds: '1'),
         throwsA(isA<PluginException>()),
       );
     },
@@ -416,7 +416,7 @@ void main() {
       bots.create(
         name: 'Shop',
         token: '123:testing',
-        adminId: '1',
+        adminIds: '1',
         plugin: plugin,
         parameters: {'apiKey': 'test-key'},
       ),
@@ -435,7 +435,7 @@ void main() {
       await bots.create(
         name: 'Shop',
         token: '123:testing',
-        adminId: '1',
+        adminIds: '1',
         plugin: plugin,
         parameters: {'apiKey': 'original-secret'},
       );
@@ -443,7 +443,7 @@ void main() {
       final original = bot.setup!;
       await bots.updatePluginParameters(
         bot,
-        adminId: '1',
+        adminIds: '1',
         parameters: {'apiKey': ''},
       );
       expect(bot.setup!.instanceId, original.instanceId);
@@ -451,7 +451,7 @@ void main() {
       await expectLater(
         bots.updatePluginParameters(
           bot,
-          adminId: '2',
+          adminIds: '2',
           parameters: {'apiKey': 'replacement-secret'},
         ),
         throwsA(isA<PluginException>()),
@@ -464,18 +464,18 @@ void main() {
       vault.failWrite = false;
       await bots.updatePluginParameters(
         bot,
-        adminId: '2',
+        adminIds: '2, 3\n2',
         parameters: {'apiKey': ''},
       );
-      expect(bot.setup!.instanceId, isNot(original.instanceId));
-      expect(bot.setup!.adminTelegramUserId, '2');
+      expect(bot.setup!.instanceId, original.instanceId);
+      expect(bot.setup!.adminIds, ['2', '3']);
       expect(
         await vault.read(bot.setup!.secretKey('apiKey')),
         'original-secret',
       );
       await bots.updatePluginParameters(
         bot,
-        adminId: '2',
+        adminIds: '2',
         parameters: {'apiKey': 'replacement-secret'},
       );
       expect(
@@ -499,14 +499,14 @@ void main() {
         await bots.create(
           name: 'Plugin shop',
           token: '1:testing',
-          adminId: '1',
+          adminIds: '1',
           plugin: plugin,
           parameters: {'apiKey': 'saved-test-key'},
         );
         await bots.create(
           name: 'Manual shop',
           token: '2:testing',
-          adminId: '1',
+          adminIds: '1',
         );
       });
       await tester.binding.setSurfaceSize(const Size(390, 844));
@@ -631,7 +631,7 @@ void main() {
       await repository.install(plugin);
       await repository.prepare(
         token: '1:abandoned',
-        adminId: '1',
+        adminIds: '1',
         plugin: plugin,
         parameters: {'apiKey': 'abandoned-test-key'},
       );
@@ -639,7 +639,7 @@ void main() {
       expect(vault.values, isEmpty);
       final prepared = await repository.prepare(
         token: '2:saved',
-        adminId: '2',
+        adminIds: '2',
         plugin: plugin,
         parameters: {'apiKey': 'recoverable-test-key'},
       );
@@ -667,7 +667,7 @@ void main() {
       final old = VirtBot('Legacy', '1:legacy');
       final key = await Hive.box<VirtBot>('botsbox').add(old);
       expect(await repository.setupFor(key, old.token), isNull);
-      await bots.create(name: 'Manual', token: '2:manual', adminId: '123');
+      await bots.create(name: 'Manual', token: '2:manual', adminIds: '123');
       final created = bots.state.single;
       expect(created.setup!.usesPlugin, isFalse);
       expect(created.events, hasLength(3));
@@ -684,8 +684,8 @@ void main() {
         (await reloadedRepository.setupFor(
           box.values.last.key,
           '2:manual',
-        ))!.adminTelegramUserId,
-        '123',
+        ))!.adminIds,
+        ['123'],
       );
       reloadedRepository.dispose();
     },
@@ -699,7 +699,7 @@ void main() {
       await bots.create(
         name: 'Shop',
         token: '1:testing',
-        adminId: '1',
+        adminIds: '1',
         plugin: plugin,
         parameters: {'apiKey': 'delete-test-key'},
       );
@@ -786,7 +786,7 @@ void main() {
       await tester.tap(find.text('Inshopa · 0.2.0').last);
       await tester.pumpAndSettle();
       expect(find.text('Inshopa API key'), findsOneWidget);
-      expect(find.text('Admin Telegram ID'), findsOneWidget);
+      expect(find.text('Admins'), findsOneWidget);
       expect(find.text('Shop ID'), findsNothing);
       await capture('create-bot-inshopa');
       await tester.tap(find.text('Inshopa · 0.2.0'));
@@ -1086,7 +1086,7 @@ void main() {
         await bots.create(
           name: 'Shop $i',
           token: '$i:settings',
-          adminId: '$i',
+          adminIds: '$i',
           plugin: plugin,
           parameters: {'apiKey': 'setting-test-key-$i'},
         );
@@ -1130,7 +1130,7 @@ void main() {
       await bots.create(
         name: 'Shop',
         token: '1:legacy-settings',
-        adminId: '1',
+        adminIds: '1',
         plugin: plugin,
         parameters: {'apiKey': 'legacy-setting-test-key'},
       );

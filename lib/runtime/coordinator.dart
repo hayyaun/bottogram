@@ -118,7 +118,7 @@ class BotRuntime extends ChangeNotifier {
           telegram: telegram,
           secret: (field) => plugins.vault.read(setup.secretKey(field)),
           fields: setup.values,
-          adminId: setup.adminTelegramUserId,
+          adminIds: setup.adminIds,
           settings: settings,
           destinationChatTypes: {
             for (final field in manifest.fields)
@@ -197,7 +197,7 @@ class BotRuntime extends ChangeNotifier {
             telegram,
             declaration,
             setup.tokenFingerprint,
-            setup.adminTelegramUserId,
+            setup.adminIds,
           );
         }
       }
@@ -234,25 +234,28 @@ class BotRuntime extends ChangeNotifier {
     BotTelegramPort telegram,
     Json declaration,
     String botFingerprint,
-    String adminId,
+    List<String> adminIds,
   ) async {
     final scopeKey = '@telegram:$botFingerprint:commands';
-    final target = declaration['adminCommands'] == null ? null : adminId;
+    final targets = declaration['adminCommands'] == null
+        ? const <String>{}
+        : adminIds.toSet();
     var success = false;
     try {
       final state = await progress.read(scopeKey);
       final managed = (state['admins'] as List? ?? const [])
           .cast<String>()
           .toSet();
-      if (target != null && managed.add(target)) {
+      if (!managed.containsAll(targets)) {
+        managed.addAll(targets);
         // Track the attempted scope before calling Telegram so a lost reply
         // still permits cleanup when the admin changes.
         await progress.write(scopeKey, {'admins': managed.toList()});
       }
-      final obsolete = managed.where((id) => id != target).toList();
+      final obsolete = managed.where((id) => !targets.contains(id)).toList();
       final published = await telegram.synchronizeCommands(
         declaration,
-        adminId: target,
+        adminIds: targets,
       );
       for (final id in obsolete) {
         if (await telegram.clearAdminCommands(id)) managed.remove(id);
@@ -260,7 +263,7 @@ class BotRuntime extends ChangeNotifier {
       if (obsolete.isNotEmpty) {
         await progress.write(scopeKey, {'admins': managed.toList()});
       }
-      success = published && managed.every((id) => id == target);
+      success = published && managed.every(targets.contains);
     } catch (_) {
       // Report safe status without exposing authenticated URLs or storage data.
     }

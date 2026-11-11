@@ -236,13 +236,12 @@ class HttpGetAction implements AutomationAction {
 }
 
 class TelegramMessageAction implements AutomationAction {
-  TelegramMessageAction(this.config, this.context, {required this.adminOnly});
+  TelegramMessageAction(this.config, this.context);
   final Json config;
   final RuntimeContext context;
-  final bool adminOnly;
   @override
   Future<Json> execute(Json event) async {
-    final chatId = adminOnly ? context.adminId : event['chatId']?.toString();
+    final chatId = event['chatId']?.toString();
     if (chatId == null) {
       throw const RuntimeFailure(
         'The event has no reply destination.',
@@ -250,6 +249,15 @@ class TelegramMessageAction implements AutomationAction {
         permanent: true,
       );
     }
+    await sendTo(event, chatId);
+    return event;
+  }
+
+  Future<void> sendTo(
+    Json event,
+    String chatId, {
+    bool notification = false,
+  }) async {
     var text = render(config['text'] as String, event);
     final list = config['list'] as Json?;
     if (list != null) {
@@ -288,7 +296,37 @@ class TelegramMessageAction implements AutomationAction {
         context.fields,
       );
     }
-    await context.telegram.send(chatId, text, replyMarkup: replyMarkup);
+    final telegram = context.telegram;
+    if (notification && telegram is TelegramNotifications) {
+      await (telegram as TelegramNotifications).notify(chatId, text);
+    } else {
+      await telegram.send(chatId, text, replyMarkup: replyMarkup);
+    }
+  }
+}
+
+class AdminNotificationAction extends TelegramMessageAction
+    implements FanOutAction {
+  AdminNotificationAction(super.config, super.context);
+
+  @override
+  Iterable<String> get recipients => context.adminIds;
+
+  @override
+  Future<void> deliver(Json event, String recipient) =>
+      sendTo(event, recipient, notification: true);
+
+  @override
+  Future<Json> execute(Json event) async {
+    RuntimeFailure? failure;
+    for (final recipient in recipients) {
+      try {
+        await deliver(event, recipient);
+      } on RuntimeFailure catch (error) {
+        failure ??= error;
+      }
+    }
+    if (failure != null) throw failure;
     return event;
   }
 }

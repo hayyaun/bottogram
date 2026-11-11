@@ -43,6 +43,11 @@ abstract interface class TelegramPort {
   Future<void> send(String chatId, String text, {Json? replyMarkup});
 }
 
+/// Notification delivery can distinguish an explicit recipient rejection.
+abstract interface class TelegramNotifications {
+  Future<void> notify(String chatId, String text);
+}
+
 /// Optional Telegram operations used by interactive and channel automations.
 abstract interface class TelegramInteractions {
   String get username;
@@ -83,7 +88,7 @@ class RuntimeContext {
     required this.telegram,
     required this.secret,
     required this.fields,
-    required this.adminId,
+    required this.adminIds,
     this.settings = const {},
     this.destinationChatTypes = const {},
   });
@@ -91,7 +96,7 @@ class RuntimeContext {
   final TelegramPort telegram;
   final Future<String?> Function(String field) secret;
   final Map<String, String> fields;
-  final String adminId;
+  final List<String> adminIds;
   final Map<String, Object> settings;
   final Map<String, Set<String>> destinationChatTypes;
   final lastResponses = <String, Json>{};
@@ -156,3 +161,9 @@ String render(String template, Json event, {dynamic item}) => template
       }
       return value.toString();
     });
+
+/// Independent deliveries with the same input and one acknowledgement per recipient.
+abstract interface class FanOutAction implements AutomationAction {
+  Iterable<String> get recipients;
+  Future<void> deliver(Json event, String recipient);
+}

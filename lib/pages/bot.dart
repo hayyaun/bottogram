@@ -8,6 +8,7 @@ import 'package:bottogram/builder/database_browser_page.dart';
 import 'package:bottogram/builder/database_browser_adapter.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/plugins/settings_form.dart';
+import 'package:bottogram/plugins/setup_fields.dart';
 import 'package:bottogram/plugins/parameters_page.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/capability_review.dart';
@@ -269,8 +270,8 @@ class _BotPageState extends State<BotPage> {
                         const SizedBox(height: 24),
                         _detail(
                           Icons.person_outline,
-                          'Admin Telegram ID',
-                          setup.adminTelegramUserId,
+                          'Admins',
+                          setup.adminIds.join(', '),
                         ),
                         for (final field in manifest?.fields ?? <PluginField>[])
                           _detail(
@@ -411,14 +412,19 @@ class _BotPageState extends State<BotPage> {
                             ),
                           ),
                         ),
-                        if (setup != null) ...[
-                          const SizedBox(height: 20),
-                          _detail(
-                            Icons.person_outline,
-                            'Admin Telegram ID',
-                            setup.adminTelegramUserId.toString(),
+                        const SizedBox(height: 20),
+                        _detail(
+                          Icons.person_outline,
+                          'Admins',
+                          setup?.adminIds.join(', ') ?? 'None added',
+                        ),
+                        Align(
+                          alignment: AlignmentDirectional.centerStart,
+                          child: TextButton(
+                            onPressed: _editAdmins,
+                            child: const Text('Edit admins'),
                           ),
-                        ],
+                        ),
                       ],
                     ),
                   ),
@@ -537,6 +543,18 @@ class _BotPageState extends State<BotPage> {
           return count + ((definition ?? act).rmu?.callsEvent(target) ?? 0);
         }),
   );
+
+  Future<void> _editAdmins() async {
+    final bots = context.read<BotsCubit>();
+    final saved = await showDialog<bool>(
+      context: context,
+      builder: (_) => EditAdminsDialog(
+        ids: widget.bot.setup?.adminIds ?? const [],
+        onSave: (ids) => bots.updateAdmins(widget.bot, ids),
+      ),
+    );
+    if (saved == true && mounted) setState(() {});
+  }
 
   Widget _pluginSettings() {
     final setup = widget.bot.setup!;

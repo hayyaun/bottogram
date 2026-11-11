@@ -47,6 +47,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   late bool _groupItemButtons = _layout['groupItemButtons'] == true;
   late String? _sharedList = widget.initial.config['sharedList'] as String?;
   String? _newListLabel;
+  late bool _sendToAdmins = widget.initial.config['sendToAdmins'] == true;
   late bool _widgetQueries = widget.initial.config['widgetQueries'] == true;
   var _saving = false;
   String? _error;
@@ -209,6 +210,11 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         }
         if (kind == 'reply') {
           config['widgetQueries'] = _widgetQueries;
+          if (_sendToAdmins) {
+            config['sendToAdmins'] = true;
+          } else {
+            config.remove('sendToAdmins');
+          }
         }
       }
       if (kind == 'renderList') {
@@ -646,6 +652,16 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                         : 'Message',
                   ),
                 ],
+                if (kind == 'reply')
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text('Send to all admins'),
+                    subtitle: const Text(
+                      'Use the admin list in bot settings as the destination.',
+                    ),
+                    value: _sendToAdmins,
+                    onChanged: (value) => setState(() => _sendToAdmins = value),
+                  ),
                 if (kind == 'reply' || kind == 'editText')
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,

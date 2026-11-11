@@ -191,6 +191,7 @@ class AutomationRunner {
           final durable = pending['durableDeduplication'] == true;
           final baseline = trigger.baseline && state['initialized'] != true;
           var deferred = false;
+          var adminDeliveryRejected = false;
           while ((pending['index'] as int) < events.length && !_stopped) {
             final index = pending['index'] as int;
             var event = channelId == null
@@ -207,7 +208,47 @@ class AutomationRunner {
                 failureMapping = definition.actions[action].errorMap;
                 executingComponent = true;
                 try {
-                  event = await actions[action].execute(event);
+                  final component = actions[action];
+                  if (component is FanOutAction) {
+                    final acknowledged = List<String>.from(
+                      pending['acknowledgedRecipients'] as List? ?? const [],
+                    );
+                    final rejected = List<String>.from(
+                      pending['rejectedRecipients'] as List? ?? const [],
+                    );
+                    RuntimeFailure? retry;
+                    for (final recipient in component.recipients) {
+                      if (_stopped) break;
+                      if (acknowledged.contains(recipient) ||
+                          rejected.contains(recipient)) {
+                        continue;
+                      }
+                      try {
+                        await component.deliver(event, recipient);
+                        acknowledged.add(recipient);
+                      } on RuntimeFailure catch (error) {
+                        if (error.code == 'telegram.recipient_rejected') {
+                          rejected.add(recipient);
+                        } else {
+                          retry ??= error;
+                          continue;
+                        }
+                      }
+                      pending['acknowledgedRecipients'] = acknowledged;
+                      pending['rejectedRecipients'] = rejected;
+                      state['pending'] = pending;
+                      await store.write(key, state);
+                    }
+                    if (_stopped) break;
+                    if (retry != null) throw retry;
+                    adminDeliveryRejected |= rejected.any(
+                      component.recipients.contains,
+                    );
+                    pending.remove('acknowledgedRecipients');
+                    pending.remove('rejectedRecipients');
+                  } else {
+                    event = await component.execute(event);
+                  }
                 } on DeferDelivery catch (defer) {
                   if (channelId == null || !durable) rethrow;
                   deferred = deferred || defer.missingPhoto;
@@ -275,6 +316,13 @@ class AutomationRunner {
                 code: 'telegram.photo_unavailable',
               ),
               definition.actions.last.errorMap,
+            );
+          } else if (adminDeliveryRejected) {
+            _report(
+              const RuntimeFailure(
+                'Telegram refused a notification for one or more admins. Ask them to open the bot and allow messages.',
+                code: 'telegram.recipient_rejected',
+              ),
             );
           } else if (channelId == null || state['pageCursor'] == null) {
             onStatus(null);

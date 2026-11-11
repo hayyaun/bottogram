@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import 'manifest.dart';
+import 'admin_ids.dart';
 
 class PluginSetupFields extends StatelessWidget {
   const PluginSetupFields({
@@ -88,5 +89,95 @@ class _SecretFormFieldState extends State<SecretFormField> {
             )
           : null,
     ),
+  );
+}
+
+class AdminIdsField extends StatelessWidget {
+  const AdminIdsField({super.key, required this.controller});
+  final TextEditingController controller;
+
+  @override
+  Widget build(BuildContext context) => SecretFormField(
+    controller: controller,
+    label: 'Admins',
+    multiline: true,
+    helpText: 'Enter Telegram user IDs separated by commas or line breaks.',
+    validator: validateAdminIds,
+  );
+}
+
+class EditAdminsDialog extends StatefulWidget {
+  const EditAdminsDialog({super.key, required this.ids, required this.onSave});
+  final List<String> ids;
+  final Future<void> Function(String ids) onSave;
+
+  @override
+  State<EditAdminsDialog> createState() => _EditAdminsDialogState();
+}
+
+class _EditAdminsDialogState extends State<EditAdminsDialog> {
+  final _form = GlobalKey<FormState>();
+  late final _ids = TextEditingController(text: widget.ids.join('\n'));
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _ids.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    if (!_form.currentState!.validate()) return;
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave(_ids.text);
+      if (mounted) Navigator.pop(context, true);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _saving = false;
+          _error = error is PluginException
+              ? error.message
+              : 'Could not save the admins. Check the bot settings and try again.';
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Edit admins'),
+    content: SizedBox(
+      width: 420,
+      child: Form(
+        key: _form,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AbsorbPointer(
+                absorbing: _saving,
+                child: AdminIdsField(controller: _ids),
+              ),
+              if (_error != null) Text(_error!),
+            ],
+          ),
+        ),
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: _saving ? null : () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: _saving ? null : _save,
+        child: Text(_saving ? 'Saving…' : 'Save admins'),
+      ),
+    ],
   );
 }

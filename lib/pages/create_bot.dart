@@ -76,7 +76,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
       await widget.bots.create(
         name: _name.text.trim(),
         token: _token.text.trim(),
-        adminId: _admin.text.trim(),
+        adminIds: _admin.text.trim(),
         plugin: _plugin,
         parameters: _parameters.map((key, ctrl) => MapEntry(key, ctrl.text)),
       );
@@ -164,14 +164,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                   : 'Enter the Telegram bot token from BotFather.',
                             ),
                             const SizedBox(height: 24),
-                            SecretFormField(
-                              controller: _admin,
-                              label: 'Admin Telegram ID',
-                              numeric: true,
-                              helpText:
-                                  'Get your own numeric ID from the UserInfo bot. Start your new bot in Telegram once.',
-                              validator: validateAdminId,
-                            ),
+                            AdminIdsField(controller: _admin),
                           ],
                         ),
                       ),

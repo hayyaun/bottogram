@@ -288,17 +288,17 @@ class AutomationRegistry {
       }, HttpGetAction.new),
       'telegram.notify-admin.v1': ComponentRegistration(
         _message,
-        (c, ctx) => TelegramMessageAction(c, ctx, adminOnly: true),
+        AdminNotificationAction.new,
       ),
       'telegram.reply.v1': ComponentRegistration(
         _message,
-        (c, ctx) => TelegramMessageAction(c, ctx, adminOnly: false),
+        TelegramMessageAction.new,
       ),
       'telegram.reply.v2': ComponentRegistration((c) {
         keys(c, {'text', 'inlineKeyboard'});
         _template(c['text']);
         validateInlineKeyboard(c['inlineKeyboard']);
-      }, (c, ctx) => TelegramMessageAction(c, ctx, adminOnly: false)),
+      }, TelegramMessageAction.new),
     }),
   );
 

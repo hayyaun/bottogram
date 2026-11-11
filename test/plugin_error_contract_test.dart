@@ -36,7 +36,7 @@ RuntimeContext context() => RuntimeContext(
   telegram: FakeTelegram(),
   secret: (_) async => null,
   fields: const {},
-  adminId: '999',
+  adminIds: ['999'],
 );
 
 class FailingTrigger implements AutomationTrigger {

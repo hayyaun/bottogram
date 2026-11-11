@@ -569,7 +569,7 @@ void main() {
             'storefrontUrl': 'https://shop.example.test',
             'telegramChannelId': channel,
           },
-          adminId: '123',
+          adminIds: ['123'],
         ),
       );
 
@@ -651,7 +651,7 @@ void main() {
       const token = '99:fixture';
       final setup = await repository.prepare(
         token: token,
-        adminId: '123',
+        adminIds: '123',
         plugin: previous,
         parameters: {
           'storefrontUrl': 'https://shop.example.test',
@@ -681,7 +681,7 @@ void main() {
       final channel = await repository.updateParameters(
         1,
         token,
-        adminId: '123',
+        adminIds: '123',
         parameters: {'telegramChannelId': '-100123'},
       );
       expect(channel.instanceId, setup.instanceId);
@@ -708,10 +708,8 @@ void main() {
       await h.progress.write(key, {
         'admins': ['123'],
       });
-      h.bot.setup = BotSetup.fromMap({
-        ...setup.toMap(),
-        'adminTelegramUserId': '777',
-      });
+      final legacy = setup.toMap()..remove('adminIds');
+      h.bot.setup = BotSetup.fromMap({...legacy, 'adminTelegramUserId': '777'});
       await h.runtime.start(h.bot);
       await until(
         () => h.api.calls.any((call) => call.$1 == 'deleteMyCommands'),

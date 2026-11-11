@@ -94,7 +94,13 @@ class PluginSetting {
 
     final key = text(data['key'], 64);
     if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$').hasMatch(key) ||
-        {'name', 'token', 'botToken', 'adminTelegramUserId'}.contains(key) ||
+        {
+          'name',
+          'token',
+          'botToken',
+          'adminTelegramUserId',
+          'adminIds',
+        }.contains(key) ||
         !usedKeys.add(key)) {
       invalid('Setting keys must be unique and distinct from creation fields.');
     }

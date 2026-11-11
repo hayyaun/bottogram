@@ -198,7 +198,7 @@ void main() {
     await repository.install(old);
     setup = await repository.prepare(
       token: token,
-      adminId: '123',
+      adminIds: '123',
       plugin: old,
       parameters: {
         'credential': 'test-secret',
@@ -313,7 +313,7 @@ void main() {
       );
       expect(updated.instanceId, setup.instanceId);
       expect(updated.tokenFingerprint, setup.tokenFingerprint);
-      expect(updated.adminTelegramUserId, setup.adminTelegramUserId);
+      expect(updated.adminIds, setup.adminIds);
       expect(updated.values, setup.values);
       expect(updated.secretFields, setup.secretFields);
       expect(updated.settings, {'notify': false});
@@ -424,7 +424,7 @@ void main() {
       final invalid = BotSetup(
         instanceId: setup.instanceId,
         tokenFingerprint: setup.tokenFingerprint,
-        adminTelegramUserId: setup.adminTelegramUserId,
+        adminIds: setup.adminIds,
         pluginKey: setup.pluginKey,
         pluginDigest: setup.pluginDigest,
         pluginName: setup.pluginName,
@@ -469,7 +469,7 @@ void main() {
       await until(() => bots.state.length == 2);
       final attached = await repository.prepare(
         token: token,
-        adminId: '123',
+        adminIds: '123',
         plugin: old,
         parameters: {
           'credential': 'test-secret',

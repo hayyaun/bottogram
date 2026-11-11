@@ -252,7 +252,7 @@ void main() {
         telegram: telegram,
         secret: (_) async => 'secret-key',
         fields: {'storefrontUrl': 'https://shop.example.test'},
-        adminId: '999',
+        adminIds: ['999'],
       );
       final runner = AutomationRunner(
         definition: parse(productDefinition()).automations.single,
@@ -329,7 +329,7 @@ void main() {
         telegram: telegram,
         secret: (_) async => null,
         fields: {},
-        adminId: '999',
+        adminIds: ['999'],
       );
       final runner = AutomationRunner(
         definition: definition,
@@ -387,7 +387,7 @@ void main() {
         telegram: FakeTelegram(),
         secret: (_) async => null,
         fields: {},
-        adminId: '9',
+        adminIds: ['9'],
       );
       final definition =
           AutomationDefinition('a', const ComponentDefinition('t', {}), [
@@ -460,7 +460,7 @@ void main() {
         telegram: FakeTelegram(),
         secret: (_) async => null,
         fields: {},
-        adminId: '9',
+        adminIds: ['9'],
       );
       final registry = AutomationRegistry(
         triggers: {
@@ -531,7 +531,7 @@ void main() {
       telegram: FakeTelegram(),
       secret: (_) async => null,
       fields: {},
-      adminId: '9',
+      adminIds: ['9'],
     );
     final trigger = HttpPollTrigger({
       'intervalSeconds': 60,

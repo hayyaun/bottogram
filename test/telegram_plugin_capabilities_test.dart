@@ -119,7 +119,7 @@ void main() {
           return 'must-not-be-used';
         },
         fields: {'portalOrigin': 'https://events.example.test:8443/'},
-        adminId: '123',
+        adminIds: ['123'],
       );
       final trigger = TelegramCommandTrigger(
         definition.trigger.config,
@@ -144,7 +144,6 @@ void main() {
         await TelegramMessageAction(
           definition.actions.single.config,
           context,
-          adminOnly: false,
         ).execute(batch.events.single);
         expect(telegram.messages, [('42', 'Your event passes')]);
         expect(telegram.markup, {

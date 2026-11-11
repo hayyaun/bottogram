@@ -18,7 +18,7 @@ RuntimeContext context({
   telegram: FakeTelegram(),
   fields: fields,
   secret: secret ?? (_) async => 'test-credential',
-  adminId: '1',
+  adminIds: ['1'],
 );
 
 Matcher failure(String code, {bool? permanent}) => isA<RuntimeFailure>()

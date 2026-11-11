@@ -46,7 +46,7 @@ void main() {
         telegram: FakeTelegram(),
         secret: (_) async => null,
         fields: {},
-        adminId: '1',
+        adminIds: ['1'],
       ),
       store: store,
       key: 'timer-probe',

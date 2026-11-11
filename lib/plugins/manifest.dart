@@ -64,17 +64,6 @@ class PluginField {
   }
 }
 
-String? validateAdminId(String? value) {
-  final text = value?.trim() ?? '';
-  final number = int.tryParse(text);
-  if (!RegExp(r'^[1-9][0-9]*$').hasMatch(text) ||
-      number == null ||
-      number > 4503599627370495) {
-    return 'Enter your positive numeric Telegram user ID.';
-  }
-  return null;
-}
-
 class PluginManifest {
   PluginManifest._(
     this.source,
@@ -226,10 +215,11 @@ class PluginManifest {
         : text(data['description'], 'description', 500);
     final requires = data['requiresBotFields'] ?? <dynamic>[];
     if (requires is! List ||
-        requires.any((v) => v != 'adminTelegramUserId') ||
+        requires.any((v) => !{'adminTelegramUserId', 'adminIds'}.contains(v)) ||
         requires.toSet().length != requires.length) {
       reject('The plugin requests unsupported shared bot fields.');
     }
+    final requiresAdmin = (requires as List).isNotEmpty;
     final rawFields = data['setupFields'];
     if (rawFields is! List || rawFields.length > 32) {
       reject('setupFields must be a list of at most 32 fields.');
@@ -252,7 +242,13 @@ class PluginManifest {
       });
       final key = text(field['key'], 'field key', 64);
       if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$').hasMatch(key) ||
-          {'name', 'token', 'botToken', 'adminTelegramUserId'}.contains(key) ||
+          {
+            'name',
+            'token',
+            'botToken',
+            'adminTelegramUserId',
+            'adminIds',
+          }.contains(key) ||
           !seen.add(key)) {
         reject(
           'Plugin field keys must be unique and cannot duplicate common bot fields.',
@@ -427,7 +423,7 @@ class PluginManifest {
           }
           if (automation.trigger.type == interactionTrigger &&
               automation.trigger.config['audience'] != null &&
-              !(requires as List).contains('adminTelegramUserId')) {
+              !requiresAdmin) {
             reject('Telegram role checks require the shared admin field.');
           }
           for (final component in [automation.trigger, ...automation.actions]) {
@@ -463,7 +459,7 @@ class PluginManifest {
               );
             }
             if (component.type == 'telegram.notify-admin.v1' &&
-                !(requires as List).contains('adminTelegramUserId')) {
+                !requiresAdmin) {
               reject('Admin notifications require the shared admin field.');
             }
             for (final request in registry.requestsFor(component)) {
@@ -508,7 +504,7 @@ class PluginManifest {
       version,
       description,
       List.unmodifiable(fields),
-      (requires as List).contains('adminTelegramUserId'),
+      requiresAdmin,
       List.unmodifiable(settings),
       automations,
       telegram,

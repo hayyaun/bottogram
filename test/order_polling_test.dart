@@ -40,7 +40,7 @@ RuntimeContext context(
   telegram: telegram,
   secret: (_) async => 'test-secret',
   fields: {'storefrontUrl': 'https://shop.example.test'},
-  adminId: admin,
+  adminIds: [admin],
 );
 Json order(String id, String status) => {
   'id': id,
@@ -63,7 +63,96 @@ class ReceiptFailureStore extends MemoryProgress {
   }
 }
 
+class AdminDeliveryProbe extends FakeTelegram implements TelegramNotifications {
+  final attempts = <String>[];
+  bool retryRecipient = true;
+
+  @override
+  Future<void> notify(String chatId, String text) async {
+    attempts.add(chatId);
+    if (chatId == '789') {
+      throw const RuntimeFailure(
+        'Rejected',
+        code: 'telegram.recipient_rejected',
+      );
+    }
+    if (chatId == '456' && retryRecipient) {
+      throw const RuntimeFailure('Temporary failure');
+    }
+    await send(chatId, text);
+  }
+}
+
 void main() {
+  test(
+    'paid orders reach every admin and retry only unconfirmed deliveries',
+    () async {
+      final definition = parse(salesPackage()).automations[1];
+      final store = MemoryProgress();
+      const key = 'instance:digest:paid-orders';
+      await store.write(key, {'initialized': true});
+      final http = FakeHttp()
+        ..responses.addAll([
+          {'id': 'shop-1'},
+          {
+            'orders': [order('new-order', 'paid')],
+          },
+        ]);
+      final telegram = AdminDeliveryProbe();
+      final runtimeContext = RuntimeContext(
+        http: http,
+        telegram: telegram,
+        secret: (_) async => 'test-secret',
+        fields: {'storefrontUrl': 'https://shop.example.test'},
+        adminIds: ['123', '456', '789', '321'],
+      );
+
+      AutomationRunner runner(void Function(String?) onStatus) =>
+          AutomationRunner(
+            definition: definition,
+            context: runtimeContext,
+            store: store,
+            key: key,
+            onStatus: onStatus,
+          );
+      final failure = Completer<void>();
+      final first = runner((status) {
+        if (status != null && !failure.isCompleted) failure.complete();
+      });
+      unawaited(first.start());
+      try {
+        await failure.future.timeout(const Duration(seconds: 5));
+      } finally {
+        await first.stop();
+      }
+      expect(telegram.attempts, ['123', '456', '789', '321']);
+      expect(telegram.messages.map((m) => m.$1), ['123', '321']);
+
+      telegram.retryRecipient = false;
+      final committed = Completer<String?>();
+      final second = runner((status) {
+        if (store.values[key]?['pending'] == null && !committed.isCompleted) {
+          committed.complete(status);
+        }
+      });
+      unawaited(second.start());
+      try {
+        expect(
+          await committed.future.timeout(const Duration(seconds: 5)),
+          contains('refused'),
+        );
+      } finally {
+        await second.stop();
+      }
+      expect(telegram.attempts, ['123', '456', '789', '321', '456']);
+      expect(telegram.messages.map((m) => m.$1), ['123', '321', '456']);
+      expect(
+        telegram.messages.every((m) => m.$2.contains('new-order')),
+        isTrue,
+      );
+    },
+  );
+
   test(
     'actual HTTP transport resolves and filters the order-list contract with the registered headers',
     () async {
@@ -112,7 +201,7 @@ void main() {
           telegram: FakeTelegram(),
           secret: (_) async => 'test-secret',
           fields: {'storefrontUrl': 'https://shop.example.test'},
-          adminId: '123',
+          adminIds: ['123'],
         );
         final batch = await HttpListPollTrigger(
           definition.trigger.config,
@@ -175,7 +264,7 @@ void main() {
       telegram: FakeTelegram(),
       secret: (_) async => throw StateError('Vault unavailable'),
       fields: {'storefrontUrl': 'https://shop.example.test'},
-      adminId: '123',
+      adminIds: ['123'],
     );
     await expectLater(
       HttpListPollTrigger(salesConfig(), ctx).next(null),

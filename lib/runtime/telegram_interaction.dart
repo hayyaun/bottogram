@@ -58,9 +58,9 @@ class TelegramInteractionTrigger extends TelegramEventTrigger {
             event['senderId'] is! String ||
             event['senderId'] != event['chatId'] ||
             (config['audience'] == 'admin' &&
-                event['senderId'] != context.adminId) ||
+                !context.adminIds.contains(event['senderId'])) ||
             (config['audience'] == 'visitor' &&
-                event['senderId'] == context.adminId)) {
+                context.adminIds.contains(event['senderId']))) {
           return;
         }
         final args = event['arguments'] as List? ?? const [];

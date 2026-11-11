@@ -105,6 +105,7 @@ class TemplateHarness {
   TemplateHarness(this.id, this.draft, this.store, this.transport) {
     engine = BuilderEngine(
       botId: id,
+      adminIds: const ['99', '98'],
       telegram: telegram,
       variables: store.variables(id),
       secret: (_) async => null,
@@ -596,6 +597,14 @@ void main() {
           (await h.query('SELECT count(*) AS n FROM requests')).single['n'],
           1,
         );
+        expect(
+          h.telegram.calls
+              .where(
+                (call) => call['text'].toString().startsWith('New request #'),
+              )
+              .map((call) => call['chatId']),
+          ['99', '98'],
+        );
         await h.click('request:open:1', user: 2);
         expect(h.messages.last, contains('not available to you'));
         await h.click('request:close:1', user: 2);
@@ -603,10 +612,10 @@ void main() {
           (await h.query('SELECT status FROM requests')).single['status'],
           'Open',
         );
-        await h.command('inbox', user: 99);
+        await h.command('inbox', user: 98);
         expect(h.messages.last, contains('Community question'));
-        await h.click('request:reply:1', user: 99);
-        await h.text('Here is an answer.', user: 99);
+        await h.click('request:reply:1', user: 98);
+        await h.text('Here is an answer.', user: 98);
         expect((await h.query('SELECT reply,status FROM requests')).single, {
           'reply': 'Here is an answer.',
           'status': 'Replied',

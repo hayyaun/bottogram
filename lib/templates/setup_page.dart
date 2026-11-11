@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../builder/values.dart';
-import '../plugins/manifest.dart';
 import '../plugins/setup_fields.dart';
+import '../plugins/manifest.dart';
 import '../store/bots.dart';
 import '../ui/design.dart';
 import 'catalog.dart';
@@ -14,7 +14,7 @@ class TemplateSetupPage extends StatefulWidget {
   final Future<void> Function(
     String name,
     String token,
-    String admin,
+    String adminIds,
     BotTemplateDraft draft,
   )?
   onCreate;
@@ -84,7 +84,7 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
         await context.read<BotsCubit>().create(
           name: _name.text.trim(),
           token: _token.text.trim(),
-          adminId: _admin.text.trim(),
+          adminIds: _admin.text.trim(),
           template: draft,
         );
       }
@@ -166,15 +166,7 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                             : 'Enter a valid Telegram bot token.',
                       ),
                       const SizedBox(height: 16),
-                      SecretFormField(
-                        controller: _admin,
-                        label: 'Admin Telegram ID',
-                        numeric: true,
-                        helpText: widget.template.requiresAdmin
-                            ? 'Only this person can use the admin commands. Start the bot from that account once.'
-                            : 'The owner ID used by Bottogram’s bot setup.',
-                        validator: validateAdminId,
-                      ),
+                      AdminIdsField(controller: _admin),
                     ],
                   ),
                 ),

@@ -157,7 +157,7 @@ void main() {
         width: 900,
       );
       await tester.enterText(field('Telegram bot token'), '123:fixture_only');
-      await tester.enterText(field('Admin Telegram ID'), '99');
+      await tester.enterText(field('Admins'), '99');
       final question = find.text('How many sides does a triangle have?');
       await tester.ensureVisible(question);
       await tester.tap(question);
@@ -208,7 +208,7 @@ void main() {
       await capture(tester, boundary, 'crypto-setup-dark');
       await tester.ensureVisible(field('Telegram bot token'));
       await tester.enterText(field('Telegram bot token'), '123:fixture_only');
-      await tester.enterText(field('Admin Telegram ID'), '99');
+      await tester.enterText(field('Admins'), '99');
       final submit = find.widgetWithText(
         FilledButton,
         'Create bot from template',

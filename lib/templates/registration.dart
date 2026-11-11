@@ -5,26 +5,23 @@ BotTemplateDraft buildRegistration(
   List<Map<String, dynamic>> rows,
   String admin,
 ) {
-  final p = TemplateProgram(
-    [
-      sql(
-        'setup_events',
-        'CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY,title TEXT NOT NULL,details TEXT NOT NULL,capacity INTEGER NOT NULL CHECK(capacity>0))',
-      ),
-      sql(
-        'setup_registrations',
-        'CREATE TABLE IF NOT EXISTS registrations(event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,user_id TEXT NOT NULL,name TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(event_id,user_id))',
-      ),
-      seed(
-        'events',
-        ['id', 'title', 'details', 'capacity'],
-        [
-          for (final (i, row) in rows.indexed) {'id': i + 1, ...row},
-        ],
-      ),
-    ],
-    [variable('adminId', admin, scope: 'bot')],
-  );
+  final p = TemplateProgram([
+    sql(
+      'setup_events',
+      'CREATE TABLE IF NOT EXISTS events(id INTEGER PRIMARY KEY,title TEXT NOT NULL,details TEXT NOT NULL,capacity INTEGER NOT NULL CHECK(capacity>0))',
+    ),
+    sql(
+      'setup_registrations',
+      'CREATE TABLE IF NOT EXISTS registrations(event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,user_id TEXT NOT NULL,name TEXT NOT NULL,created_at TEXT NOT NULL,PRIMARY KEY(event_id,user_id))',
+    ),
+    seed(
+      'events',
+      ['id', 'title', 'details', 'capacity'],
+      [
+        for (final (i, row) in rows.indexed) {'id': i + 1, ...row},
+      ],
+    ),
+  ]);
   Acts home() => [
     sql(
       'events',
@@ -100,7 +97,7 @@ BotTemplateDraft buildRegistration(
     ...detail(),
   ], prefix: true);
   p.command('registrations', [
-    check('admin', '{{event.userId}}', '{{bot.adminId}}'),
+    check('admin', '{{event.isAdmin}}', true),
     sql(
       'counts',
       'SELECT title,capacity,(SELECT count(*) FROM registrations WHERE event_id=e.id) AS registered FROM events e ORDER BY id LIMIT 20',

@@ -258,7 +258,7 @@ class PluginHarness {
       ..setup = BotSetup(
         instanceId: 'original-instance',
         tokenFingerprint: BotSetup.fingerprint('99:test-token'),
-        adminTelegramUserId: '123',
+        adminIds: ['123'],
         pluginKey: manifest.storageKey,
         pluginDigest: manifest.digest,
         pluginName: manifest.name,

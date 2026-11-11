@@ -40,11 +40,13 @@ class BuilderEngine {
     required this.telegram,
     required this.variables,
     required this.secret,
+    this.adminIds = const [],
     BoundedJsonTransport? http,
     BuilderConsole? console,
   }) : http = http ?? BoundedJsonTransport(),
        console = console ?? BuilderConsole.shared;
   final String botId;
+  final List<String> adminIds;
   final BuilderTelegram telegram;
   final BuilderVariables variables;
   final Future<String?> Function(String name) secret;
@@ -124,7 +126,7 @@ class BuilderEngine {
           throw const BuilderFailure('An event may have at most 64 actions.');
         }
         final values = <String, dynamic>{
-          'event': event,
+          'event': {...event, 'isAdmin': adminIds.contains(userId)},
           'steps': <String, dynamic>{},
           ...await variables.read(userId),
         };
@@ -363,6 +365,30 @@ class BuilderEngine {
         ),
     };
     if (_closed) throw const BuilderFailure('Bot stopped.');
+    if (step.kind == 'reply' && config['sendToAdmins'] == true) {
+      if (adminIds.isEmpty) {
+        throw const BuilderFailure('Add at least one admin in bot settings.');
+      }
+      var delivered = 0;
+      for (final admin in adminIds) {
+        if (_closed) throw const BuilderFailure('Bot stopped.');
+        try {
+          final result = await telegram.execute(step.kind, {
+            ...arguments,
+            'chatId': admin,
+          });
+          if (result['ok'] == true) delivered++;
+        } catch (_) {
+          // One unavailable admin must not block the remaining recipients.
+        }
+      }
+      if (delivered != adminIds.length) {
+        throw BuilderFailure(
+          'Telegram confirmed $delivered of ${adminIds.length} admin notifications.',
+        );
+      }
+      return {'ok': true, 'delivered': delivered};
+    }
     return telegram.execute(step.kind, arguments);
   }
 

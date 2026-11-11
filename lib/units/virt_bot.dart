@@ -97,7 +97,11 @@ class VirtBot extends HiveObject {
     final generation = ++_runGeneration;
     var acceptsWidgets = pluginRuntime && pluginWidgetQueries;
     if (!pluginRuntime) {
-      final session = _builder = BuilderSession(token, bot.api);
+      final session = _builder = BuilderSession(
+        token,
+        bot.api,
+        adminIds: setup?.adminIds ?? const [],
+      );
       acceptsWidgets = session.registerWidgetQueries(bot, events);
       for (var ev in events) {
         ev.add(bot, execute: (context) => session.receive(ev, context));

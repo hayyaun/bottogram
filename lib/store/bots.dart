@@ -168,7 +168,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   Future<void> create({
     required String name,
     required String token,
-    required String adminId,
+    required String adminIds,
     PluginManifest? plugin,
     Map<String, String> parameters = const {},
     BotTemplateDraft? template,
@@ -198,7 +198,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     }
     final setup = await plugins.prepare(
       token: token,
-      adminId: adminId,
+      adminIds: adminIds,
       plugin: plugin,
       parameters: parameters,
     );
@@ -247,10 +247,32 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     emit(List<VirtBot>.from(state));
   });
 
+  Future<void> updateAdmins(VirtBot bot, String adminIds) => _mutate(() async {
+    if (!state.contains(bot) || !bot.isInBox) {
+      throw const PluginException('This bot is no longer available.');
+    }
+    final restart = bot.active;
+    if (restart) await runtime.stop(bot);
+    try {
+      bot.setup = await plugins.updateAdmins(bot.key, bot.token, adminIds);
+    } finally {
+      emit(List<VirtBot>.of(state));
+    }
+    if (restart) {
+      try {
+        await runtime.start(bot);
+      } catch (_) {
+        throw const PluginException(
+          'Admins saved. The bot could not restart; check its status and start it again.',
+        );
+      }
+    }
+  });
+
   // Add a bot to the list and persist it
   Future<void> updatePluginParameters(
     VirtBot bot, {
-    required String adminId,
+    required String adminIds,
     required Map<String, String> parameters,
   }) => _mutate(() async {
     if (!state.contains(bot) || !bot.isInBox) {
@@ -263,7 +285,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
       bot.setup = await plugins.updateParameters(
         bot.key,
         bot.token,
-        adminId: adminId,
+        adminIds: adminIds,
         parameters: parameters,
       );
     } catch (_) {

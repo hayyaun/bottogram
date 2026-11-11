@@ -123,7 +123,7 @@ void main() {
       ..setup = BotSetup(
         instanceId: 'navigation-fixture',
         tokenFingerprint: 'fixture',
-        adminTelegramUserId: '123456789',
+        adminIds: ['123456789'],
         pluginKey: manifest.storageKey,
         pluginDigest: manifest.digest,
         pluginName: manifest.name,

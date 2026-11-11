@@ -96,7 +96,7 @@ void main() {
     await until(() => bots.state.contains(bot));
     bot.setup = await repository.prepare(
       token: token,
-      adminId: '123',
+      adminIds: '123',
       plugin: plugin,
       parameters: {'credential': 'original-test-key', 'publicOrigin': origin},
     );
@@ -124,7 +124,7 @@ void main() {
 
       final saving = bots.updatePluginParameters(
         bot,
-        adminId: '123',
+        adminIds: '123',
         parameters: {'credential': '', 'publicOrigin': changedOrigin},
       );
       try {
@@ -142,7 +142,7 @@ void main() {
       expect(changed.instanceId, isNot(previous.instanceId));
       expect(changed.values['publicOrigin'], changedOrigin);
       expect(changed.settings['notify'], isFalse);
-      expect(changed.adminTelegramUserId, '123');
+      expect(changed.adminIds, ['123']);
       expect(
         await vault.read(changed.secretKey('credential')),
         'original-test-key',
@@ -161,7 +161,7 @@ void main() {
 
       await bots.updatePluginParameters(
         bot,
-        adminId: '123',
+        adminIds: '123',
         parameters: {
           'credential': 'replacement-test-key',
           'publicOrigin': changedOrigin,
@@ -188,7 +188,7 @@ void main() {
       await expectLater(
         bots.updatePluginParameters(
           bot,
-          adminId: '123',
+          adminIds: '123',
           parameters: {
             'credential': 'replacement-test-key',
             'publicOrigin': changedOrigin,
@@ -211,7 +211,7 @@ void main() {
       vault.failWrite = false;
       await bots.updatePluginParameters(
         bot,
-        adminId: '123',
+        adminIds: '123',
         parameters: {'credential': '', 'publicOrigin': origin},
       );
       expect(bot.setup!.instanceId, previous.instanceId);
@@ -228,7 +228,7 @@ void main() {
       bot.running = true;
       await bots.updatePluginParameters(
         bot,
-        adminId: '123',
+        adminIds: '123',
         parameters: {'credential': '', 'publicOrigin': changedOrigin},
       );
       expect(runtime.stops, 1);
@@ -254,7 +254,7 @@ void main() {
       await expectLater(
         bots.updatePluginParameters(
           bot,
-          adminId: '123',
+          adminIds: '123',
           parameters: {'credential': '', 'publicOrigin': changedOrigin},
         ),
         throwsA(

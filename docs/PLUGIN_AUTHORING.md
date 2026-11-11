@@ -109,7 +109,8 @@ Required top-level properties are `manifestVersion`, `hostApiMajor`, `id`, `name
 - `version` is `major.minor.patch`, such as `1.0.0`, without a suffix.
 - `name` is the displayed name, at most 100 characters. Optional `description`
   is at most 500 characters.
-- Optional `requiresBotFields` can contain only `"adminTelegramUserId"`. Include
+- Optional `requiresBotFields` accepts `"adminIds"`. Existing packages may use
+  `"adminTelegramUserId"` for the same shared admin list. Include
   it when an automation uses `telegram.notify-admin.v1`.
 - Optional `settings`, `errorMessages` and `telegram` add the facilities described
   below. Unknown properties are rejected.
@@ -149,7 +150,7 @@ characters; field labels to 100 and help text to 300.
 
 Field keys start with a letter and contain letters, digits or underscores, up to
 64 characters. Keys must be unique across fields and settings. Do not redeclare
-`name`, `token`, `botToken` or `adminTelegramUserId`; those belong to the common
+`name`, `token`, `botToken`, `adminIds` or `adminTelegramUserId`; those belong to the common
 bot form. A required text field is not automatically a URL field: the relevant
 header or Mini App capability validates its configured value when used.
 
@@ -203,7 +204,9 @@ array order. A JSON file cannot register its own component type.
 - `telegram.reply.v1`: replies to the command's chat with `text` and an optional
   `list`. It requires either command-trigger version.
 - `telegram.notify-admin.v1`: uses the same message configuration but sends to
-  the configured admin. It requires `requiresBotFields: ["adminTelegramUserId"]`.
+  all configured admins. It requires `requiresBotFields: ["adminIds"]`.
+  A confirmed send is recorded per recipient so retrying an order skips admins
+  who already received it.
 - `telegram.reply.v2`: sends text plus a Mini App keyboard. It requires a
   `telegram.command.v2` trigger whose only chat type is `private`.
 

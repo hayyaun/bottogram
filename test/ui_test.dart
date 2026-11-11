@@ -114,7 +114,7 @@ void main() {
           ..setup = BotSetup(
             instanceId: 'fixture',
             tokenFingerprint: 'fixture',
-            adminTelegramUserId: '123456789',
+            adminIds: ['123456789'],
             pluginKey: catalog.entries.first.storageKey,
             pluginName: 'Inshopa',
             secretFields: const ['apiKey'],

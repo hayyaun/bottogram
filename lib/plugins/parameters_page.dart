@@ -25,10 +25,10 @@ class PluginParametersPage extends StatelessWidget {
           child: PluginParametersForm(
             plugin: plugin,
             setup: bot.setup!,
-            onSave: (adminId, values) async {
+            onSave: (adminIds, values) async {
               await context.read<BotsCubit>().updatePluginParameters(
                 bot,
-                adminId: adminId,
+                adminIds: adminIds,
                 parameters: values,
               );
               if (context.mounted) Navigator.pop(context);

@@ -58,8 +58,9 @@ There are up to 20 sample rows per template. Topic/category names are bounded by
 UTF-8 bytes because Telegram button callback data is limited to 64 bytes.
 
 After creation, review the normal event/action list and start the bot from **Bots**.
-Admin templates use the numeric Telegram ID entered during setup; that account
-must open the bot before it can receive notifications. The templates default to
+Admin templates use the Telegram user IDs in the bot's **Admins** setting.
+Each admin can use the template's admin actions. The requests template sends
+new request notices to every listed admin. The templates default to
 private chats to keep personal records out of group replies. These are editable
 action conditions, not a restriction on other bots built in Bottogram.
 

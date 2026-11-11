@@ -31,7 +31,7 @@ BotTemplateDraft buildFeedback(
         ],
       ),
     ],
-    [variable('adminId', admin, scope: 'bot'), variable('reviewPage', 0)],
+    [variable('reviewPage', 0)],
   );
   final homeKeyboard = keyboard([
     [button('Begin survey', 'survey:begin')],
@@ -217,7 +217,7 @@ ON CONFLICT(user_id,generation) DO NOTHING""",
     ),
   ]);
   p.command('report', [
-    check('admin', '{{event.userId}}', '{{bot.adminId}}'),
+    check('admin', '{{event.isAdmin}}', true),
     sql(
       'totals',
       'SELECT count(*) AS total,coalesce(round(sum(rating_sum)*1.0/nullif(sum(rating_count),0),2),0) AS average FROM survey_submissions',

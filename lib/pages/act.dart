@@ -44,6 +44,7 @@ class _ActPageState extends State<ActPage> {
     'event.text',
     'event.input',
     'event.userId',
+    'event.isAdmin',
     'event.firstName',
     'event.username',
     'event.chatId',

@@ -57,11 +57,15 @@ void main() {
       await bots.create(
         name: 'My quiz',
         token: '123:fixture',
-        adminId: '99',
+        adminIds: '99, 98',
         template: draft,
       );
       expect(bots.state.single.active, isFalse);
       expect(bots.state.single.setup!.usesPlugin, isFalse);
+      final originalSetup = bots.state.single.setup!;
+      expect(originalSetup.adminIds, ['99', '98']);
+      await bots.updateAdmins(bots.state.single, '98\n97');
+      expect(bots.state.single.setup!.instanceId, originalSetup.instanceId);
       expect(
         bots.state.single.events.first.acts.any(
           (a) => a.type == VirtActType.renderList,
@@ -71,14 +75,14 @@ void main() {
       expect(
         (await BuilderStore.shared.definitions(
           builderBotId('123:fixture'),
-        )).single.name,
-        'initialized',
+        )).map((definition) => definition.name),
+        ['initialized', 'textQuiz'],
       );
       await expectLater(
         bots.create(
           name: 'Duplicate',
           token: '123:fixture',
-          adminId: '99',
+          adminIds: '99',
           template: draft,
         ),
         throwsException,
@@ -89,12 +93,13 @@ void main() {
       bots = BotsCubit(TestContext(), plugins: plugins);
       await bots.ready;
       expect(bots.state.single.name, 'My quiz');
+      expect(bots.state.single.setup!.adminIds, ['98', '97']);
       expect(bots.state.single.events.length, draft.events.length);
       expect(
         (await BuilderStore.shared.definitions(
           builderBotId('123:fixture'),
-        )).single.name,
-        'initialized',
+        )).map((definition) => definition.name),
+        ['initialized', 'textQuiz'],
       );
       await bots.remove(bots.state.single);
       expect(
@@ -123,7 +128,7 @@ void main() {
         bots.create(
           name: 'Tasks',
           token: '456:fixture',
-          adminId: '99',
+          adminIds: '99',
           template: BotTemplates.create(
             template,
             template.defaults(),

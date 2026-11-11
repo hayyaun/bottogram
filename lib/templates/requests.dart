@@ -17,7 +17,6 @@ BotTemplateDraft buildRequests(
       ),
     ],
     [
-      variable('adminId', admin, scope: 'bot'),
       variable('flow', 'idle'),
       variable('subject', ''),
       variable('requestId', 0),
@@ -45,7 +44,7 @@ BotTemplateDraft buildRequests(
     say('subject', 'Send a short subject (1–120 characters), or /cancel.'),
   ]);
   Acts listing({bool inbox = false}) => [
-    if (inbox) check('admin', '{{event.userId}}', '{{bot.adminId}}'),
+    if (inbox) check('admin', '{{event.isAdmin}}', true),
     sql(
       'page',
       'SELECT max(0,min(?,max(0,CAST((count(*)-1)/5 AS INTEGER)))) AS page FROM requests WHERE ${inbox ? '1=1' : 'user_id=?'}',
@@ -91,13 +90,8 @@ BotTemplateDraft buildRequests(
   p.click('request:open:', [
     sql(
       'request',
-      'SELECT *,CASE WHEN reply=\'\' THEN \'Awaiting a reply\' ELSE reply END AS response FROM requests WHERE id=? AND (user_id=? OR CAST(? AS TEXT)=CAST(? AS TEXT))',
-      [
-        '{{event.input}}',
-        '{{event.userId}}',
-        '{{event.userId}}',
-        '{{bot.adminId}}',
-      ],
+      'SELECT *,CASE WHEN reply=\'\' THEN \'Awaiting a reply\' ELSE reply END AS response FROM requests WHERE id=? AND (user_id=? OR CAST(? AS INTEGER)=1)',
+      ['{{event.input}}', '{{event.userId}}', '{{event.isAdmin}}'],
     ),
     render(
       'detail',
@@ -124,15 +118,15 @@ BotTemplateDraft buildRequests(
         button('Close', 'request:close:{{item.id}}'),
         button('Reopen', 'request:reopen:{{item.id}}'),
       ],
-    )..config['when'] = when('{{event.userId}}', '{{bot.adminId}}'),
+    )..config['when'] = when('{{event.isAdmin}}', true),
     sendList(
       'controls',
       output: 'controls_sent',
-      only: when('{{event.userId}}', '{{bot.adminId}}'),
+      only: when('{{event.isAdmin}}', true),
     ),
   ], prefix: true);
   p.click('request:reply:', [
-    check('admin', '{{event.userId}}', '{{bot.adminId}}'),
+    check('admin', '{{event.isAdmin}}', true),
     sql('exists', 'SELECT count(*) AS n FROM requests WHERE id=?', [
       '{{event.input}}',
     ]),
@@ -151,7 +145,7 @@ BotTemplateDraft buildRequests(
   ], prefix: true);
   for (final operation in ['close', 'reopen']) {
     p.click('request:$operation:', [
-      check('admin', '{{event.userId}}', '{{bot.adminId}}'),
+      check('admin', '{{event.isAdmin}}', true),
       sql('updated', 'UPDATE requests SET status=? WHERE id=?', [
         operation == 'close' ? 'Closed' : 'Open',
         '{{event.input}}',
@@ -232,20 +226,15 @@ BotTemplateDraft buildRequests(
       'New request #{{steps.created.lastInsertRowId}}\n{{user.subject}}\nUse /inbox to reply.',
       'notify_admin',
       {
-        'chatId': '{{bot.adminId}}',
+        'sendToAdmins': true,
         'when': when('{{steps.input.rows.0.stage}}', 'body'),
         'onError': 'continue',
       },
     ),
     sql(
       'replied',
-      'UPDATE requests SET reply=?,status=\'Replied\' WHERE id=? AND CAST(? AS TEXT)=CAST(? AS TEXT) RETURNING user_id,id',
-      [
-        '{{event.input}}',
-        '{{user.requestId}}',
-        '{{event.userId}}',
-        '{{bot.adminId}}',
-      ],
+      'UPDATE requests SET reply=?,status=\'Replied\' WHERE id=? AND CAST(? AS INTEGER)=1 RETURNING user_id,id',
+      ['{{event.input}}', '{{user.requestId}}', '{{event.isAdmin}}'],
       {'when': when('{{steps.input.rows.0.stage}}', 'adminReply')},
     ),
     templateAction(
@@ -254,7 +243,12 @@ BotTemplateDraft buildRequests(
       'notify_user',
       {
         'chatId': '{{steps.replied.rows.0.user_id}}',
-        'when': when('{{steps.input.rows.0.stage}}', 'adminReply'),
+        'when': {
+          'all': [
+            when('{{steps.input.rows.0.stage}}', 'adminReply'),
+            when('{{steps.replied.affectedRows}}', 0, 'greater'),
+          ],
+        },
         'onError': 'continue',
       },
     ),
@@ -262,7 +256,12 @@ BotTemplateDraft buildRequests(
       'saved_reply',
       'Reply saved. The requester can also read it under My requests.',
       buttons: homeKeyboard,
-      only: when('{{steps.input.rows.0.stage}}', 'adminReply'),
+      only: {
+        'all': [
+          when('{{steps.input.rows.0.stage}}', 'adminReply'),
+          when('{{steps.replied.affectedRows}}', 0, 'greater'),
+        ],
+      },
     ),
     setValue(
       'flow',

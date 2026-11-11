@@ -13,7 +13,7 @@ class PluginParametersForm extends StatefulWidget {
   });
   final PluginManifest plugin;
   final BotSetup setup;
-  final Future<void> Function(String adminId, Map<String, String> values)
+  final Future<void> Function(String adminIds, Map<String, String> values)
   onSave;
   @override
   State<PluginParametersForm> createState() => _PluginParametersFormState();
@@ -22,7 +22,7 @@ class PluginParametersForm extends StatefulWidget {
 class _PluginParametersFormState extends State<PluginParametersForm> {
   final _form = GlobalKey<FormState>();
   late final _admin = TextEditingController(
-    text: widget.setup.adminTelegramUserId,
+    text: widget.setup.adminIds.join('\n'),
   );
   late final _fields = {
     for (final field in widget.plugin.fields)
@@ -83,13 +83,7 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
           absorbing: _busy,
           child: Column(
             children: [
-              SecretFormField(
-                controller: _admin,
-                label: 'Admin Telegram ID',
-                numeric: true,
-                helpText: 'Get your numeric Telegram ID from @userinfobot.',
-                validator: (value) => validateAdminId(value ?? ''),
-              ),
+              AdminIdsField(controller: _admin),
               const SizedBox(height: 20),
               for (final field in widget.plugin.fields)
                 Padding(
@@ -135,8 +129,8 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
         ),
         Text(
           widget.plugin.destinationFields.isEmpty
-              ? 'Saving changed parameters restarts a running bot and resets its automation progress.'
-              : 'Saving changes restarts a running bot. Changes to Telegram destinations keep existing automation progress.',
+              ? 'Saving changes restarts a running bot. Admin changes keep existing automation progress.'
+              : 'Saving changes restarts a running bot. Admin and Telegram destination changes keep existing automation progress.',
         ),
         const SizedBox(height: 16),
         if (_error != null) ...[

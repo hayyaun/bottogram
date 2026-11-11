@@ -128,7 +128,7 @@ class PluginCapabilityReview extends StatelessWidget {
           ...automation.actions,
         ]) ...[
           if (component.type == 'telegram.notify-admin.v1')
-            const Text('Sends notifications to the configured admin.'),
+            const Text('Sends notifications to all configured admins.'),
           for (final photo in presentationPhotos(component.config))
             Text(
               'Downloads photos: ${_fieldLabel(photo['originField'] as String)} → ${photo['path']}',

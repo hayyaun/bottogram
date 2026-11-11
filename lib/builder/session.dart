@@ -9,12 +9,18 @@ import 'telegram.dart';
 import 'event_match.dart';
 
 class BuilderSession {
-  BuilderSession(String token, RawAPI api, {BuilderStore? store}) {
+  BuilderSession(
+    String token,
+    RawAPI api, {
+    BuilderStore? store,
+    List<String> adminIds = const [],
+  }) {
     repository = store ?? BuilderStore.shared;
     final id = builderBotId(token);
     telegram = BuilderTelegramPort(api);
     engine = BuilderEngine(
       botId: id,
+      adminIds: adminIds,
       telegram: telegram,
       variables: repository.variables(id),
       secret: (name) => repository.secret(id, name),

@@ -2,16 +2,16 @@
 
 ![Bottogram — Telegram bots, on your own device](docs/assets/banner.svg)
 
-**Build a Telegram bot. Keep it on your device.**
+**A visual Telegram bot builder for Android, Windows, macOS, and Linux.**
 
-Create replies, install integrations, and answer conversations from one app.
+Create commands, install plugins, and manage conversations on your device.
 
 [![Build test artifacts](https://github.com/hayyaun/bottogram/actions/workflows/build.yml/badge.svg)](https://github.com/hayyaun/bottogram/actions/workflows/build.yml)
 ![Flutter 3.47.9](https://img.shields.io/badge/Flutter-3.47.9-02569B?logo=flutter&logoColor=white)
 ![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Status: experimental](https://img.shields.io/badge/status-experimental-8B5CF6)
 
-[Try a build](#try-a-build) · [Get started](#get-started) · [Plugins](#plugins) · [Development](#development) · [Roadmap](docs/REMAINING_WORK.md)
+**[Project website](https://hayyaun.github.io/bottogram/)** · **[Download latest release](https://github.com/hayyaun/bottogram/releases/latest)** · [Quick start](#quick-start) · [Plugin guide](docs/PLUGIN_AUTHORING.md)
 
 </div>
 
@@ -26,7 +26,7 @@ a separate Bottogram server. Use it to:
 **Experimental:** real-device verification is still in progress; see the
 [roadmap](docs/REMAINING_WORK.md).
 
-## Try a build
+## Downloads
 
 Download a package and `SHA256SUMS.txt` from
 [GitHub Releases](https://github.com/hayyaun/bottogram/releases).
@@ -48,12 +48,12 @@ See [build requirements](docs/BUILD_ARTIFACTS.md),
 [macOS signing and Keychain](docs/MACOS_BUILD.md) before replacing an installation;
 uninstalling removes local data.
 
-## Get started
+## Quick start
 
 1. Create a bot with [@BotFather](https://t.me/BotFather) and keep its token private.
 2. Choose **Create bot** in Bottogram, or the centered **+** on mobile.
-3. Enter a name, token and numeric Telegram admin ID. Choose **Manual** or a
-   plugin, then complete any extra setup fields.
+3. Enter a name, token, and the numeric Telegram IDs of your admins. Choose
+   **Manual**, a template, or a plugin, then complete any extra setup fields.
 4. Open your bot in Telegram and send `/start` so it can message your account.
 5. Start it in Bottogram. On Android, follow **Keep bots running** to configure
    background execution and notifications.
@@ -85,7 +85,7 @@ the agent then creates the package. Other agents and installation options are
 covered in the guide.
 
 The bundled **Inshopa** integration opens shop/order pages as Telegram Mini Apps
-and supports paid-order alerts to the configured admin. It uses a shop's registered
+and sends paid-order alerts to all configured admins. It uses a shop's registered
 HTTPS origin and API key. See [storefront setup and behavior](docs/STOREFRONT_NAVIGATION.md),
 [example packages](examples/plugins) and [runtime/recovery details](docs/PLUGIN_RUNTIME.md).
 

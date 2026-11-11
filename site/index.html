@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="en" data-type="software" data-radius="soft" data-buttons="solid" data-motion>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="page-type" content="software">
+  <meta name="site-kind" content="software">
+  <meta name="theme-color" content="#0e191b">
+  <meta name="description" content="Build Telegram bots on your device. Create commands, install plugins, and manage conversations with Bottogram.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Bottogram · Telegram bot builder">
+  <meta property="og:description" content="Build and run Telegram bots on Android, Windows, macOS, and Linux.">
+  <meta property="og:url" content="https://hayyaun.github.io/bottogram/">
+  <title>Bottogram · Telegram bot builder</title>
+  <link rel="canonical" href="https://hayyaun.github.io/bottogram/">
+  <link rel="icon" href="assets/bottogram.png" type="image/png">
+  <link rel="preload" href="assets/geist-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="assets/site.css">
+  <script src="assets/preview.js" defer></script>
+</head>
+<body id="top">
+  <header class="nav">
+    <div class="wrap nav__bar">
+      <a class="skip-link" href="#main">Skip to content</a>
+      <a class="brand" href="#top"><img src="assets/bottogram.png" width="36" height="36" alt="">Bottogram</a>
+      <nav class="nav__links" aria-label="Main">
+        <a href="#builder">Builder</a>
+        <a href="https://github.com/hayyaun/bottogram/blob/main/docs/PLUGIN_AUTHORING.md">Plugin guide</a>
+        <a href="https://github.com/hayyaun/bottogram">GitHub <span aria-hidden="true">↗</span></a>
+      </nav>
+      <a class="btn btn--primary" href="#download">Download <span aria-hidden="true">↓</span></a>
+    </div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div class="wrap grid hero__grid">
+        <div class="hero__copy">
+          <h1>Telegram<br> bot builder<span class="hero__period">.</span></h1>
+          <p class="lead">Create commands, connect services, and manage conversations from one app. Your bots run directly on your device.</p>
+          <div class="btn-row">
+            <a class="btn btn--primary" href="#download">Download <span aria-hidden="true">↓</span></a>
+            <a class="btn btn--secondary" href="https://github.com/hayyaun/bottogram#quick-start">Read the quick start <span aria-hidden="true">↗</span></a>
+          </div>
+          <p class="hero__platforms">Android <span>·</span> Windows <span>·</span> macOS <span>·</span> Linux</p>
+        </div>
+        <div class="stage" data-visual role="group" aria-label="Interactive Bottogram builder preview">
+          <div class="app-frame">
+            <div class="app-bar">
+              <img src="assets/bottogram.png" width="28" height="28" alt="">
+              <span>Personal Task List</span>
+              <span class="app-bar__badge">Builder preview</span>
+            </div>
+            <div class="app-workspace">
+              <div class="events" role="group" aria-label="Preview a bot command">
+                <p class="ui-label">Events</p>
+                <button type="button" class="event" data-command="start" aria-pressed="true"><span>/start</span><span aria-hidden="true">›</span></button>
+                <button type="button" class="event" data-command="tasks" aria-pressed="false"><span>/tasks</span><span aria-hidden="true">›</span></button>
+                <button type="button" class="event" data-command="add" aria-pressed="false"><span>/add</span><span aria-hidden="true">›</span></button>
+              </div>
+              <div class="actions">
+                <p class="ui-label">Actions</p>
+                <div class="action">
+                  <span class="action__icon" aria-hidden="true">↳</span>
+                  <div><strong id="action-title">Send HTML widget</strong><span id="action-detail">Open task board</span></div>
+                </div>
+              </div>
+            </div>
+            <div class="chat">
+              <div class="chat__bar">
+                <span class="chat__avatar" aria-hidden="true">T</span>
+                <span>Personal Task List</span>
+                <span class="chat__badge">Bot</span>
+              </div>
+              <div class="chat__body" role="status" aria-atomic="true">
+                <code class="chat__command" id="chat-command">/start</code>
+                <div class="chat__reply">
+                  <strong id="reply-title">Your task list is ready.</strong>
+                  <span id="reply-detail">Add a task or view your current list.</span>
+                </div>
+                <button class="chat__option" id="reply-option" type="button">View tasks</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section section--builder" id="builder">
+      <div class="wrap">
+        <h2>Tools for building bots</h2>
+        <p class="lead">Start with a template, assemble your own automation, or connect a service with a plugin.</p>
+        <div class="features">
+          <article class="card feature">
+            <div class="feature__visual" aria-hidden="true">
+              <div class="mini-flow">
+                <div><span class="mini-symbol">/</span> Command <code>/start</code></div>
+                <div><span class="mini-symbol">↳</span> Send message</div>
+              </div>
+            </div>
+            <div class="feature__copy">
+              <h3>Visual editor</h3>
+              <p>Connect Telegram commands and button presses to replies, HTTP requests, and data stored in SQLite.</p>
+            </div>
+          </article>
+          <article class="card feature">
+            <div class="feature__visual" aria-hidden="true">
+              <div class="mini-library">
+                <div><span class="mini-symbol">↳</span> Actions</div>
+                <div><span class="mini-symbol">≡</span> Lists</div>
+                <div><span class="mini-symbol">⠿</span> Button rows</div>
+              </div>
+            </div>
+            <div class="feature__copy">
+              <h3>Shared library</h3>
+              <p>Save actions, list layouts, and button rows once. Reuse them across events and bots.</p>
+            </div>
+          </article>
+          <article class="card feature">
+            <div class="feature__visual" aria-hidden="true">
+              <div class="mini-plugin">
+                <div><span class="mini-symbol">{ }</span> Inshopa</div>
+                <div><span>Paid order</span><span>→</span><span>Notify admins</span></div>
+              </div>
+            </div>
+            <div class="feature__copy">
+              <h3>Plugin integrations</h3>
+              <p>Import a JSON plugin with its own setup form and automations. Inshopa is included for shop catalogs and order alerts.</p>
+            </div>
+          </article>
+        </div>
+        <a class="link" href="https://github.com/hayyaun/bottogram/blob/main/docs/PLUGIN_AUTHORING.md">Read the plugin guide <span aria-hidden="true">↗</span></a>
+      </div>
+    </section>
+
+    <section class="section section--download" id="download">
+      <div class="wrap grid download-grid">
+        <div>
+          <h2>Bottogram downloads</h2>
+          <p class="lead">Install the app, connect a bot from BotFather, and start it on your device.</p>
+          <p class="download-note">Bots respond and run automations while Bottogram is running and connected to the internet.</p>
+          <div class="download-links">
+            <a class="link" href="https://github.com/hayyaun/bottogram/releases/latest">View release notes <span aria-hidden="true">↗</span></a>
+            <a class="link" href="https://github.com/hayyaun/bottogram/releases/latest/download/SHA256SUMS.txt">Get checksums <span aria-hidden="true">↗</span></a>
+            <a class="link" href="https://github.com/hayyaun/bottogram/releases/latest/download/bottogram-windows-x64.zip">Get Windows portable <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <ul class="packages" aria-label="Downloads by platform">
+          <li><a href="https://github.com/hayyaun/bottogram/releases/latest/download/bottogram-android-release.apk"><span><strong>Android</strong><small>APK · Android 7.0+</small></span><span class="package-arrow" aria-hidden="true">↓</span></a></li>
+          <li><a href="https://github.com/hayyaun/bottogram/releases/latest/download/bottogram-windows-x64-setup.exe"><span><strong>Windows</strong><small>Installer · x64</small></span><span class="package-arrow" aria-hidden="true">↓</span></a></li>
+          <li><a href="https://github.com/hayyaun/bottogram/releases/latest/download/bottogram-macos-universal.zip"><span><strong>macOS</strong><small>Universal ZIP · macOS 13+</small></span><span class="package-arrow" aria-hidden="true">↓</span></a></li>
+          <li><a href="https://github.com/hayyaun/bottogram/releases/latest/download/bottogram-linux-x86_64.AppImage.tar.gz"><span><strong>Linux</strong><small>AppImage tarball · x86_64</small></span><span class="package-arrow" aria-hidden="true">↓</span></a></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer__inner">
+      <a class="brand" href="#top"><img src="assets/bottogram.png" width="36" height="36" alt="">Bottogram</a>
+      <nav aria-label="Project links">
+        <a href="https://github.com/hayyaun/bottogram">GitHub <span aria-hidden="true">↗</span></a>
+        <a href="https://github.com/hayyaun/bottogram/issues">Report an issue <span aria-hidden="true">↗</span></a>
+      </nav>
+    </div>
+  </footer>
+</body>
+</html>

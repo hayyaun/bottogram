@@ -621,7 +621,7 @@ are checked when a command or button is used.
 - `telegram.status.v1` can report the current destination posting permissions and a
   boolean plugin setting from an admin-only interaction.
 
-See the [Inshopa 0.8.3 package](../examples/plugins/inshopa.storefront.0.8.3.bottogram-plugin.json)
+See the [Inshopa 0.8.4 package](../examples/plugins/inshopa.storefront.0.8.4.bottogram-plugin.json)
 for complete declarations, including a Telegram deep link generated from the
 bot's username and a same-origin Mini App button with a bound path segment.
 

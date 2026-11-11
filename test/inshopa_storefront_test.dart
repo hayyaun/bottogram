@@ -21,7 +21,7 @@ import 'plugins_test.dart' show MemoryVault;
 import 'storefront_presentation_test.dart' show PluginHarness, shipped;
 
 const package = 'inshopa.storefront.0.8.1';
-const thumbnailPackage = 'inshopa.storefront.0.8.3';
+const thumbnailPackage = 'inshopa.storefront.0.8.4';
 const productId = 'e6af6af3-a42d-4a71-87d5-aac75e232183';
 const nextId = '11111111-1111-1111-1111-111111111111';
 const otherId = '22222222-2222-2222-2222-222222222222';
@@ -198,7 +198,7 @@ class CatalogFixture implements JsonTransport, PhotoTransport {
 
 void main() {
   test(
-    'ten priced catalog rows fit Telegram and navigation replaces the old widget',
+    'six priced catalog rows fit Telegram and navigation replaces the old widget',
     () async {
       final http = ThumbnailHttp();
       final h = await PluginHarness.create(
@@ -235,7 +235,7 @@ void main() {
           expect(thumbnail, isNotNull);
           expect(
             max(thumbnail!.width, thumbnail.height),
-            lessThanOrEqualTo(32),
+            lessThanOrEqualTo(64),
           );
         }
         return rows;
@@ -245,8 +245,8 @@ void main() {
           .singleWhere((call) => call.$1 == 'sendWidget')
           .$2;
       final firstRows = verifyHtml(first);
-      expect(firstRows, hasLength(10));
-      expect(firstRows.where((row) => row['thumbnail'] != null), hasLength(9));
+      expect(firstRows, hasLength(6));
+      expect(firstRows.where((row) => row['thumbnail'] != null), hasLength(5));
       expect(firstRows[2]['thumbnail'], isNull);
       expect(firstRows[2]['price'], '19000002');
       expect(firstRows[3]['price'], isEmpty);
@@ -254,7 +254,7 @@ void main() {
       expect(jsonDecode(first['chat_data'])['next'], '2');
       expect(
         http.mediaRequests.map((url) => url.pathSegments.last),
-        unorderedEquals(http.ids.take(10)),
+        unorderedEquals(http.ids.take(6)),
       );
 
       await h.api.widgetTap('catalog:2');
@@ -268,7 +268,7 @@ void main() {
       expect(secondIndex, lessThan(deleteIndex));
       final second = h.api.calls[secondIndex].$2;
       final secondRows = verifyHtml(second);
-      expect(secondRows.map((row) => row['id']), http.ids.skip(10));
+      expect(secondRows.map((row) => row['id']), http.ids.skip(6));
       expect(secondRows.last['price'], '19000011');
       expect(jsonDecode(second['chat_data'])['previous'], '1');
       expect(jsonDecode(second['chat_data'])['next'], isEmpty);
@@ -282,9 +282,10 @@ void main() {
       final keyboard =
           h.api.messages.last['reply_markup']['inline_keyboard'] as List;
       expect(
-        keyboard.take(10).map((row) => row.single['callback_data']),
-        http.ids.take(10).map((id) => 'product:$id'),
+        keyboard.take(6).map((row) => row.single['callback_data']),
+        http.ids.take(6).map((id) => 'product:$id'),
       );
+      expect(keyboard[6].single['callback_data'], 'catalog-text:2');
       expect(keyboard.first.single['text'], startsWith('19000000 ریال'));
       expect(keyboard[3].single['text'], isNot(contains('ریال')));
     },

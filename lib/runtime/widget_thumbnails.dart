@@ -9,6 +9,7 @@ import 'ports.dart';
 
 const widgetRowsSlot = '/*widget-rows*/[]';
 const maxWidgetRows = 10;
+const _maxPreviewSize = 64;
 
 bool widgetHtmlFits(String html) {
   final bytes = utf8.encode(html);
@@ -46,10 +47,19 @@ String? _embedWidgetRows(
   if (previews.every((preview) => preview == null)) return plain;
 
   List<String?> images = [];
-  for (final (size, quality) in [(32, 42), (28, 39), (24, 35), (20, 32)]) {
+  for (final (size, quality) in [
+    (_maxPreviewSize, 46),
+    (48, 44),
+    (32, 42),
+    (28, 39),
+    (24, 35),
+    (20, 32),
+  ]) {
     images = previews.map((preview) {
       if (preview == null) return null;
-      final resized = size == 32 ? preview : _resize(preview, size);
+      final resized = size == _maxPreviewSize
+          ? preview
+          : _resize(preview, size);
       final bytes = image.encodeJpg(
         resized,
         quality: quality,
@@ -79,7 +89,7 @@ image.Image? _preview(Uint8List? bytes) {
     if (info == null || info.width * info.height > 4096 * 4096) return null;
     final source = decoder.decodeFrame(0);
     if (source == null) return null;
-    return _resize(source, 32)..exif = image.ExifData();
+    return _resize(source, _maxPreviewSize)..exif = image.ExifData();
   } catch (_) {
     return null;
   }

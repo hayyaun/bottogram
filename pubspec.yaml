@@ -107,7 +107,7 @@ flutter:
     - examples/plugins/inshopa.catalog.bottogram-plugin.json
     - examples/plugins/inshopa.sales.bottogram-plugin.json
     - examples/plugins/inshopa.sales.local.bottogram-plugin.json
-    - examples/plugins/inshopa.storefront.0.8.3.bottogram-plugin.json
+    - examples/plugins/inshopa.storefront.0.8.4.bottogram-plugin.json
     - examples/plugins/inshopa.storefront.local.bottogram-plugin.json
     - assets/icon/foreground.png
     - assets/fonts/HostGrotesk-OFL.txt

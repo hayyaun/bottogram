@@ -185,7 +185,7 @@ Future<void> main(List<String> arguments) async {
       telegram: telegram,
       secret: (field) async => field == 'apiKey' ? connection.key : null,
       fields: {'storefrontUrl': connection.storefront},
-      adminId: '1',
+      adminIds: const ['1'],
     );
     final products = package.automations.firstWhere((a) => a.id == 'products');
     var event = <String, dynamic>{'id': 'read-probe', 'chatId': '1', 'page': 1};

@@ -90,7 +90,7 @@ void main() {
           await store.create(
             name: 'Inshopa local test',
             token: token,
-            adminId: admin,
+            adminIds: admin,
             plugin: local,
             parameters: {
               'apiKey': connection['api_key'] as String,
@@ -103,7 +103,7 @@ void main() {
         final setup = bot.setup;
         if (setup == null ||
             setup.pluginDigest != local.digest ||
-            setup.adminTelegramUserId != admin) {
+            !setup.adminIds.contains(admin)) {
           throw StateError(
             'An existing bot uses different settings; no replacement was performed.',
           );

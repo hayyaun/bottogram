@@ -40,6 +40,7 @@ void main() {
           '99',
         );
         final id = builderBotId('native-template-${template.id}');
+        if (!draft.parts.isEmpty) await store.installParts(draft.parts);
         for (final definition in draft.variables) {
           await store.addDefinition(id, definition);
         }

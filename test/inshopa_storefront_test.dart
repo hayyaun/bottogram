@@ -21,7 +21,7 @@ import 'plugins_test.dart' show MemoryVault;
 import 'storefront_presentation_test.dart' show PluginHarness, shipped;
 
 const package = 'inshopa.storefront.0.8.1';
-const thumbnailPackage = 'inshopa.storefront.0.8.5';
+const thumbnailPackage = 'inshopa.storefront.0.8.6';
 const productId = 'e6af6af3-a42d-4a71-87d5-aac75e232183';
 const nextId = '11111111-1111-1111-1111-111111111111';
 const otherId = '22222222-2222-2222-2222-222222222222';
@@ -158,6 +158,15 @@ class ThumbnailHttp extends FakeHttp implements PhotoTransport {
     final random = Random(seed);
     final photo = image.Image(width: 84, height: 64);
     for (final pixel in photo) {
+      const margin = 16;
+      if (seed < 6 &&
+          (pixel.x < margin ||
+              pixel.x >= photo.width - margin ||
+              pixel.y < margin ||
+              pixel.y >= photo.height - margin)) {
+        photo.setPixelRgb(pixel.x, pixel.y, 244, 245, 247);
+        continue;
+      }
       final block = ((pixel.x ~/ 7) * 11 + (pixel.y ~/ 7) * 7 + seed) * 25;
       photo.setPixelRgb(
         pixel.x,
@@ -226,8 +235,13 @@ void main() {
       );
 
       int thumbnailSize(String url) {
-        expect(url, startsWith('data:image/jpeg;base64,'));
-        final thumbnail = image.decodeJpg(base64Decode(url.split(',').last));
+        final [format, encoded] = url.split(',');
+        final bytes = base64Decode(encoded);
+        final thumbnail = switch (format) {
+          'data:image/jpeg;base64' => image.decodeJpg(bytes),
+          'data:image/webp;base64' => image.decodeWebP(bytes),
+          _ => fail('Unsupported thumbnail format.'),
+        };
         expect(thumbnail, isNotNull);
         return max(thumbnail!.width, thumbnail.height);
       }
@@ -261,6 +275,10 @@ void main() {
       final firstRows = verifyHtml(first);
       expect(firstRows, hasLength(6));
       expect(firstRows.where((row) => row['thumbnail'] != null), hasLength(5));
+      expect(
+        firstRows.map((row) => row['thumbnail']).whereType<String>(),
+        anyElement(startsWith('data:image/webp;base64,')),
+      );
       expect(firstRows[2]['thumbnail'], isNull);
       expect(firstRows[2]['price'], '19000002');
       expect(firstRows[3]['price'], isEmpty);

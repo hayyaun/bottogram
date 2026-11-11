@@ -166,8 +166,9 @@ void validatePresentation(Json config) {
     }
     if (widget['thumbnails'] != null) {
       final thumbs = AutomationRegistry.object(widget['thumbnails']);
-      AutomationRegistry.keys(thumbs, {'photo'});
+      AutomationRegistry.keys(thumbs, {'photo', 'allowWebp'});
       if (config['list'] == null ||
+          thumbs['allowWebp'] != null && thumbs['allowWebp'] is! bool ||
           widget['editOnWidget'] == true ||
           html.split(widgetRowsSlot).length != 2) {
         AutomationRegistry.invalid();
@@ -352,6 +353,7 @@ class TelegramPresentationAction implements AutomationAction {
                 template,
                 projected,
                 await _loadThumbnails(thumbnails, items),
+                allowWebp: thumbnails['allowWebp'] == true,
               );
         if (html != null) {
           await context.interactions.widget(

@@ -3,7 +3,7 @@
   "hostApiMajor": 2,
   "id": "bottogram-plugin-inshopa",
   "name": "این شاپا",
-  "version": "0.8.5",
+  "version": "0.8.6",
   "executionStatus": "live",
   "description": "ویترین فارسی فروشگاه در تلگرام با مرور محصولات، پیگیری خرید، اعلان سفارش برای مدیر و معرفی محصولات تازه در کانال‌ها و گروه‌های انتخابی فروشگاه.",
   "requiresBotFields": [
@@ -585,6 +585,7 @@
                 }
               },
               "thumbnails": {
+                "allowWebp": true,
                 "photo": {
                   "originField": "storefrontUrl",
                   "path": "/api/v1/media/{argument}",

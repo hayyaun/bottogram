@@ -21,14 +21,18 @@ bool widgetHtmlFits(String html) {
 Future<String?> embedWidgetRows(
   String html,
   List<Json> rows,
-  List<Uint8List?> sources,
-) => Isolate.run(() => _embedWidgetRows(html, rows, sources));
+  List<Uint8List?> sources, {
+  bool allowWebp = false,
+}) => Isolate.run(
+  () => _embedWidgetRows(html, rows, sources, allowWebp: allowWebp),
+);
 
 String? _embedWidgetRows(
   String html,
   List<Json> rows,
-  List<Uint8List?> sources,
-) {
+  List<Uint8List?> sources, {
+  required bool allowWebp,
+}) {
   String insert(List<String?> images) {
     final encoded = jsonEncode([
       for (final (index, row) in rows.indexed)
@@ -48,27 +52,37 @@ String? _embedWidgetRows(
 
   final levels = <List<String?>>[];
   String? fitted;
-  for (final (size, quality) in [
-    (_maxPreviewSize, 62),
-    (_maxPreviewSize, 46),
-    (48, 44),
-    (40, 43),
-    (32, 42),
-    (28, 39),
-    (24, 35),
-    (20, 32),
+  for (final (size, quality, format) in [
+    (_maxPreviewSize, 62, 'jpeg'),
+    if (allowWebp) (_maxPreviewSize, 65, 'webp'),
+    (_maxPreviewSize, 46, 'jpeg'),
+    if (allowWebp) ...[
+      (_maxPreviewSize, 45, 'webp'),
+      (_maxPreviewSize, 35, 'webp'),
+      (_maxPreviewSize, 25, 'webp'),
+      (48, 55, 'webp'),
+    ],
+    (48, 44, 'jpeg'),
+    if (allowWebp) (48, 45, 'webp'),
+    (40, 43, 'jpeg'),
+    (32, 42, 'jpeg'),
+    (28, 39, 'jpeg'),
+    (24, 35, 'jpeg'),
+    (20, 32, 'jpeg'),
   ]) {
     final images = previews.map((preview) {
       if (preview == null) return null;
       final resized = size == _maxPreviewSize
           ? preview
           : _resize(preview, size);
-      final bytes = image.encodeJpg(
-        resized,
-        quality: quality,
-        chroma: image.JpegChroma.yuv420,
-      );
-      return 'data:image/jpeg;base64,${base64Encode(bytes)}';
+      final bytes = format == 'webp'
+          ? image.encodeWebP(resized, lossless: false, quality: quality)
+          : image.encodeJpg(
+              resized,
+              quality: quality,
+              chroma: image.JpegChroma.yuv420,
+            );
+      return 'data:image/$format;base64,${base64Encode(bytes)}';
     }).toList();
     levels.add(images);
     final candidate = insert(images);
@@ -114,7 +128,7 @@ String? _embedWidgetRows(
 image.Image? _preview(Uint8List? bytes) {
   if (bytes == null) return null;
   try {
-    final decoder = image.JpegDecoder();
+    final decoder = image.JpegDecoder(maxPixels: 4096 * 4096);
     final info = decoder.startDecode(bytes);
     if (info == null || info.width * info.height > 4096 * 4096) return null;
     final source = decoder.decodeFrame(0);

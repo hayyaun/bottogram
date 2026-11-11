@@ -645,7 +645,7 @@ are checked when a command or button is used.
 - `telegram.status.v1` can report the current destination posting permissions and a
   boolean plugin setting from an admin-only interaction.
 
-See the [Inshopa 0.8.5 package](../examples/plugins/inshopa.storefront.0.8.5.bottogram-plugin.json)
+See the [Inshopa 0.8.6 package](../examples/plugins/inshopa.storefront.0.8.6.bottogram-plugin.json)
 for complete declarations, including a Telegram deep link generated from the
 bot's username and a same-origin Mini App button with a bound path segment.
 
@@ -653,7 +653,8 @@ To show photos in a widget list, declare the photo source under
 `widget.thumbnails.photo` and put the literal `/*widget-rows*/[]` in the
 widget script as an array expression. Bottogram fills the array from the
 `list.data` bindings and adds a resized JPEG data URL as `thumbnail` when
-available. To look up extra fields per row, declare `list.lookup` with a GET
+available. Set `widget.thumbnails.allowWebp` to `true` to also allow WebP
+when choosing a quality and resolution that fit the widget limit. To look up extra fields per row, declare `list.lookup` with a GET
 `request`, URL path `parameter` and `itemIdPath`. Its response is available
 under `item.detail`. An optional `minimum` computes the lowest nonnegative
 number in a response list. Bottogram packs up to ten rows, keeps them available

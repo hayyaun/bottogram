@@ -4,6 +4,8 @@ import 'triggers/http_list_poll.dart';
 import 'telegram_config.dart';
 import 'http_headers.dart';
 import 'failure_presentation.dart';
+import 'telegram_interaction.dart';
+import 'telegram_presentation.dart';
 
 typedef TriggerFactory =
     AutomationTrigger Function(Json config, RuntimeContext context);
@@ -50,12 +52,14 @@ class AutomationDefinition {
     this.id,
     this.trigger,
     this.actions,
-    this.enabledBySetting,
-  );
+    this.enabledBySetting, {
+    this.destinationField,
+  });
   final String id;
   final ComponentDefinition trigger;
   final List<ComponentDefinition> actions;
   final String? enabledBySetting;
+  final String? destinationField;
 }
 
 /// Schema and implementation share a registration. A type is never accepted
@@ -77,6 +81,10 @@ class AutomationRegistry {
         _listPoll,
         HttpListPollTrigger.new,
         requests: _listRequests,
+      ),
+      interactionTrigger: ComponentRegistration(
+        validateInteraction,
+        TelegramInteractionTrigger.new,
       ),
       'telegram.command.v1': ComponentRegistration((c) {
         keys(c, {'command', 'arguments'});
@@ -117,18 +125,57 @@ class AutomationRegistry {
       }, TelegramCommandTrigger.new),
     }),
     actions: Map.unmodifiable({
+      presentationAction: ComponentRegistration(
+        validatePresentation,
+        TelegramPresentationAction.new,
+      ),
+      statusAction: ComponentRegistration(
+        validateTelegramStatus,
+        TelegramStatusAction.new,
+      ),
       'http.get-json.v1': ComponentRegistration((c) {
-        keys(c, {'request', 'resultKey', 'pagination'});
+        keys(c, {
+          'request',
+          'resultKey',
+          'pagination',
+          'bindings',
+          'minimum',
+          'useLastResponse',
+          'deferOnNotFound',
+        });
         if (c['pagination'] != null) {
           final p = object(c['pagination']);
-          keys(p, {'pageSize'});
+          keys(p, {'pageSize', 'itemsPath'});
+          if (p['itemsPath'] != null) path(p['itemsPath']);
           if (p['pageSize'] is! int ||
               p['pageSize'] < 1 ||
               p['pageSize'] > 10) {
             invalid();
           }
         }
-        _request(object(c['request']));
+        final bindings = c['bindings'] == null
+            ? const <String, dynamic>{}
+            : object(c['bindings']);
+        for (final entry in bindings.entries) {
+          identifier(entry.key);
+          path(entry.value);
+        }
+        if (c['minimum'] != null) {
+          final minimum = object(c['minimum']);
+          keys(minimum, {'itemsPath', 'valuePath'});
+          path(minimum['itemsPath']);
+          path(minimum['valuePath']);
+        }
+        if (c['deferOnNotFound'] != null && c['deferOnNotFound'] is! bool) {
+          invalid();
+        }
+        if (c['useLastResponse'] != null &&
+            (c['useLastResponse'] is! bool ||
+                c['pagination'] != null ||
+                bindings.isNotEmpty)) {
+          invalid();
+        }
+        _request(object(c['request']), pathParameters: bindings.keys.toSet());
         identifier(c['resultKey']);
       }, HttpGetAction.new),
       'telegram.notify-admin.v1': ComponentRegistration(
@@ -151,7 +198,8 @@ class AutomationRegistry {
     if (raw is! List || raw.isEmpty || raw.length > 16) invalid();
     final ids = <String>{};
     final commands = <String>{};
-    return List.unmodifiable(
+    final routes = <(Json, String?)>[];
+    final definitions = List<AutomationDefinition>.unmodifiable(
       (raw).map((value) {
         final a = object(value);
         keys(a, {'id', 'enabledBySetting', 'trigger', 'actions'});
@@ -185,6 +233,11 @@ class AutomationRegistry {
         }
 
         final t = component(a['trigger'], true);
+        if (t.type == interactionTrigger) {
+          for (final route in interactionRoutes(t.config)) {
+            routes.add((route, t.config['audience'] as String?));
+          }
+        }
         if (t.type == 'telegram.command.v1' ||
             t.type == 'telegram.command.v2') {
           for (final command
@@ -198,7 +251,26 @@ class AutomationRegistry {
         if (list is! List || list.isEmpty || list.length > 16) invalid();
         final actionIds = <String>{};
         final parsed = (list).map((v) => component(v, false)).toList();
+        String? destinationField;
         for (final action in parsed) {
+          if (action.type == presentationAction) {
+            final channel = action.config['channelField'] as String?;
+            if (channel == null && t.type != interactionTrigger ||
+                channel != null &&
+                    (t.type != 'http.poll-list.v1' ||
+                        !identical(action, parsed.last) ||
+                        parsed
+                            .take(parsed.length - 1)
+                            .any((c) => c.type != 'http.get-json.v1'))) {
+              invalid();
+            }
+            destinationField = channel;
+          }
+          if (action.type == statusAction &&
+              (t.type != interactionTrigger ||
+                  t.config['audience'] != 'admin')) {
+            invalid();
+          }
           if (!actionIds.add(action.id!)) invalid();
           if ((action.type == 'telegram.reply.v1' ||
                   action.type == 'telegram.reply.v2') &&
@@ -217,14 +289,51 @@ class AutomationRegistry {
             );
           }
         }
+        if (destinationField == null &&
+            parsed.any((action) => action.config['deferOnNotFound'] == true)) {
+          invalid();
+        }
         return AutomationDefinition(
           a['id'],
           t,
           List.unmodifiable(parsed),
           a['enabledBySetting'] as String?,
+          destinationField: destinationField,
         );
       }),
     );
+    for (var i = 0; i < routes.length; i++) {
+      final (route, audience) = routes[i];
+      if (route['kind'] == 'command' && commands.contains(route['name'])) {
+        invalid();
+      }
+      for (final (previous, previousAudience) in routes.take(i)) {
+        if (route['kind'] != previous['kind'] ||
+            route['name'] != previous['name'] ||
+            audience != null &&
+                previousAudience != null &&
+                audience != previousAudience) {
+          continue;
+        }
+        if (route['kind'] != 'command') {
+          if (route['argument'] != 'none' && previous['argument'] == 'none' ||
+              route['argument'] == 'none' && previous['argument'] != 'none') {
+            continue;
+          }
+          invalid();
+        }
+        final prefix = route['prefix'] as String? ?? '';
+        final other = previous['prefix'] as String? ?? '';
+        if ((prefix.startsWith(other) || other.startsWith(prefix)) &&
+            !(route['argument'] == 'none' &&
+                (previous['argument'] == 'uuid' || other.isNotEmpty)) &&
+            !(previous['argument'] == 'none' &&
+                (route['argument'] == 'uuid' || prefix.isNotEmpty))) {
+          invalid();
+        }
+      }
+    }
+    return definitions;
   }
 
   static Never invalid() =>

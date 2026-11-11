@@ -588,3 +588,44 @@ Telegram interaction, arbitrary code, or another unregistered capability, a JSON
 package cannot add it. Describe the missing general capability and implement it
 in the host with schema validation and appropriate checks, then compose it in
 the plugin. Do not add branches for a particular plugin ID, service or template.
+
+## Interactive Telegram menus, widgets and channel posts
+
+A plugin can use a command menu with `telegram.menuButton: {"type": "commands"}`.
+Publish buyer-facing commands in `telegram.commands`. If the plugin requires the
+shared admin ID, `telegram.adminCommands` adds entries to that person's private
+menu. Match those entries with `audience: "admin"` routes so Telegram sender IDs
+are checked when a command or button is used.
+
+- `telegram.interaction.v1` accepts private-chat command, inline callback, and
+  HTML widget routes. Each route declares `kind`, `name`, and `argument`
+  (`none`, `page`, or `uuid`). Argument-bearing callbacks use `name:value`.
+  Commands can require a literal argument `prefix`, such as a deep-link prefix.
+  Set `failureText` to a short recovery message in the plugin's language.
+- `telegram.present.v1` renders bounded message lines and inline actions. A
+  `widget` declares HTML and a mapping from scalar values to chat data. A
+  paginated list can render both widget rows and text keyboard rows. Telegram
+  limits widget state to 1 KiB and accepts these widgets in private chats.
+  Provide a plain-text command for clients that cannot display them.
+- `http.get-json.v1` can bind event values to complete URL path segments.
+  Pagination with `pageSize` and `itemsPath` fetches one extra result and exposes
+  `items`, `page`, `previous`, and `next` under the action's result key.
+- For channel delivery, declare an optional negative integer setup field with
+  bounds between `-4503599627370495` and `-1`. Reference it from the final
+  `telegram.present.v1` action as `channelField` in a
+  `http.poll-list.v1` automation. To attach a `photo`, use a required public
+  HTTPS origin field and a bounded resource ID. The channel must grant the bot
+  permission to post. A blank destination disables polling. Use
+  `initialSync: "baseline"` to record existing items quietly. Delivery receipts
+  are kept per channel. Missing media is retried on later scans.
+- `telegram.status.v1` can report the current channel posting permission and a
+  boolean plugin setting from an admin-only interaction.
+
+See the [Inshopa 0.8.0 package](../examples/plugins/inshopa.storefront.0.8.0.bottogram-plugin.json)
+for complete declarations, including a Telegram deep link generated from the
+bot's username and a same-origin Mini App button with a bound path segment.
+
+Reviewed updates can merge duplicate URL fields when the saved origins resolve
+to identical header values and the polling definitions otherwise match. The
+review lists the removed fields before applying the update and carries over the
+existing polling progress.

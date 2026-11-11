@@ -35,7 +35,7 @@ dependencies:
   televerse:
     git:
       url: https://github.com/hayyaun/televerse.git
-      ref: 09ea3ce96c99461007ba8d960ec09430c54e3358
+      ref: 9375b6fdb5464bb31b51385688bb8e31056e9053
   flutter_bloc: ^9.1.0
   provider: ^6.1.4
   hive: ^2.2.3
@@ -107,6 +107,7 @@ flutter:
     - examples/plugins/inshopa.sales.bottogram-plugin.json
     - examples/plugins/inshopa.sales.local.bottogram-plugin.json
     - examples/plugins/inshopa.storefront.bottogram-plugin.json
+    - examples/plugins/inshopa.storefront.0.8.0.bottogram-plugin.json
     - examples/plugins/inshopa.storefront.local.bottogram-plugin.json
     - assets/icon/foreground.png
     - assets/fonts/HostGrotesk-OFL.txt

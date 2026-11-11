@@ -48,13 +48,14 @@ RuntimeFailure _statusFailure(HttpClientResponse response) {
   return RuntimeFailure(
     'HTTP request failed (status $status).',
     code: code,
+    httpStatus: status,
     permanent: status >= 300 && status < 500 && !{408, 429}.contains(status),
     retryAfter: retry == null ? null : Duration(seconds: retry.clamp(1, 3600)),
   );
 }
 
 /// Each bot owns its client: Stop cancels its requests without affecting others.
-class BoundedJsonTransport implements JsonTransport {
+class BoundedJsonTransport implements JsonTransport, PhotoTransport {
   BoundedJsonTransport({HttpClient? client}) : _client = client ?? HttpClient();
   final HttpClient _client;
   bool _closed = false;
@@ -196,6 +197,47 @@ class BoundedJsonTransport implements JsonTransport {
         'The HTTP endpoint could not be reached.',
         code: 'http.request_failed',
       );
+    }
+  }
+
+  @override
+  Future<Uint8List?> jpeg(Uri url) async {
+    if (_closed ||
+        url.scheme != 'https' ||
+        url.host.isEmpty ||
+        url.userInfo.isNotEmpty ||
+        url.hasFragment) {
+      return null;
+    }
+    const maxBytes = 10 * 1024 * 1024;
+    HttpClientRequest? request;
+    try {
+      return await (() async {
+        request = await _client.getUrl(url);
+        request!.followRedirects = false;
+        request!.headers.set('Accept', 'image/jpeg');
+        final response = await request!.close();
+        if (response.statusCode != 200 ||
+            response.headers.contentType?.mimeType != 'image/jpeg' ||
+            response.contentLength > maxBytes) {
+          request!.abort();
+          return null;
+        }
+        final bytes = BytesBuilder(copy: false);
+        await for (final chunk in response) {
+          if (bytes.length + chunk.length > maxBytes) {
+            request!.abort();
+            return null;
+          }
+          bytes.add(chunk);
+        }
+        final data = bytes.takeBytes();
+        if (data.length < 4 || data[0] != 0xff || data[1] != 0xd8) return null;
+        return data;
+      })().timeout(const Duration(seconds: 12));
+    } catch (_) {
+      request?.abort();
+      return null;
     }
   }
 

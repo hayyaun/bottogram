@@ -27,6 +27,7 @@ class TelegramFixture {
   final errors = <Object>[];
   bool failMenu = false;
   bool failMessages = false;
+  bool canPost = true;
   late final bot = Bot.local('99:test-token', 'http://127.0.0.1:${server.port}')
     ..onError((error) => errors.add(error));
 
@@ -36,8 +37,20 @@ class TelegramFixture {
     );
     fixture.server.listen((request) async {
       final method = request.uri.pathSegments.last;
-      final text = await utf8.decoder.bind(request).join();
-      final body = text.isEmpty
+      final multipart =
+          request.headers.contentType?.mimeType == 'multipart/form-data';
+      final text = await (multipart ? latin1 : utf8).decoder
+          .bind(request)
+          .join();
+      final body = multipart
+          ? {
+              for (final match in RegExp(
+                r'name="([^"]+)"\r\n\r\n([^\r\n]+)',
+              ).allMatches(text))
+                match[1]!: utf8.decode(latin1.encode(match[2]!)),
+              'uploaded_photo': text.contains('filename="photo.jpg"'),
+            }
+          : text.isEmpty
           ? <String, dynamic>{}
           : jsonDecode(text) as Map<String, dynamic>;
       fixture.calls.add((method, body));
@@ -52,9 +65,44 @@ class TelegramFixture {
           'first_name': 'Shop bot',
           'username': 'shop_bot',
         };
-      } else if (method == 'setChatMenuButton' || method == 'setMyCommands') {
+      } else if ({
+        'setChatMenuButton',
+        'setMyCommands',
+        'deleteMyCommands',
+        'editMessageWidgetData',
+        'answerWidgetQuery',
+        'answerCallbackQuery',
+      }.contains(method)) {
         result = true;
-      } else if (method == 'sendMessage') {
+      } else if (method == 'getChat') {
+        result = {
+          'id': int.parse(body['chat_id'].toString()),
+          'type': 'channel',
+          'title': 'Test channel',
+          'accent_color_id': 0,
+          'max_reaction_count': 11,
+          'available_reactions': [],
+          'accepted_gift_types': <String, dynamic>{},
+        };
+      } else if (method == 'getChatMember') {
+        result = {
+          'status': 'administrator',
+          'user': {'id': 99, 'is_bot': true, 'first_name': 'Shop'},
+          'can_post_messages': fixture.canPost,
+          'can_be_edited': false,
+          'is_anonymous': false,
+          'can_manage_chat': true,
+          'can_delete_messages': false,
+          'can_manage_video_chats': false,
+          'can_restrict_members': false,
+          'can_promote_members': false,
+          'can_change_info': false,
+          'can_invite_users': false,
+          'can_post_stories': false,
+          'can_edit_stories': false,
+          'can_delete_stories': false,
+        };
+      } else if ({'sendMessage', 'sendWidget', 'sendPhoto'}.contains(method)) {
         final chat = int.parse(body['chat_id'].toString());
         result = {
           'message_id': fixture.calls.length,
@@ -85,26 +133,41 @@ class TelegramFixture {
   Iterable<Map<String, dynamic>> get messages =>
       calls.where((call) => call.$1 == 'sendMessage').map((call) => call.$2);
 
-  Future<void> command(String command, {int chat = 42, String suffix = ''}) =>
-      bot.dispatch(
-        Update.fromJson({
-          'update_id': calls.length + 1,
-          'message': {
-            'message_id': calls.length + 1,
-            'date': 1700000000,
-            'chat': {'id': chat, 'type': chat < 0 ? 'group' : 'private'},
-            'from': {'id': 42, 'is_bot': false, 'first_name': 'Buyer'},
-            'text': '/$command$suffix',
-            'entities': [
-              {
-                'offset': 0,
-                'length': command.length + 1,
-                'type': 'bot_command',
-              },
-            ],
-          },
-        }),
-      );
+  Future<void> command(
+    String command, {
+    int chat = 42,
+    int sender = 42,
+    String suffix = '',
+  }) => bot.dispatch(
+    Update.fromJson({
+      'update_id': calls.length + 1,
+      'message': {
+        'message_id': calls.length + 1,
+        'date': 1700000000,
+        'chat': {'id': chat, 'type': chat < 0 ? 'group' : 'private'},
+        'from': {'id': sender, 'is_bot': false, 'first_name': 'Buyer'},
+        'text': '/$command$suffix',
+        'entities': [
+          {'offset': 0, 'length': command.length + 1, 'type': 'bot_command'},
+        ],
+      },
+    }),
+  );
+
+  Future<void> widgetTap(String data) => bot.dispatch(
+    Update.fromJson({
+      'update_id': calls.length + 1,
+      'widget_query': {
+        'id': 'test-tap',
+        'from': {'id': 42, 'is_bot': false, 'first_name': 'Buyer'},
+        'chat': {'id': 42, 'type': 'private'},
+        'message_id': 200,
+        'chat_instance': 'fixture-chat',
+        'type': {'type': 'data'},
+        'data': data,
+      },
+    }),
+  );
 
   Future<void> close() async {
     bot.api.closeClient();
@@ -170,6 +233,7 @@ class PluginHarness {
     bool failMenu = false,
     String origin = 'https://shop.example.test',
     String apiOrigin = 'http://registered-shop.localhost',
+    FakeHttp? transport,
   }) async {
     final api = await TelegramFixture.open()
       ..failMenu = failMenu;
@@ -192,7 +256,7 @@ class PluginHarness {
         settings: {'notifyNewSuccessfulPurchases': notify},
       );
     await catalog.vault.write(bot.setup!.secretKey('apiKey'), 'seller-key');
-    final http = FakeHttp();
+    final http = transport ?? FakeHttp();
     final progress = MemoryNamespaces();
     final runtime = BotRuntime(
       TestLease(),

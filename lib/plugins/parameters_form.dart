@@ -132,8 +132,10 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
             ],
           ),
         ),
-        const Text(
-          'Saving changed parameters restarts a running bot and resets its automation progress.',
+        Text(
+          widget.plugin.destinationFields.isEmpty
+              ? 'Saving changed parameters restarts a running bot and resets its automation progress.'
+              : 'Saving changes restarts a running bot. Channel-only changes keep existing automation progress.',
         ),
         const SizedBox(height: 16),
         if (_error != null) ...[

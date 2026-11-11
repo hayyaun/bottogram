@@ -4,6 +4,7 @@ import 'package:crypto/crypto.dart';
 import 'ports.dart';
 import 'registry.dart';
 import 'failure_presentation.dart';
+import 'telegram_interaction.dart';
 
 /// Acknowledges each action before advancing the source checkpoint. Network IO
 /// never occupies a global persistence queue. Stop drains any in-flight send.
@@ -15,6 +16,7 @@ class AutomationRunner {
     required this.key,
     required this.onStatus,
     this.errorMessages,
+    this.channelId,
     this.onFailure,
     AutomationRegistry? registry,
   }) : registry = registry ?? AutomationRegistry.standard;
@@ -24,6 +26,7 @@ class AutomationRunner {
   final String key;
   final void Function(String? error) onStatus;
   final Json? errorMessages;
+  final String? channelId;
   final void Function(FailurePresentation? failure)? onFailure;
   final AutomationRegistry registry;
   AutomationTrigger? _trigger;
@@ -83,13 +86,60 @@ class AutomationRunner {
       _trigger?.close();
       return;
     }
+    if (definition.trigger.type == interactionTrigger) {
+      try {
+        while (!_stopped) {
+          final TriggerBatch batch;
+          try {
+            batch = await trigger.next(null);
+          } on RuntimeFailure {
+            if (_stopped) break;
+            rethrow;
+          }
+          for (var event in batch.events) {
+            try {
+              for (final action in actions) {
+                if (_stopped) break;
+                event = await action.execute(event);
+              }
+            } catch (_) {
+              if (_stopped) break;
+              try {
+                await context.telegram.send(
+                  event['chatId'] as String,
+                  definition.trigger.config['failureText'] as String,
+                );
+              } catch (_) {
+                // A later interaction can still succeed.
+              }
+            }
+          }
+        }
+      } finally {
+        trigger.close();
+      }
+      return;
+    }
     var failures = 0;
+    var channelChecked = false;
     try {
       final state = await store.read(key);
       while (!_stopped) {
         Map<String, String> failureMapping = const {};
         var executingComponent = false;
         try {
+          if (channelId != null && !channelChecked) {
+            failureMapping = definition.actions.last.errorMap;
+            executingComponent = true;
+            if (!await context.interactions.canPost(channelId!)) {
+              throw const RuntimeFailure(
+                'The bot cannot post to the configured Telegram channel.',
+                code: 'telegram.channel_unavailable',
+                retryAfter: Duration(seconds: 60),
+              );
+            }
+            channelChecked = true;
+          }
           if (state['pending'] == null) {
             failureMapping = definition.trigger.errorMap;
             executingComponent = true;
@@ -132,6 +182,7 @@ class AutomationRunner {
           final recent = List<String>.from(state['recent'] as List? ?? []);
           final durable = pending['durableDeduplication'] == true;
           final baseline = trigger.baseline && state['initialized'] != true;
+          var deferred = false;
           while ((pending['index'] as int) < events.length && !_stopped) {
             final index = pending['index'] as int;
             var event = events[index];
@@ -145,19 +196,37 @@ class AutomationRunner {
                 final action = pending['action'] as int;
                 failureMapping = definition.actions[action].errorMap;
                 executingComponent = true;
-                event = await actions[action].execute(event);
+                try {
+                  event = await actions[action].execute(event);
+                } on DeferDelivery catch (defer) {
+                  if (channelId == null || !durable) rethrow;
+                  deferred = deferred || defer.missingPhoto;
+                  pending['index'] = index + 1;
+                  pending['action'] = 0;
+                  state['pending'] = pending;
+                  break;
+                }
                 failureMapping = const {};
                 executingComponent = false;
-                events[index] = event;
-                pending['events'] = events;
                 pending['action'] = action + 1;
-                state['pending'] = pending;
-                await store.write(key, state);
+                if (channelId == null) {
+                  events[index] = event;
+                  pending['events'] = events;
+                  state['pending'] = pending;
+                  await store.write(key, state);
+                } else if (action == actions.length - 1) {
+                  // A confirmed channel delivery is recorded even when Stop
+                  // was pressed while the Telegram request was in flight.
+                  await store.write(receiptKey, {'complete': true});
+                }
               }
               if (_stopped) break;
             }
+            if (pending['index'] != index) continue;
             if (durable) {
-              if (!seen) await store.write(receiptKey, {'complete': true});
+              if (!seen && (channelId == null || baseline)) {
+                await store.write(receiptKey, {'complete': true});
+              }
             } else {
               recent.add(event['id'] as String);
               if (recent.length > 2000) {
@@ -173,6 +242,8 @@ class AutomationRunner {
             if (!durable) await store.write(key, state);
           }
           if (_stopped) break;
+          if (deferred) state['deferredDelivery'] = true;
+          final scanDeferred = state['deferredDelivery'] == true;
           state.remove('pending');
           if (pending['nextCursor'] != null) {
             state['pageCursor'] = pending['nextCursor'];
@@ -180,13 +251,25 @@ class AutomationRunner {
           } else {
             state['checkpoint'] = pending['checkpoint'];
             state['initialized'] = true;
+            channelChecked = false;
+            state.remove('deferredDelivery');
             state.remove('pageCursor');
             state.remove('cycleCheckpoint');
           }
           await store.write(key, state);
           failures = 0;
-          onStatus(null);
-          onFailure?.call(null);
+          if (scanDeferred) {
+            _report(
+              const RuntimeFailure(
+                'An item is waiting for usable media and will be checked again.',
+                code: 'telegram.photo_unavailable',
+              ),
+              definition.actions.last.errorMap,
+            );
+          } else if (channelId == null || state['pageCursor'] == null) {
+            onStatus(null);
+            onFailure?.call(null);
+          }
           // Bound work even for an API that returns endlessly changing pages.
           await _delay(
             state['pageCursor'] == null
@@ -196,6 +279,10 @@ class AutomationRunner {
         } on RuntimeFailure catch (error) {
           if (_stopped) break;
           _report(error, failureMapping);
+          channelChecked = false;
+          if (channelId != null && state['pending'] is Json) {
+            (state['pending'] as Json)['action'] = 0;
+          }
           if (error.permanent) break;
           failures++;
           await _delay(

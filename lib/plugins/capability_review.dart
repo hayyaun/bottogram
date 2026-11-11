@@ -2,15 +2,26 @@ import 'package:flutter/material.dart';
 
 import '../runtime/registry.dart';
 import '../runtime/telegram_config.dart';
+import '../runtime/telegram_interaction.dart';
 import 'manifest.dart';
 
-List<String> pluginCommands(PluginManifest manifest) => [
+List<String> pluginCommands(PluginManifest manifest) => {
   for (final automation in manifest.automations)
-    if (automation.trigger.type == 'telegram.command.v1')
-      automation.trigger.config['command'] as String
-    else if (automation.trigger.type == 'telegram.command.v2')
-      ...List<String>.from(automation.trigger.config['commands'] as List),
-];
+    ..._commands(automation.trigger),
+}.toList();
+
+Iterable<String> _commands(ComponentDefinition trigger) sync* {
+  switch (trigger.type) {
+    case 'telegram.command.v1':
+      yield trigger.config['command'] as String;
+    case 'telegram.command.v2':
+      yield* (trigger.config['commands'] as List).cast<String>();
+    case interactionTrigger:
+      for (final route in interactionRoutes(trigger.config)) {
+        if (route['kind'] == 'command') yield route['name'] as String;
+      }
+  }
+}
 
 String automationSummary(AutomationDefinition automation) {
   final trigger = automation.trigger;
@@ -23,6 +34,16 @@ String automationSummary(AutomationDefinition automation) {
         .join(' · ');
     final chats = (trigger.config['chatTypes'] as List).join(', ');
     return '$commands · $chats chats';
+  }
+  if (trigger.type == interactionTrigger) {
+    final commands = _commands(
+      trigger,
+    ).map((command) => '/$command').join(' · ');
+    if (commands.isEmpty) return 'Private-chat buttons and widgets';
+    final role = trigger.config['audience'] == 'admin'
+        ? 'admin only'
+        : 'private chats';
+    return '$commands · $role';
   }
   return 'Scheduled checks · every ${trigger.config['intervalSeconds']} seconds';
 }
@@ -76,7 +97,9 @@ class PluginCapabilityReview extends StatelessWidget {
     children: [
       if (plugin.telegram?['menuButton'] != null) ...[
         const SizedBox(height: 12),
-        Text('Menu button: ${plugin.telegram!['menuButton']['text']}'),
+        Text(
+          'Menu button: ${plugin.telegram!['menuButton']['text'] ?? 'Commands'}',
+        ),
       ],
       for (final target in webAppTargets(
         telegram: plugin.telegram,
@@ -90,6 +113,11 @@ class PluginCapabilityReview extends StatelessWidget {
       for (final automation in plugin.automations) ...[
         const SizedBox(height: 12),
         Text(automationSummary(automation)),
+        if (automation.destinationField case final String field)
+          Text(
+            'Posts to channel: ${_fieldLabel(field)}'
+            '${fields?[field]?.trim().isNotEmpty == true ? ' → ${fields![field]}' : ' (optional)'}',
+          ),
         if (automation.enabledBySetting != null)
           Text(
             'Controlled by: ${plugin.settings.firstWhere((s) => s.key == automation.enabledBySetting).label}',
@@ -100,6 +128,10 @@ class PluginCapabilityReview extends StatelessWidget {
         ]) ...[
           if (component.type == 'telegram.notify-admin.v1')
             const Text('Sends notifications to the configured admin.'),
+          if (component.config['photo'] case final Map<String, dynamic> photo)
+            Text(
+              'Downloads photos: ${_fieldLabel(photo['originField'] as String)} → ${photo['path']}',
+            ),
           for (final request in AutomationRegistry.standard.requestsFor(
             component,
           )) ...[

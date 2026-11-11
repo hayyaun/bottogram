@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'dart:convert';
 import 'ports.dart';
 import 'http_request.dart';
 import 'telegram_config.dart';
@@ -70,12 +71,12 @@ class HttpPollTrigger implements AutomationTrigger {
   void close() {}
 }
 
-class TelegramCommandTrigger implements AutomationTrigger {
+class TelegramCommandTrigger extends TelegramEventTrigger {
   TelegramCommandTrigger(Json config, RuntimeContext context) {
     final commands = config['commands'] as List? ?? [config['command']];
     for (final command in commands) {
       context.telegram.command(command as String, (event) {
-        if (_closed) return;
+        if (isClosed) return;
         final chatTypes = config['chatTypes'] as List?;
         if (chatTypes != null && !chatTypes.contains(event['chatType'])) return;
         if (config['arguments'] == 'ignore') {
@@ -97,12 +98,7 @@ class TelegramCommandTrigger implements AutomationTrigger {
           }
           event = {...event, 'page': page};
         }
-        if (_waiting != null) {
-          _waiting!.complete(TriggerBatch([event]));
-          _waiting = null;
-        } else if (_events.length < 32) {
-          _events.add(event);
-        } else {
+        if (!enqueue(event)) {
           unawaited(
             context.telegram
                 .send(
@@ -115,6 +111,24 @@ class TelegramCommandTrigger implements AutomationTrigger {
       });
     }
   }
+}
+
+class TelegramEventTrigger implements AutomationTrigger {
+  bool get isClosed => _closed;
+
+  bool enqueue(Json event) {
+    if (_closed) return false;
+    if (_waiting != null) {
+      _waiting!.complete(TriggerBatch([event]));
+      _waiting = null;
+    } else if (_events.length < 32) {
+      _events.add(event);
+    } else {
+      return false;
+    }
+    return true;
+  }
+
   final Queue<Json> _events = Queue();
   Completer<TriggerBatch>? _waiting;
   bool _closed = false;
@@ -142,31 +156,94 @@ class TelegramCommandTrigger implements AutomationTrigger {
 }
 
 class HttpGetAction implements AutomationAction {
-  HttpGetAction(this.config, RuntimeContext context)
-    : request = HttpRequest(config['request'] as Json, context);
+  HttpGetAction(this.config, this.context)
+    : request = HttpRequest(config['request'] as Json, context),
+      cacheKey = config['useLastResponse'] == true
+          ? jsonEncode([config['request'], config['minimum']])
+          : null;
   final Json config;
+  final RuntimeContext context;
   final HttpRequest request;
+  final String? cacheKey;
+
   @override
   Future<Json> execute(Json event) async {
     final pagination = config['pagination'] as Json?;
+    final size = pagination?['pageSize'] as int? ?? 0;
+    final lookahead = pagination?['itemsPath'] is String;
     final page = event['page'] as int? ?? 1;
-    return {
-      ...event,
-      'page': page,
-      'nextPage': page + 1,
-      'results': {
-        ...(event['results'] as Json? ?? {}),
-        config['resultKey'] as String: await request.fetch(
-          query: {
-            if (pagination != null) 'limit': pagination['pageSize'].toString(),
-            if (pagination != null)
-              'offset': ((page - 1) * (pagination['pageSize'] as int))
-                  .toString(),
-          },
-        ),
+    final query = <String, String>{
+      if (pagination != null) ...{
+        'limit': (size + (lookahead ? 1 : 0)).toString(),
+        'offset': ((page - 1) * size).toString(),
       },
     };
+    final bindings = config['bindings'] as Json? ?? const {};
+    try {
+      var result = await request.fetch(
+        query: query,
+        pathParameters: {
+          for (final binding in bindings.entries)
+            binding.key:
+                valueAt(event, binding.value as String)?.toString() ?? '',
+        },
+      );
+      if (lookahead) {
+        final items = valueAt(result, pagination!['itemsPath'] as String);
+        if (items is! List || items.length > size + 1) {
+          throw const RuntimeFailure(
+            'The list response does not match the plugin contract.',
+            code: 'http.invalid_response',
+          );
+        }
+        result = {
+          'items': items.take(size).toList(),
+          'page': page,
+          if (page > 1) 'previous': page - 1,
+          if (items.length > size && page < 9999) 'next': page + 1,
+        };
+      }
+      final minimum = config['minimum'] as Json?;
+      if (minimum != null) {
+        final items = valueAt(result, minimum['itemsPath'] as String);
+        if (items is List) {
+          final amounts = items
+              .map((item) => valueAt(item, minimum['valuePath'] as String))
+              .whereType<num>()
+              .where((value) => value.isFinite && value >= 0);
+          if (amounts.isNotEmpty) {
+            result = {
+              ...result,
+              'minimum': amounts.reduce((a, b) => a < b ? a : b),
+            };
+          }
+        }
+      }
+      if (cacheKey != null) {
+        final cache = context.lastResponses;
+        cache.remove(cacheKey);
+        if (cache.length >= 8) cache.remove(cache.keys.first);
+        cache[cacheKey!] = result;
+      }
+      return _withResult(event, page, result);
+    } on RuntimeFailure catch (error) {
+      if (config['deferOnNotFound'] == true && error.httpStatus == 404) {
+        throw const DeferDelivery();
+      }
+      if (cacheKey == null) rethrow;
+      return _withResult(event, page, context.lastResponses[cacheKey] ?? {});
+    }
   }
+
+  Json _withResult(Json event, int page, Json result) => {
+    ...event,
+    'page': page,
+    'nextPage': page + 1,
+    'results': {
+      ...(event['results'] as Json? ?? {}),
+      config['resultKey'] as String: result,
+    },
+  };
 }
 
 class TelegramMessageAction implements AutomationAction {

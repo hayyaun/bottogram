@@ -24,16 +24,21 @@ class BotSetup {
   final Map<String, String> values;
   final List<String> secretFields;
   final Map<String, Object?> settings;
-  BotSetup withSettings(Map<String, Object?> updated) => BotSetup(
+  BotSetup withSettings(Map<String, Object?> updated) =>
+      copyWith(settings: updated);
+  BotSetup copyWith({
+    Map<String, String>? values,
+    Map<String, Object?>? settings,
+  }) => BotSetup(
     instanceId: instanceId,
     tokenFingerprint: tokenFingerprint,
     adminTelegramUserId: adminTelegramUserId,
     pluginKey: pluginKey,
     pluginDigest: pluginDigest,
     pluginName: pluginName,
-    values: values,
+    values: values == null ? this.values : Map.unmodifiable(values),
     secretFields: secretFields,
-    settings: Map.unmodifiable(updated),
+    settings: settings == null ? this.settings : Map.unmodifiable(settings),
   );
   bool get usesPlugin => pluginKey != null;
   static String fingerprint(String token) =>

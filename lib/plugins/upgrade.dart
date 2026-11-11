@@ -1,7 +1,11 @@
 import 'dart:convert';
 
+import '../runtime/http_headers.dart';
+import '../runtime/origin.dart';
+import '../runtime/ports.dart';
 import '../runtime/registry.dart';
 import '../runtime/telegram_config.dart';
+import '../runtime/telegram_interaction.dart';
 import 'bot_setup.dart';
 import 'manifest.dart';
 
@@ -15,6 +19,7 @@ class PluginUpgradePlan {
     required this.addedAutomationIds,
     required this.removedAutomationIds,
     required this.replacedAutomationIds,
+    required this.removedFields,
   });
 
   final PluginManifest current;
@@ -23,6 +28,7 @@ class PluginUpgradePlan {
   final List<String> addedAutomationIds;
   final List<String> removedAutomationIds;
   final List<String> replacedAutomationIds;
+  final List<PluginField> removedFields;
 
   /// Catalog candidates are already sorted from newest to oldest.
   static PluginManifest? firstCompatibleTarget(
@@ -57,16 +63,13 @@ class PluginUpgradePlan {
       );
     }
     if (current.requiresAdmin != target.requiresAdmin ||
-        canonicalJson(_fieldSchema(current)) !=
-            canonicalJson(_fieldSchema(target)) ||
         canonicalJson(_settingSchema(current)) !=
             canonicalJson(_settingSchema(target))) {
       throw const PluginException(
         'This update changes setup fields or settings. A compatible update must retain the current configuration contract.',
       );
     }
-    // All field semantics and effective preferences remain identical, as do the
-    // instance, token, admin, values and secure key references during publishing.
+    final aliases = _fieldAliases(current, target, setup);
     target.settingValues(setup.settings);
     for (final field in target.fields) {
       if (field.type != PluginFieldType.secret &&
@@ -98,7 +101,7 @@ class PluginUpgradePlan {
     for (final entry in before.entries) {
       final next = after[entry.key];
       if (next != null &&
-          canonicalJson(_automation(entry.value)) ==
+          canonicalJson(_automation(entry.value, aliases: aliases)) ==
               canonicalJson(_automation(next))) {
         preserved.add(entry.key);
       } else {
@@ -122,6 +125,9 @@ class PluginUpgradePlan {
       ),
       removedAutomationIds: List.unmodifiable(removed),
       replacedAutomationIds: List.unmodifiable(replaced),
+      removedFields: List.unmodifiable(
+        current.fields.where((field) => aliases.containsKey(field.key)),
+      ),
     );
   }
 }
@@ -136,8 +142,114 @@ int comparePluginVersions(String left, String right) {
   return 0;
 }
 
-bool _command(AutomationDefinition a) =>
-    {'telegram.command.v1', 'telegram.command.v2'}.contains(a.trigger.type);
+bool _command(AutomationDefinition a) => {
+  'telegram.command.v1',
+  'telegram.command.v2',
+  interactionTrigger,
+}.contains(a.trigger.type);
+
+Map<String, String> _fieldAliases(
+  PluginManifest current,
+  PluginManifest target,
+  BotSetup setup,
+) {
+  final before = _fieldSchema(current);
+  final after = _fieldSchema(target);
+  const changedContract = PluginException(
+    'This update changes the configuration contract. Existing fields must retain their semantics and new fields must be optional with no default.',
+  );
+  if (before.entries.any(
+        (entry) =>
+            after.containsKey(entry.key) &&
+            canonicalJson(entry.value) != canonicalJson(after[entry.key]),
+      ) ||
+      target.fields
+          .where((field) => !before.containsKey(field.key))
+          .any(
+            (field) =>
+                field.type == PluginFieldType.secret ||
+                field.required ||
+                field.defaultValue != null ||
+                setup.values.containsKey(field.key),
+          )) {
+    throw changedContract;
+  }
+
+  final aliases = <String, String>{};
+  final removed = current.fields.where(
+    (field) => !after.containsKey(field.key),
+  );
+  if (removed.isEmpty) return aliases;
+  final registry = AutomationRegistry.standard;
+  final boundOrigins = {
+    for (final automation in current.automations.where((a) => !_command(a)))
+      for (final component in [automation.trigger, ...automation.actions])
+        for (final request in registry.requestsFor(component))
+          for (final binding in headerFieldBindings(request))
+            if (binding.transform == 'url.origin' ||
+                binding.transform == 'url.authority')
+              binding.field,
+  };
+  for (final field in removed) {
+    if (field.type != PluginFieldType.text ||
+        !field.required ||
+        !boundOrigins.contains(field.key)) {
+      throw changedContract;
+    }
+    final origin = parseConfiguredOrigin(setup.values[field.key] ?? '');
+    final matches = target.fields.where((candidate) {
+      if (origin == null ||
+          !before.containsKey(candidate.key) ||
+          candidate.type != PluginFieldType.text ||
+          !candidate.required) {
+        return false;
+      }
+      final retained = parseConfiguredOrigin(setup.values[candidate.key] ?? '');
+      return retained?.origin == origin.origin &&
+          retained?.authority == origin.authority;
+    }).toList();
+    if (matches.length != 1) {
+      throw const PluginException(
+        'The saved URL for a field removed by this version does not match a single retained origin. The current plugin and polling progress have been kept.',
+      );
+    }
+    aliases[field.key] = matches.single.key;
+  }
+  return aliases;
+}
+
+Json _configWithAliases(
+  ComponentDefinition component,
+  Map<String, String> aliases,
+) {
+  if (aliases.isEmpty) return component.config;
+  final requests = AutomationRegistry.standard.requestsFor(component).toSet();
+  dynamic rewrite(dynamic value) {
+    if (value is List) return value.map(rewrite).toList();
+    if (value is! Json) return value;
+    final headers = value['headers'];
+    if (requests.contains(value) && headers is Json) {
+      return {
+        ...value,
+        'headers': {
+          for (final entry in headers.entries)
+            entry.key: switch (entry.value) {
+              {
+                'field': final String field,
+                'transform': 'url.origin' || 'url.authority',
+              }
+                  when aliases.containsKey(field) =>
+                {...entry.value as Json, 'field': aliases[field]},
+              _ => entry.value,
+            },
+        },
+      };
+    }
+    return {for (final entry in value.entries) entry.key: rewrite(entry.value)};
+  }
+
+  return rewrite(component.config) as Json;
+}
 
 Map<String, dynamic> _fieldSchema(PluginManifest manifest) => {
   for (final f in manifest.fields)
@@ -163,12 +275,24 @@ Map<String, dynamic> _settingSchema(PluginManifest manifest) => {
     },
 };
 
-Map<String, dynamic> _automation(AutomationDefinition a) => {
+Json _automation(
+  AutomationDefinition a, {
+  Map<String, String> aliases = const {},
+}) => {
   'id': a.id,
   'enabledBySetting': a.enabledBySetting,
-  'trigger': {'type': a.trigger.type, 'config': a.trigger.config},
+  'trigger': {
+    'type': a.trigger.type,
+    'config': _configWithAliases(a.trigger, aliases),
+  },
   'actions': a.actions
-      .map((c) => {'id': c.id, 'type': c.type, 'config': c.config})
+      .map(
+        (c) => {
+          'id': c.id,
+          'type': c.type,
+          'config': _configWithAliases(c, aliases),
+        },
+      )
       .toList(),
 };
 

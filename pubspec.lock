@@ -784,8 +784,8 @@ packages:
     dependency: "direct main"
     description:
       path: "."
-      ref: "09ea3ce96c99461007ba8d960ec09430c54e3358"
-      resolved-ref: "09ea3ce96c99461007ba8d960ec09430c54e3358"
+      ref: "9375b6fdb5464bb31b51385688bb8e31056e9053"
+      resolved-ref: "9375b6fdb5464bb31b51385688bb8e31056e9053"
       url: "https://github.com/hayyaun/televerse.git"
     source: git
     version: "3.7.0"

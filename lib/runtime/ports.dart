@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 typedef Json = Map<String, dynamic>;
 
@@ -8,9 +9,11 @@ class RuntimeFailure implements Exception {
     this.permanent = false,
     this.retryAfter,
     this.code = 'runtime.failure',
+    this.httpStatus,
   });
   final String message;
   final String code;
+  final int? httpStatus;
   final bool permanent;
   final Duration? retryAfter;
   @override
@@ -40,6 +43,36 @@ abstract interface class TelegramPort {
   Future<void> send(String chatId, String text, {Json? replyMarkup});
 }
 
+/// Optional Telegram operations used by interactive and channel automations.
+abstract interface class TelegramInteractions {
+  String get username;
+  void interaction(String kind, void Function(Json event) receive);
+  Future<bool> canPost(String chatId);
+  Future<void> photo(
+    String chatId,
+    Uint8List bytes,
+    String caption,
+    Json? keyboard,
+  );
+  Future<void> widget(
+    Json event,
+    String html,
+    Json data,
+    String caption,
+    Json? keyboard,
+  );
+}
+
+abstract interface class PhotoTransport {
+  Future<Uint8List?> jpeg(Uri url);
+}
+
+/// Defer an item before delivery. A full list scan can retry it next time.
+class DeferDelivery implements Exception {
+  const DeferDelivery({this.missingPhoto = false});
+  final bool missingPhoto;
+}
+
 class RuntimeContext {
   RuntimeContext({
     required this.http,
@@ -47,12 +80,17 @@ class RuntimeContext {
     required this.secret,
     required this.fields,
     required this.adminId,
+    this.settings = const {},
   });
   final JsonTransport http;
   final TelegramPort telegram;
   final Future<String?> Function(String field) secret;
   final Map<String, String> fields;
   final String adminId;
+  final Map<String, Object> settings;
+  final lastResponses = <String, Json>{};
+
+  TelegramInteractions get interactions => telegram as TelegramInteractions;
 }
 
 class TriggerBatch {

@@ -8,6 +8,7 @@ import 'http_transport.dart';
 import 'ports.dart';
 import 'progress_store.dart';
 import 'telegram_port.dart';
+import 'telegram_interaction.dart';
 import 'failure_presentation.dart';
 
 /// Lifecycle operations serialize; long-running automations never occupy this
@@ -26,6 +27,7 @@ class BotRuntime extends ChangeNotifier {
   final Set<VirtBot> _bots = {};
   final Map<VirtBot, List<AutomationRunner>> _runners = {};
   final Map<VirtBot, JsonTransport> _clients = {};
+  final Map<VirtBot, Future<void>> _commandSync = {};
   final Map<VirtBot, Map<String, String>> _errors = {};
   final Map<VirtBot, Map<String, FailurePresentation>> _failureDetails = {};
   Future<void> _tail = Future.value();
@@ -41,6 +43,17 @@ class BotRuntime extends ChangeNotifier {
   FailurePresentation? failureFor(VirtBot bot) {
     final key = _firstErrorKey(bot);
     return key == null ? null : _failureDetails[bot]?[key];
+  }
+
+  List<FailurePresentation> failuresFor(VirtBot bot) {
+    final key = _firstErrorKey(bot);
+    return [
+      if (failureFor(bot) case final FailurePresentation failure) failure,
+      for (final entry
+          in (_failureDetails[bot] ?? const <String, FailurePresentation>{})
+              .entries)
+        if (entry.key != key) entry.value,
+    ];
   }
 
   Future<void> _queue(Future<void> Function() work) {
@@ -91,31 +104,48 @@ class BotRuntime extends ChangeNotifier {
       }
     };
     BotTelegramPort? telegram;
+    var acceptsWidgets = false;
     try {
       await bot.bot.initialize().timeout(const Duration(seconds: 22));
       if (manifest != null && setup != null) {
         final http = _clients[bot] =
             httpClientFactory?.call() ?? BoundedJsonTransport();
         telegram = BotTelegramPort(bot.bot);
+        final settings = manifest.settingValues(setup.settings);
         final context = RuntimeContext(
           http: http,
           telegram: telegram,
           secret: (field) => plugins.vault.read(setup.secretKey(field)),
           fields: setup.values,
           adminId: setup.adminTelegramUserId,
+          settings: settings,
         );
-        final settings = manifest.settingValues(setup.settings);
         final runners = _runners[bot] = [];
         for (final definition in manifest.automations) {
           if (definition.enabledBySetting != null &&
               settings[definition.enabledBySetting] != true) {
             continue;
           }
+          final field = definition.destinationField;
+          final channel = field == null
+              ? null
+              : int.tryParse(setup.values[field]?.trim() ?? '');
+          if (field != null && channel == null) continue;
+          final trigger = definition.trigger;
+          if (trigger.type == interactionTrigger &&
+              interactionRoutes(
+                trigger.config,
+              ).any((route) => route['kind'] == 'widget')) {
+            acceptsWidgets = true;
+          }
+          final namespace =
+              '${setup.instanceId}:${manifest.digest}:${definition.id}';
           final runner = AutomationRunner(
             definition: definition,
             context: context,
             store: progress,
-            key: '${setup.instanceId}:${manifest.digest}:${definition.id}',
+            key: channel == null ? namespace : '$namespace:channel:$channel',
+            channelId: channel?.toString(),
             errorMessages: manifest.errorMessages,
             onFailure: (failure) {
               if (_closed || !_bots.contains(bot)) return;
@@ -143,6 +173,7 @@ class BotRuntime extends ChangeNotifier {
           unawaited(runner.start());
         }
       }
+      bot.pluginWidgetQueries = acceptsWidgets;
       await bot.start(pluginRuntime: manifest?.executable == true);
       if (manifest?.telegram != null && setup != null && telegram != null) {
         final declaration = manifest!.telegram!;
@@ -150,7 +181,13 @@ class BotRuntime extends ChangeNotifier {
           unawaited(_synchronizeMenu(bot, telegram, declaration, setup.values));
         }
         if (declaration['commands'] != null) {
-          unawaited(_synchronizeCommands(bot, telegram, declaration));
+          _commandSync[bot] = _synchronizeCommands(
+            bot,
+            telegram,
+            declaration,
+            setup.tokenFingerprint,
+            setup.adminTelegramUserId,
+          );
         }
       }
     } catch (_) {
@@ -185,8 +222,37 @@ class BotRuntime extends ChangeNotifier {
     VirtBot bot,
     BotTelegramPort telegram,
     Json declaration,
+    String botFingerprint,
+    String adminId,
   ) async {
-    final success = await telegram.synchronizeCommands(declaration);
+    final scopeKey = '@telegram:$botFingerprint:commands';
+    final target = declaration['adminCommands'] == null ? null : adminId;
+    var success = false;
+    try {
+      final state = await progress.read(scopeKey);
+      final managed = (state['admins'] as List? ?? const [])
+          .cast<String>()
+          .toSet();
+      if (target != null && managed.add(target)) {
+        // Track the attempted scope before calling Telegram so a lost reply
+        // still permits cleanup when the admin changes.
+        await progress.write(scopeKey, {'admins': managed.toList()});
+      }
+      final obsolete = managed.where((id) => id != target).toList();
+      final published = await telegram.synchronizeCommands(
+        declaration,
+        adminId: target,
+      );
+      for (final id in obsolete) {
+        if (await telegram.clearAdminCommands(id)) managed.remove(id);
+      }
+      if (obsolete.isNotEmpty) {
+        await progress.write(scopeKey, {'admins': managed.toList()});
+      }
+      success = published && managed.every((id) => id == target);
+    } catch (_) {
+      // Report safe status without exposing authenticated URLs or storage data.
+    }
     if (_closed || !_bots.contains(bot) || bot.bot != telegram.bot) return;
     const key = '@telegram.commands';
     if (success) {
@@ -212,6 +278,7 @@ class BotRuntime extends ChangeNotifier {
       await bot.stop();
     } finally {
       await drained;
+      await _commandSync.remove(bot);
     }
     _bots.remove(bot);
     _errors.remove(bot);

@@ -15,6 +15,7 @@ class PluginRepository extends ChangeNotifier {
     SecretVault? vault,
     this.bundledAssets = const [
       'examples/plugins/inshopa.storefront.bottogram-plugin.json',
+      'examples/plugins/inshopa.storefront.0.8.0.bottogram-plugin.json',
     ],
     AssetBundle? bundle,
   }) : vault = vault ?? PlatformSecretVault(),
@@ -287,6 +288,7 @@ class PluginRepository extends ChangeNotifier {
         '${current.instanceId}:${target.digest}:$id',
       );
     }
+    final removed = plan.removedFields.map((field) => field.key).toSet();
     final updated = BotSetup(
       instanceId: current.instanceId,
       tokenFingerprint: current.tokenFingerprint,
@@ -294,7 +296,10 @@ class PluginRepository extends ChangeNotifier {
       pluginKey: target.storageKey,
       pluginDigest: target.digest,
       pluginName: target.name,
-      values: current.values,
+      values: {
+        for (final entry in current.values.entries)
+          if (!removed.contains(entry.key)) entry.key: entry.value,
+      },
       secretFields: current.secretFields,
       settings: current.settings,
     );
@@ -339,14 +344,26 @@ class PluginRepository extends ChangeNotifier {
         'Complete the plugin parameters and admin ID.',
       );
     }
-    var unchanged = current.adminTelegramUserId == adminId.trim();
+    final sameAdmin = current.adminTelegramUserId == adminId.trim();
+    final changed = <String>{};
     for (final field in manifest.fields) {
       final previous = field.type == PluginFieldType.secret
           ? await vault.read(current.secretKey(field.key)) ?? ''
           : current.values[field.key] ?? '';
-      unchanged = unchanged && previous == values[field.key];
+      if (previous != values[field.key]) changed.add(field.key);
     }
-    if (unchanged) return current;
+    if (sameAdmin && changed.isEmpty) return current;
+    if (sameAdmin && changed.every(manifest.destinationFields.contains)) {
+      final updated = current.copyWith(
+        values: {
+          ...current.values,
+          for (final field in changed) field: values[field]!.trim(),
+        },
+      );
+      await _setups!.put(botKey, updated.toMap());
+      notifyListeners();
+      return updated;
+    }
     final staged = await _prepare(
       token: token,
       adminId: adminId,

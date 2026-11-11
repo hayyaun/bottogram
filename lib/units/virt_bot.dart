@@ -73,6 +73,8 @@ class VirtBot extends HiveObject {
 
   bool get active => _active;
 
+  bool pluginWidgetQueries = false;
+
   Future<void> start({bool pluginRuntime = false}) async {
     if (setupError != null) throw PluginException(setupError!);
     if ((setup?.usesPlugin ?? false) && !pluginRuntime) {
@@ -83,7 +85,7 @@ class VirtBot extends HiveObject {
     if (_active) await stop(); // stop before restart
     await bot.initialize().timeout(const Duration(seconds: 22));
     final generation = ++_runGeneration;
-    var acceptsWidgets = false;
+    var acceptsWidgets = pluginRuntime && pluginWidgetQueries;
     if (!pluginRuntime) {
       final session = _builder = BuilderSession(token, bot.api);
       acceptsWidgets = session.registerWidgetQueries(bot, events);

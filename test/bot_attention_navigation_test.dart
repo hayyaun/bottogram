@@ -33,7 +33,9 @@ class AttentionRuntime extends Fake implements BotRuntime {
   );
 
   @override
-  FailurePresentation? failureFor(VirtBot bot) => presentation;
+  List<FailurePresentation> failuresFor(VirtBot bot) => [
+    if (presentation case final FailurePresentation failure) failure,
+  ];
 }
 
 class AttentionBots extends Cubit<List<VirtBot>> implements BotsCubit {

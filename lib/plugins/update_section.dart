@@ -64,8 +64,14 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Bot identity, parameters, secure keys and preferences stay unchanged.',
+                    'The updated plugin reuses this bot’s identity, secure keys and saved preferences.',
                   ),
+                  if (plan.removedFields.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      'Duplicate URL fields removed: ${plan.removedFields.map((field) => field.label).join(', ')}. The saved origins produce the same request headers.',
+                    ),
+                  ],
                   if (plan.preservedAutomationIds.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(

@@ -7,6 +7,8 @@ import 'setting.dart';
 import '../runtime/registry.dart';
 import '../runtime/ports.dart' show Json;
 import '../runtime/telegram_config.dart';
+import '../runtime/telegram_interaction.dart';
+import '../runtime/telegram_presentation.dart';
 import '../runtime/http_headers.dart';
 import '../runtime/failure_presentation.dart';
 
@@ -111,6 +113,11 @@ class PluginManifest {
     }
     return result;
   }
+
+  Set<String> get destinationFields => {
+    for (final automation in automations)
+      if (automation.destinationField case final String field) field,
+  };
 
   String get digest => sha256.convert(utf8.encode(source)).toString();
   String get storageKey => '$id@$version';
@@ -316,22 +323,58 @@ class PluginManifest {
 
         if (telegram != null) {
           validateTargetFields(webAppTargets(telegram: telegram));
-          final privateCommands = {
-            for (final automation in automations)
-              if (automation.trigger.type == 'telegram.command.v2' &&
-                  (automation.trigger.config['chatTypes'] as List).contains(
-                    'private',
-                  ))
-                ...automation.trigger.config['commands'] as List,
-          };
-          for (final entry in telegram['commands'] as List? ?? const []) {
-            if (!privateCommands.contains((entry as Json)['command'])) {
-              reject(
-                'Published Telegram commands must match a private-chat command trigger.',
+          final privateCommands = <String>{};
+          final adminCommands = <String>{};
+          for (final automation in automations) {
+            final trigger = automation.trigger;
+            if (trigger.type == 'telegram.command.v2' &&
+                (trigger.config['chatTypes'] as List).contains('private')) {
+              privateCommands.addAll(
+                (trigger.config['commands'] as List).cast<String>(),
+              );
+            } else if (trigger.type == interactionTrigger) {
+              final target = trigger.config['audience'] == 'admin'
+                  ? adminCommands
+                  : privateCommands;
+              target.addAll(
+                interactionRoutes(trigger.config)
+                    .where((route) => route['kind'] == 'command')
+                    .map((route) => route['name'] as String),
               );
             }
           }
+          for (final (name, available) in [
+            ('commands', privateCommands),
+            ('adminCommands', adminCommands),
+          ]) {
+            for (final entry
+                in (telegram[name] as List? ?? const []).cast<Json>()) {
+              if (!available.contains(entry['command'])) {
+                reject(
+                  'Published Telegram commands must match a private-chat trigger for the same audience.',
+                );
+              }
+            }
+          }
         }
+        validateTargetFields(
+          webAppTargets(
+            actionConfigs: automations.expand(
+              (a) => a.actions.map((c) => c.config),
+            ),
+          ),
+        );
+        bool channelFieldExists(Object? key) => fields.any(
+          (f) =>
+              f.key == key &&
+              f.type == PluginFieldType.integer &&
+              !f.required &&
+              f.defaultValue == null &&
+              f.min != null &&
+              f.min! >= -4503599627370495 &&
+              f.max != null &&
+              f.max! <= -1,
+        );
         for (final automation in automations) {
           if (automation.enabledBySetting != null &&
               !settings.any(
@@ -341,7 +384,31 @@ class PluginManifest {
               )) {
             reject('An automation must reference a boolean setting.');
           }
+          if (automation.trigger.type == interactionTrigger &&
+              automation.trigger.config['audience'] != null &&
+              !(requires as List).contains('adminTelegramUserId')) {
+            reject('Telegram role checks require the shared admin field.');
+          }
           for (final component in [automation.trigger, ...automation.actions]) {
+            if (component.type == presentationAction ||
+                component.type == statusAction) {
+              final c = component.config;
+              if (c['channelField'] != null &&
+                  !channelFieldExists(c['channelField'])) {
+                reject(
+                  'Channel destinations require an optional negative integer field.',
+                );
+              }
+              if (c['setting'] != null &&
+                  !settings.any(
+                    (s) => s.key == c['setting'] && s.defaultValue is bool,
+                  )) {
+                reject('Status actions require a declared boolean setting.');
+              }
+              if (c['photo'] is Json) {
+                validateTargetFields([c['photo'] as Json]);
+              }
+            }
             if (component.errorMap.values.any(
               (resource) => !errorMessages!.containsKey(resource),
             )) {

@@ -142,6 +142,19 @@ class ThumbnailHttp extends FakeHttp implements PhotoTransport {
     final id = url.pathSegments.last;
     final seed = ids.indexOf(id);
     if (id == otherId) return Uint8List.fromList([255, 216, 255, 217]);
+    if (seed == 6) {
+      final photo = image.Image(width: 84, height: 64);
+      image.fill(photo, color: image.ColorRgb8(245, 245, 245));
+      image.fillRect(
+        photo,
+        x1: 12,
+        y1: 20,
+        x2: 72,
+        y2: 44,
+        color: image.ColorRgb8(36, 46, 68),
+      );
+      return image.encodeJpg(photo);
+    }
     final random = Random(seed);
     final photo = image.Image(width: 84, height: 64);
     for (final pixel in photo) {
@@ -212,6 +225,13 @@ void main() {
         () => h.api.calls.where((call) => call.$1 == 'sendWidget').length == 1,
       );
 
+      int thumbnailSize(String url) {
+        expect(url, startsWith('data:image/jpeg;base64,'));
+        final thumbnail = image.decodeJpg(base64Decode(url.split(',').last));
+        expect(thumbnail, isNotNull);
+        return max(thumbnail!.width, thumbnail.height);
+      }
+
       List<Map<String, dynamic>> verifyHtml(Map<String, dynamic> payload) {
         final html = payload['html'] as String;
         final bytes = utf8.encode(html);
@@ -230,13 +250,7 @@ void main() {
                 .cast<Map<String, dynamic>>();
         for (final url
             in rows.map((row) => row['thumbnail']).whereType<String>()) {
-          expect(url, startsWith('data:image/jpeg;base64,'));
-          final thumbnail = image.decodeJpg(base64Decode(url.split(',').last));
-          expect(thumbnail, isNotNull);
-          expect(
-            max(thumbnail!.width, thumbnail.height),
-            lessThanOrEqualTo(64),
-          );
+          expect(thumbnailSize(url), lessThanOrEqualTo(64));
         }
         return rows;
       }
@@ -269,6 +283,11 @@ void main() {
       final second = h.api.calls[secondIndex].$2;
       final secondRows = verifyHtml(second);
       expect(secondRows.map((row) => row['id']), http.ids.skip(6));
+      final sizes = secondRows
+          .map((row) => thumbnailSize(row['thumbnail'] as String))
+          .toList();
+      expect(sizes.first, 64);
+      expect(sizes.skip(1), anyElement(lessThan(64)));
       expect(secondRows.last['price'], '19000011');
       expect(jsonDecode(second['chat_data'])['previous'], '1');
       expect(jsonDecode(second['chat_data'])['next'], isEmpty);

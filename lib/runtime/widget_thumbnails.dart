@@ -46,16 +46,19 @@ String? _embedWidgetRows(
   final previews = sources.map(_preview).toList(growable: false);
   if (previews.every((preview) => preview == null)) return plain;
 
-  List<String?> images = [];
+  final levels = <List<String?>>[];
+  String? fitted;
   for (final (size, quality) in [
+    (_maxPreviewSize, 62),
     (_maxPreviewSize, 46),
     (48, 44),
+    (40, 43),
     (32, 42),
     (28, 39),
     (24, 35),
     (20, 32),
   ]) {
-    images = previews.map((preview) {
+    final images = previews.map((preview) {
       if (preview == null) return null;
       final resized = size == _maxPreviewSize
           ? preview
@@ -67,18 +70,45 @@ String? _embedWidgetRows(
       );
       return 'data:image/jpeg;base64,${base64Encode(bytes)}';
     }).toList();
+    levels.add(images);
     final candidate = insert(images);
-    if (widgetHtmlFits(candidate)) return candidate;
+    if (widgetHtmlFits(candidate)) {
+      fitted = candidate;
+      break;
+    }
   }
 
-  // Keep all rows and as many thumbnails as the remaining HTML budget allows.
-  for (var index = images.length - 1; index >= 0; index--) {
-    if (images[index] == null) continue;
-    images[index] = null;
-    final candidate = insert(images);
-    if (widgetHtmlFits(candidate)) return candidate;
+  final images = levels.removeLast();
+  if (fitted == null) {
+    // Keep all rows and as many thumbnails as the HTML budget allows.
+    for (var index = images.length - 1; index >= 0; index--) {
+      if (images[index] == null) continue;
+      images[index] = null;
+      final candidate = insert(images);
+      if (widgetHtmlFits(candidate)) {
+        fitted = candidate;
+        break;
+      }
+    }
   }
-  return plain;
+
+  // Improve one photo at a time, testing each upgrade against the whole widget.
+  var best = fitted ?? plain;
+  for (final (index, original) in images.indexed) {
+    if (original == null) continue;
+    for (final level in levels) {
+      final sharper = level[index];
+      if (sharper == null || sharper == original) continue;
+      images[index] = sharper;
+      final candidate = insert(images);
+      if (widgetHtmlFits(candidate)) {
+        best = candidate;
+        break;
+      }
+      images[index] = original;
+    }
+  }
+  return best;
 }
 
 image.Image? _preview(Uint8List? bytes) {

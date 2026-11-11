@@ -50,6 +50,13 @@ BotTemplateDraft buildRegistration(
       '{{steps.event.rows}}',
       '{{item.title}}\n{{item.details}}\n\nSeats remaining: {{item.remaining}} / {{item.capacity}}\n{{item.status}}',
       empty: 'This event is no longer available.',
+      rowBlocks: [
+        heading('{{item.title}}'),
+        paragraph(
+          '{{item.status}} · {{item.remaining}} of {{item.capacity}} seats left',
+        ),
+        details('Event details', '{{item.details}}'),
+      ],
       buttons: [
         button('Register', 'reg:join:{{item.id}}'),
         button('Cancel registration', 'reg:cancel:{{item.id}}'),
@@ -102,6 +109,12 @@ BotTemplateDraft buildRegistration(
       'report',
       '{{steps.counts.rows}}',
       '{{item.title}}: {{item.registered}} / {{item.capacity}}',
+      header: 'Registration report',
+      columns: {
+        'Event': '{{item.title}}',
+        'Registered': '{{item.registered}}',
+        'Capacity': '{{item.capacity}}',
+      },
     ),
     sendList('report'),
   ]);

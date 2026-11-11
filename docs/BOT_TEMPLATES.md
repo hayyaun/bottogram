@@ -22,6 +22,13 @@ The catalog order is:
 7. Event registration: seat counts, duplicate-safe registration, cancellation and
    admin counts. One guarded SQL statement performs the capacity check and insert.
 
+New bots from the templates use Telegram rich messages: native lists for
+browsing, tables for prices and reports, and expandable sections for longer
+details and explanations. The crypto template shows a temporary progress
+preview while it fetches prices, then posts a table with a refresh button and
+coin images when the response supplies URLs from the provider's image hosts.
+Existing bots keep their saved actions.
+
 ## Setup and editing
 
 The setup form includes sample content. Edit or replace quiz questions and answer

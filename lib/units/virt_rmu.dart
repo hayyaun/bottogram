@@ -36,10 +36,9 @@ class VirtRMUKeyboard implements VirtRMU {
   }
 
   @override
-  VirtRMU copy(String name) =>
-      VirtRMUKeyboard()
-        ..items = List.of(items)
-        ..name = name;
+  VirtRMU copy(String name) => VirtRMUKeyboard()
+    ..items = List.of(items)
+    ..name = name;
   @override
   int callsEvent(VirtEvent ev) {
     if (ev.type != VirtEventType.text) return 0;
@@ -60,25 +59,20 @@ class VirtRMUInlineKeyboard implements VirtRMU {
       if (item == null) {
         rmu = rmu.row();
       } else if (isValidUrl(item.value)) {
-        rmu = rmu.addUrl(item.key, item.value);
+        rmu = rmu.url(item.key, item.value);
       } else {
-        rmu = rmu.add(item.key, item.value);
+        rmu = rmu.text(item.key, item.value);
       }
     }
     return rmu;
   }
 
   @override
-  VirtRMU copy(String name) =>
-      VirtRMUInlineKeyboard()
-        ..items =
-            items
-                .map(
-                  (item) =>
-                      item == null ? null : KeyValue(item.key, item.value),
-                )
-                .toList()
-        ..name = name;
+  VirtRMU copy(String name) => VirtRMUInlineKeyboard()
+    ..items = items
+        .map((item) => item == null ? null : KeyValue(item.key, item.value))
+        .toList()
+    ..name = name;
   @override
   int callsEvent(VirtEvent ev) {
     if (ev.type != VirtEventType.callbackQuery) return 0;

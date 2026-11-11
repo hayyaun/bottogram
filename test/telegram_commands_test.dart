@@ -9,6 +9,7 @@ import 'package:bottogram/units/virt_bot.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:televerse/telegram.dart' show Update;
 import 'package:televerse/televerse.dart';
+import 'support/telegram_updates.dart';
 
 import 'automation_runtime_test.dart' show FakeHttp, MemoryProgress, until;
 import 'plugins_test.dart' show MemoryCatalog;
@@ -77,7 +78,7 @@ class CommandApi {
   final errors = <Object>[];
   late final bot = Bot.local(
     '199:fake-token',
-    baseURL: 'http://127.0.0.1:${server.port}',
+    'http://127.0.0.1:${server.port}',
   )..onError((error) => errors.add(error));
 
   static Future<CommandApi> open() async {
@@ -126,7 +127,7 @@ class CommandApi {
     return api;
   }
 
-  Future<void> command(String command) => bot.handleUpdate(
+  Future<void> command(String command) => bot.dispatch(
     Update.fromJson({
       'update_id': calls.length + 1,
       'message': {

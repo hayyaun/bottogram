@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:crypto/crypto.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:televerse/televerse.dart';
+import 'support/telegram_updates.dart';
 import 'package:televerse/telegram.dart' show Update;
 import 'package:bottogram/plugins/bot_setup.dart';
 import 'package:bottogram/plugins/manifest.dart';
@@ -26,10 +27,8 @@ class TelegramFixture {
   final errors = <Object>[];
   bool failMenu = false;
   bool failMessages = false;
-  late final bot = Bot.local(
-    '99:test-token',
-    baseURL: 'http://127.0.0.1:${server.port}',
-  )..onError((error) => errors.add(error));
+  late final bot = Bot.local('99:test-token', 'http://127.0.0.1:${server.port}')
+    ..onError((error) => errors.add(error));
 
   static Future<TelegramFixture> open() async {
     final fixture = TelegramFixture(
@@ -87,7 +86,7 @@ class TelegramFixture {
       calls.where((call) => call.$1 == 'sendMessage').map((call) => call.$2);
 
   Future<void> command(String command, {int chat = 42, String suffix = ''}) =>
-      bot.handleUpdate(
+      bot.dispatch(
         Update.fromJson({
           'update_id': calls.length + 1,
           'message': {
@@ -292,7 +291,7 @@ void main() {
           expect(registered['language_code'] ?? '', isEmpty);
           final before = h.api.messages.length;
           await h.api.command('shop', chat: -100);
-          await h.api.bot.handleUpdate(
+          await h.api.bot.dispatch(
             Update.fromJson({
               'update_id': 200,
               'message': {

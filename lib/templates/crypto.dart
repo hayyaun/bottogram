@@ -36,7 +36,15 @@ BotTemplateDraft buildCrypto(
       only: when('{{steps.gate.affectedRows}}', 0),
     ),
     check('allowed', '{{steps.gate.affectedRows}}', 0, 'greater'),
-    say('loading', 'Fetching current prices…'),
+    say(
+      'loading',
+      'Fetching current prices…',
+      draftId: '{{event.updateId}}',
+      rich: [
+        heading('Market snapshot'),
+        {'type': 'thinking', 'text': 'Fetching current prices from CoinGecko…'},
+      ],
+    )..config['onError'] = 'continue',
     templateAction(VirtActType.http, '', 'prices', {
       'url':
           'https://api.coingecko.com/api/v3/coins/markets?vs_currency=$currency&order=market_cap_desc&per_page=5&page=1&sparkline=false&precision=2',
@@ -46,7 +54,20 @@ BotTemplateDraft buildCrypto(
       'quotes',
       '{{steps.prices.body}}',
       '{{item.market_cap_rank}}. {{item.name}} ({{item.symbol}})\n{{item.current_price}} ${currency.toUpperCase()}',
-      header: 'Current prices\n\n',
+      header:
+          'Current prices · ${currency.toUpperCase()}\nTop five by market capitalization\n\n',
+      columns: {
+        'Rank': '{{item.market_cap_rank}}',
+        'Asset': '{{item.name}} ({{item.symbol}})',
+        currency.toUpperCase(): '{{item.current_price}}',
+      },
+      photoField: 'image',
+      photoHosts: const [
+        'coin-images.coingecko.com',
+        'assets.coingecko.com',
+        'images.coingecko.com',
+      ],
+      buttonsInMessage: true,
       empty: 'No price data is available right now. Please try again later.',
       footer:
           '\n\nSource: CoinGecko · https://www.coingecko.com\nRequested: {{event.timestamp}}',
@@ -55,16 +76,12 @@ BotTemplateDraft buildCrypto(
       ],
     )..config['onError'] = 'continue',
     say(
-        'unavailable',
-        'Prices are unavailable right now.\nThe service may be busy, rate-limited or unreachable. Please wait a little and try again.',
-        buttons: buttons,
-        only: when('{{steps.quotes.ok}}', false),
-      )
-      ..type = VirtActType.editText
-      ..config['messageId'] = '{{steps.loading.messageId}}',
-    sendList('quotes', only: when('{{steps.quotes.ok}}', true))
-      ..type = VirtActType.editText
-      ..config['messageId'] = '{{steps.loading.messageId}}',
+      'unavailable',
+      'Prices are unavailable right now.\nThe service may be busy, rate-limited or unreachable. Please wait a little and try again.',
+      buttons: buttons,
+      only: when('{{steps.quotes.ok}}', false),
+    ),
+    sendList('quotes', only: when('{{steps.quotes.ok}}', true)),
   ];
   p.command('prices', prices());
   p.click('prices:refresh', prices());

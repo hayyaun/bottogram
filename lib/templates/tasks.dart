@@ -33,13 +33,13 @@ BotTemplateDraft buildTasks(
     render(
       'view',
       '{{steps.tasks.rows}}',
-      '{{item.status}} · {{item.title}}',
+      '{{index}}. {{item.title}} · {{item.status}}',
       header:
           '${settings['title']!}\nPage {{steps.page.rows.0.number}} / {{steps.page.rows.0.pages}}\n\n',
       empty: 'No tasks yet. Add your first task below.',
       buttons: [
-        button('{{item.action}}', 'task:toggle:{{item.id}}'),
-        button('Delete', 'task:delete:{{item.id}}'),
+        button('{{item.action}} #{{index}}', 'task:toggle:{{item.id}}'),
+        button('Delete #{{index}}', 'task:delete:{{item.id}}'),
       ],
       footerButtons: [
         [button('Previous', 'task:prev'), button('Next', 'task:next')],

@@ -104,6 +104,12 @@ BotTemplateDraft buildRequests(
       '{{steps.request.rows}}',
       '#{{item.id}} · {{item.subject}}\nStatus: {{item.status}}\n\n{{item.body}}\n\nReply: {{item.response}}',
       empty: 'This request is not available to you.',
+      rowBlocks: [
+        heading('#{{item.id}} · {{item.subject}}'),
+        paragraph('Status: {{item.status}}'),
+        details('Request', '{{item.body}}'),
+        details('Reply', '{{item.response}}'),
+      ],
       footerButtons: [
         [button('My requests', 'request:list')],
       ],

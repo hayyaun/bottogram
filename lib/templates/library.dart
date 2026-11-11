@@ -102,6 +102,11 @@ BotTemplateDraft buildLibrary(
       '{{steps.item.rows}}',
       '{{item.title}}\n{{item.category}}\n\n{{item.description}}',
       empty: 'This resource is no longer available.',
+      rowBlocks: [
+        heading('{{item.title}}'),
+        paragraph('{{item.category}}'),
+        details('About this resource', '{{item.description}}'),
+      ],
       buttons: [
         {'text': 'Open link', 'url': '{{item.url}}'},
         button('{{item.favorite}}', 'lib:favorite:{{item.id}}'),

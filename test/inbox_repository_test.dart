@@ -31,6 +31,14 @@ Map<String, dynamic> message(
     ]
   else
     'text': text,
+  if (!photo && text.startsWith('/'))
+    'entities': [
+      {
+        'type': 'bot_command',
+        'offset': 0,
+        'length': text.split(RegExp(r'\s+')).first.length,
+      },
+    ],
 };
 Map<String, dynamic> update(
   int user,
@@ -299,7 +307,7 @@ void main() {
       };
       final result = await transformer.transform(
         (method, [payload]) async => response,
-        APIMethod.getUpdates,
+        'getUpdates',
       );
       expect(identical(response, result), true);
       expect(
@@ -309,7 +317,7 @@ void main() {
       final sent = {'ok': true, 'result': message(1, 2, text: 'A reply')};
       await transformer.transform(
         (method, [payload]) async => sent,
-        APIMethod.sendMessage,
+        'sendMessage',
       );
       expect((await repository.messages(1)).last.outgoing, true);
       await repository.close();
@@ -317,7 +325,7 @@ void main() {
         identical(
           await transformer.transform(
             (method, [payload]) async => sent,
-            APIMethod.sendMessage,
+            'sendMessage',
           ),
           sent,
         ),

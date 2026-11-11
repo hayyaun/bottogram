@@ -1,6 +1,7 @@
 import 'package:televerse/televerse.dart';
 import 'package:televerse/telegram.dart';
 import 'engine.dart';
+import 'rich_message.dart';
 import 'values.dart';
 
 /// Typed, supported Televerse methods retain the app's inbox transformers.
@@ -38,7 +39,10 @@ class BuilderTelegramPort implements BuilderTelegram {
     final keyboardJson = rawKeyboard == null
         ? null
         : Map<String, dynamic>.from(rawKeyboard as Map);
-    final keyboard = keyboardJson == null
+    final keyboard =
+        keyboardJson == null ||
+            (arguments['richBlocks'] != null &&
+                (keyboardJson['inline_keyboard'] as List?)?.isEmpty == true)
         ? null
         : keyboardJson.containsKey('inline_keyboard')
         ? InlineKeyboardMarkup.fromJson(keyboardJson)
@@ -84,9 +88,37 @@ class BuilderTelegramPort implements BuilderTelegram {
       return InputFile.fromFileId(source);
     }
 
+    final draftId = value('draftId');
+    final richBlocks = arguments['richBlocks'];
+    final rich = richBlocks == null
+        ? null
+        : BuilderRichMessage.build(richBlocks, draft: draftId.isNotEmpty);
+    if (draftId.isNotEmpty) {
+      final id = int.tryParse(draftId);
+      final target = int.tryParse(value('chatId'));
+      if (kind != 'reply' ||
+          rich == null ||
+          keyboard != null ||
+          id == null ||
+          id <= 0 ||
+          target == null ||
+          target <= 0 ||
+          target != arguments['userId']) {
+        throw const BuilderFailure(
+          'A rich draft requires a private chat, draft ID and rich content.',
+        );
+      }
+      return {'ok': await api.sendRichMessageDraft(chat(), id, rich)};
+    }
+
     final text = value('text');
     switch (kind) {
       case 'reply':
+        if (rich != null) {
+          return sent(
+            await api.sendRichMessage(chat(), rich, replyMarkup: keyboard),
+          );
+        }
         return sent(
           await api.sendMessage(
             chat(),
@@ -102,8 +134,9 @@ class BuilderTelegramPort implements BuilderTelegram {
           return {
             'ok': await api.editInlineMessageText(
               value('inlineMessageId'),
-              required('text'),
-              parseMode: parseMode,
+              rich == null ? required('text') : null,
+              richMessage: rich,
+              parseMode: rich == null ? parseMode : null,
               replyMarkup: inlineKeyboard(),
             ),
           };
@@ -112,8 +145,9 @@ class BuilderTelegramPort implements BuilderTelegram {
           await api.editMessageText(
             chat(),
             message(),
-            required('text'),
-            parseMode: parseMode,
+            rich == null ? required('text') : null,
+            richMessage: rich,
+            parseMode: rich == null ? parseMode : null,
             replyMarkup: inlineKeyboard(),
           ),
         );

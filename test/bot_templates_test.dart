@@ -3,6 +3,7 @@ import 'package:bottogram/builder/console.dart';
 import 'package:bottogram/builder/database.dart';
 import 'package:bottogram/builder/engine.dart';
 import 'package:bottogram/builder/event_match.dart';
+import 'package:bottogram/builder/rich_message.dart';
 import 'package:bottogram/builder/session.dart';
 import 'package:bottogram/builder/store.dart';
 import 'package:bottogram/runtime/http_transport.dart';
@@ -25,6 +26,12 @@ class TemplateTelegram implements BuilderTelegram {
         Map<String, dynamic>.from(args['keyboard'] as Map),
       );
     }
+    if (args['richBlocks'] != null) {
+      BuilderRichMessage.build(
+        args['richBlocks'],
+        draft: args['draftId'] != null,
+      );
+    }
     calls.add({'kind': kind, ...args});
     return {'ok': true, 'messageId': calls.length, 'chatId': args['chatId']};
   }
@@ -38,12 +45,14 @@ class PriceTransport extends BoundedJsonTransport {
       'name': 'Bitcoin',
       'symbol': 'btc',
       'current_price': 100,
+      'image': 'https://coin-images.coingecko.com/bitcoin.png',
     },
     {
       'market_cap_rank': 2,
       'name': 'Ethereum',
       'symbol': 'eth',
       'current_price': 50,
+      'image': 'https://coin-images.coingecko.com/ethereum.png',
     },
   ];
   bool fail = false;
@@ -115,6 +124,7 @@ class TemplateHarness {
             event.config['match']?.toString() ?? 'exact',
           );
     await engine.run('$type:$input', {
+      'updateId': tick + 1,
       'userId': user,
       'chatId': chat ?? user,
       'text': input,
@@ -461,6 +471,13 @@ void main() {
         await h.command('prices');
         expect(h.messages.last, contains('Bitcoin'));
         expect(h.messages.last, contains('CoinGecko'));
+        final output = h.telegram.calls;
+        expect(output[output.length - 2]['draftId'], isNotEmpty);
+        expect(output.last['draftId'], isNull);
+        expect(
+          (output.last['richBlocks'] as List).map((block) => block['type']),
+          containsAllInOrder(['heading', 'table', 'collage', 'buttons']),
+        );
         h.tick--;
         await h.click('prices:refresh');
         expect(h.transport.calls, 1);

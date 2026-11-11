@@ -60,18 +60,18 @@ class VirtEvent extends HiveObject {
     }
     switch (type) {
       case VirtEventType.command:
-        return bot.command(query, callback);
+        bot.command(query, callback);
       case VirtEventType.text:
-        return bot.text(query, callback);
+        bot.text(query, callback);
       case VirtEventType.callbackQuery:
-        return bot.callbackQuery(query, (ctx) async {
+        bot.callbackQuery(query, (ctx) async {
           if (!acts.any((act) => act.type == VirtActType.callbackAnswer)) {
             await ctx.answerCallbackQuery();
           }
           return await callback(ctx);
         });
       case VirtEventType.inlineQuery:
-        return bot.inlineQuery(query, callback);
+        bot.inlineQuery(query, callback);
       case VirtEventType.polling:
         return;
     }

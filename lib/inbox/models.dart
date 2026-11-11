@@ -107,12 +107,11 @@ class CachedMessage {
       outgoing: j['outgoing'] as bool,
       text: j['text'] as String,
       edited: j['edited'] as bool,
-      attachment:
-          j['attachment'] == null
-              ? null
-              : InboxAttachment.fromJson(
-                Map<String, dynamic>.from(j['attachment'] as Map),
-              ),
+      attachment: j['attachment'] == null
+          ? null
+          : InboxAttachment.fromJson(
+              Map<String, dynamic>.from(j['attachment'] as Map),
+            ),
     );
   }
   factory CachedMessage.fromTelegram(
@@ -144,19 +143,23 @@ class CachedMessage {
       }
     }
     var text = (j['text'] ?? j['caption'] ?? '') as String;
+    if (text.isEmpty && j['rich_message'] is Map) {
+      final rich = j['rich_message'] as Map;
+      final excerpt = _richExcerpt(rich['blocks']);
+      text = excerpt.isEmpty ? 'Rich message' : excerpt;
+    }
     if (text.isEmpty && attachment == null) {
-      text =
-          j['dice'] != null
-              ? 'Dice: ${(j['dice'] as Map)['value']}'
-              : j['sticker'] != null
-              ? 'Sticker ${(j['sticker'] as Map)['emoji'] ?? ''}'
-              : j['contact'] != null
-              ? 'Contact'
-              : j['location'] != null
-              ? 'Location'
-              : j['poll'] != null
-              ? 'Poll: ${(j['poll'] as Map)['question']}'
-              : 'Unsupported message';
+      text = j['dice'] != null
+          ? 'Dice: ${(j['dice'] as Map)['value']}'
+          : j['sticker'] != null
+          ? 'Sticker ${(j['sticker'] as Map)['emoji'] ?? ''}'
+          : j['contact'] != null
+          ? 'Contact'
+          : j['location'] != null
+          ? 'Location'
+          : j['poll'] != null
+          ? 'Poll: ${(j['poll'] as Map)['question']}'
+          : 'Unsupported message';
     }
     return CachedMessage(
       id: j['message_id'] as int,
@@ -168,6 +171,63 @@ class CachedMessage {
       attachment: attachment,
     );
   }
+}
+
+/// Keep an inbox-readable excerpt of Telegram's documented rich block fields.
+String _richExcerpt(Object? blocks) {
+  final lines = <String>[];
+  var budget = 4096;
+  String inline(Object? value, [int depth = 0]) {
+    if (depth > 8 || budget <= 0) return '';
+    if (value is String) {
+      final result = value.length > budget ? value.substring(0, budget) : value;
+      budget -= result.length;
+      return result;
+    }
+    if (value is List) {
+      final text = StringBuffer();
+      for (final part in value.take(100)) {
+        text.write(inline(part, depth + 1));
+      }
+      return text.toString();
+    }
+    if (value is Map) {
+      return inline(value['text'] ?? value['alternative_text'], depth + 1);
+    }
+    return '';
+  }
+
+  void add(String text) {
+    if (text.trim().isNotEmpty) lines.add(text);
+  }
+
+  void visit(Object? values, int depth) {
+    if (values is! List || depth > 8) return;
+    for (final block in values.take(100)) {
+      if (budget <= 0 || lines.length >= 100) return;
+      if (block is! Map) continue;
+      add(inline(block['text'] ?? block['summary']));
+      if (block['caption'] is Map) add(inline(block['caption']));
+      visit(block['blocks'], depth + 1);
+      final items = block['items'];
+      if (block['type'] == 'list' && items is List) {
+        for (final item in items.take(50)) {
+          if (item is Map) visit(item['blocks'], depth + 1);
+        }
+      }
+      final rows = block['cells'];
+      if (block['type'] == 'table' && rows is List) {
+        for (final row in rows.take(50)) {
+          if (row is List && budget > 0) {
+            add(row.take(8).map((cell) => inline(cell)).join(' · '));
+          }
+        }
+      }
+    }
+  }
+
+  visit(blocks, 0);
+  return lines.join('\n');
 }
 
 class UserPage {

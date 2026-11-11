@@ -10,6 +10,7 @@ import 'package:bottogram/units/virt_event.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
+import 'support/telegram_updates.dart';
 import 'package:televerse/telegram.dart';
 import 'inbox_repository_test.dart' show message, update;
 import 'plugins_test.dart' show MemoryVault;
@@ -25,10 +26,7 @@ void main() {
         request.response.statusCode = 500;
         await request.response.close();
       });
-      final bot = Bot.local(
-        '99:fixture',
-        baseURL: 'http://127.0.0.1:${server.port}',
-      );
+      final bot = Bot.local('99:fixture', 'http://127.0.0.1:${server.port}');
       final port = BuilderTelegramPort(bot.api);
       try {
         for (final kind in [
@@ -83,10 +81,7 @@ void main() {
         );
         await request.response.close();
       });
-      final bot = Bot.local(
-        '99:fixture',
-        baseURL: 'http://127.0.0.1:${server.port}',
-      );
+      final bot = Bot.local('99:fixture', 'http://127.0.0.1:${server.port}');
       final port = BuilderTelegramPort(bot.api);
       try {
         final sources = [
@@ -155,7 +150,7 @@ void main() {
         request.response.write(jsonEncode({'ok': true, 'result': result}));
         await request.response.close();
       });
-      final bot = Bot.local('99:fixture', baseURL: address);
+      final bot = Bot.local('99:fixture', address);
       final session = BuilderSession('99:fixture', bot.api, store: store);
       await store.addDefinition(
         builderBotId('99:fixture'),
@@ -217,8 +212,8 @@ void main() {
         );
       inline.add(bot, execute: (ctx) => session.receive(inline, ctx));
       try {
-        await bot.init();
-        await bot.handleUpdate(Update.fromJson(update(1, 1, text: '/price')));
+        await bot.initialize();
+        await bot.dispatch(Update.fromJson(update(1, 1, text: '/price')));
         expect(
           calls.where((c) => c.$1 == 'sendMessage').first.$2['text'],
           '*Score*: 12',
@@ -239,7 +234,7 @@ void main() {
           calls.where((c) => c.$1 == 'sendPhoto').single.$2['photo'],
           'telegram_file_fixture',
         );
-        await bot.handleUpdate(
+        await bot.dispatch(
           Update.fromJson({
             'update_id': 2,
             'callback_query': {
@@ -259,7 +254,7 @@ void main() {
               .$2['show_alert'],
           true,
         );
-        await bot.handleUpdate(
+        await bot.dispatch(
           Update.fromJson({
             'update_id': 3,
             'inline_query': {

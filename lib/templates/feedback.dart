@@ -93,6 +93,7 @@ SELECT r.position,coalesce(q.id,0) AS id,coalesce(q.kind,'review') AS kind,coale
       'review',
       '{{steps.review_rows.rows}}',
       '{{item.prompt}}\n{{item.answer}}',
+      rowBlocks: [details('{{item.prompt}}', '{{item.answer}}')],
       header:
           'Review your answers · page {{steps.review_page.rows.0.number}} / {{steps.review_page.rows.0.pages}}\n\n',
       footerButtons: [
@@ -229,6 +230,12 @@ ON CONFLICT(user_id,generation) DO NOTHING""",
       'report',
       '{{steps.recent.rows}}',
       '#{{item.id}} · {{item.created_at}}\n{{item.preview}}',
+      rowBlocks: [
+        details(
+          'Submission #{{item.id}} · {{item.created_at}}',
+          '{{item.preview}}',
+        ),
+      ],
       header:
           'Submissions: {{steps.totals.rows.0.total}}\nAverage rating: {{steps.totals.rows.0.average}} / 5\n\nLatest five responses (300-character previews)\n\n',
     ),

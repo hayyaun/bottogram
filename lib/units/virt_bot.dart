@@ -16,7 +16,9 @@ part 'virt_bot.adapter.dart';
 
 class VirtBot extends HiveObject {
   bool _active = false; // TODO change it to (Date? activeSince)
-  Bot bot;
+  late Bot bot;
+  late DioHttpClient _telegramClient;
+  final String? _telegramBaseUrl;
   // Stored separately; existing Hive field IDs and legacy bot records stay intact.
   BotSetup? setup;
   String? setupError;
@@ -26,7 +28,12 @@ class VirtBot extends HiveObject {
   BuilderSession? _builder;
   Future<InboxRepository> get inbox => InboxRepository.forToken(token);
 
-  void _attachInbox() {
+  void _createTelegramSession() {
+    _telegramClient = DioHttpClient(
+      timeout: const Duration(seconds: 22),
+      receiveTimeout: const Duration(seconds: 45),
+    );
+    bot = Bot(token, httpClient: _telegramClient, baseUrl: _telegramBaseUrl);
     bot.api.use(InboxTransformer(() => inbox));
   }
 
@@ -34,14 +41,18 @@ class VirtBot extends HiveObject {
   String token;
   List<VirtEvent> events = [];
 
-  VirtBot(this.name, this.token, {bool addSamples = true}) : bot = Bot(token) {
-    _attachInbox();
+  VirtBot(
+    this.name,
+    this.token, {
+    bool addSamples = true,
+    String? telegramBaseUrl,
+  }) : _telegramBaseUrl = telegramBaseUrl {
+    _createTelegramSession();
     if (!addSamples) return;
     // Sample Events/Actions
     final btn = KeyValue('Dice 🎲', 'dice');
-    final keyboard =
-        VirtRMUInlineKeyboard()
-          ..items = [btn, btn, btn, null, btn, btn, null, btn];
+    final keyboard = VirtRMUInlineKeyboard()
+      ..items = [btn, btn, btn, null, btn, btn, null, btn];
     events
       ..add(
         VirtEvent(query: 'start', type: VirtEventType.command)
@@ -70,6 +81,7 @@ class VirtBot extends HiveObject {
       );
     }
     if (_active) await stop(); // stop before restart
+    await bot.initialize().timeout(const Duration(seconds: 22));
     final generation = ++_runGeneration;
     if (!pluginRuntime) {
       final session = _builder = BuilderSession(token, bot.api);
@@ -86,15 +98,22 @@ class VirtBot extends HiveObject {
     });
     // start() runs for the lifetime of polling; don't await that loop here.
     unawaited(
-      bot.start().catchError((Object error) {
-        if (generation != _runGeneration) return;
-        _active = false;
-        onRunningChanged?.call();
-        debugPrint('Bot could not start. Check its token and connection.');
-      }),
+      bot.start().then<void>(
+        (_) => _pollingEnded(generation),
+        onError: (Object error, StackTrace _) {
+          _pollingEnded(generation);
+          debugPrint('Bot could not start. Check its token and connection.');
+        },
+      ),
     );
     _active = true;
     if (!pluginRuntime) _builder!.startPolling(events);
+    onRunningChanged?.call();
+  }
+
+  void _pollingEnded(int generation) {
+    if (generation != _runGeneration || !_active) return;
+    _active = false;
     onRunningChanged?.call();
   }
 
@@ -103,10 +122,16 @@ class VirtBot extends HiveObject {
     final builder = _builder;
     _builder = null;
     final drained = builder?.close();
-    await bot.stop();
-    await drained;
-    bot = Bot(token);
-    _attachInbox();
+    final stopping = bot.stop();
+    // Closing the owned client cancels any in-flight poll or send, including
+    // when initialization failed before polling started.
+    _telegramClient.dio.close(force: true);
+    try {
+      await stopping;
+    } finally {
+      await drained;
+    }
+    _createTelegramSession();
     _active = false;
     onRunningChanged?.call();
   }

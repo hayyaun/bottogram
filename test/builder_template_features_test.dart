@@ -9,6 +9,7 @@ import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_event.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:televerse/televerse.dart';
+import 'support/telegram_updates.dart';
 import 'package:televerse/telegram.dart';
 import 'inbox_repository_test.dart' show message, update;
 
@@ -147,10 +148,7 @@ void main() {
         );
         await request.response.close();
       });
-      final bot = Bot.local(
-        '99:fixture',
-        baseURL: 'http://127.0.0.1:${server.port}',
-      );
+      final bot = Bot.local('99:fixture', 'http://127.0.0.1:${server.port}');
       final received = <String>[];
       final errors = <Object>[];
       bot.onError((error) => errors.add(error));
@@ -176,13 +174,11 @@ void main() {
         ),
       );
       try {
-        await bot.init();
-        await bot.handleUpdate(Update.fromJson(update(1, 1, text: 'Hello')));
-        await bot.handleUpdate(Update.fromJson(update(1, 2, text: '/start')));
-        await bot.handleUpdate(
-          Update.fromJson(update(1, 3, text: 'An answer')),
-        );
-        await bot.handleUpdate(
+        await bot.initialize();
+        await bot.dispatch(Update.fromJson(update(1, 1, text: 'Hello')));
+        await bot.dispatch(Update.fromJson(update(1, 2, text: '/start')));
+        await bot.dispatch(Update.fromJson(update(1, 3, text: 'An answer')));
+        await bot.dispatch(
           Update.fromJson({
             'update_id': 4,
             'callback_query': {

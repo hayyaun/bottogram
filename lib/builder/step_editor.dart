@@ -77,6 +77,22 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
     if (!_form.currentState!.validate()) return;
     final config = <String, dynamic>{...widget.initial.config};
     try {
+      if (kind == 'reply' || kind == 'editText') {
+        final content = value('richBlocks').trim();
+        if (content.isNotEmpty) {
+          final decoded = jsonDecode(content);
+          if (decoded is! List && decoded is! String) {
+            throw const BuilderFailure(
+              'Enter rich blocks as an array or a quoted output reference.',
+            );
+          }
+        }
+        if (kind == 'reply' &&
+            value('draftId').trim().isNotEmpty &&
+            content.isEmpty) {
+          throw const BuilderFailure('A draft requires rich message content.');
+        }
+      }
       if (kind == 'renderList') {
         for (final key in ['buttons', 'footerButtons']) {
           if (jsonDecode(value(key).isEmpty ? '[]' : value(key)) is! List) {
@@ -380,6 +396,28 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                         : 'Message',
                   ),
                 ],
+                if (kind == 'reply' || kind == 'editText')
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: const Text('Rich message'),
+                    initiallyExpanded: value('richBlocks').isNotEmpty,
+                    children: [
+                      _input(
+                        'richBlocks',
+                        'Rich blocks (JSON)',
+                        lines: 5,
+                        help:
+                            'Use a block array or a quoted reference such as "{{steps.list.rich}}". Leave blank to send the text above.',
+                      ),
+                      if (kind == 'reply')
+                        _input(
+                          'draftId',
+                          'Draft ID',
+                          help:
+                              'Private chat preview. Use {{event.updateId}}, then send the finished message in a later action.',
+                        ),
+                    ],
+                  ),
                 if (kind == 'callbackAnswer') ...[
                   _input(
                     'text',

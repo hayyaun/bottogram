@@ -80,6 +80,36 @@ Button notifications should precede slow API calls because Telegram callback
 queries expire. Inline answers currently return one configurable article result
 with personal caching disabled.
 
+### Rich messages
+
+In **Send text** or **Edit message text**, open **Rich message** to supply
+structured blocks. When blocks are provided, Telegram displays them in place of
+the plain message field. Bindings are inserted as literal text.
+
+```json
+[
+  {"type":"heading","text":"Order summary"},
+  {"type":"table","rows":[["Item","Quantity"],["{{steps.lookup.body.name}}",2]]},
+  {"type":"details","summary":"Notes","blocks":[{"type":"paragraph","text":"Packed for delivery."}]},
+  {"type":"buttons","buttons":[{"text":"Refresh","callback_data":"refresh"}]}
+]
+```
+
+Text blocks are `heading`, `paragraph` and `footer`. Use `list` with
+`items`, `table` with `rows` (first row is the header), or `details` with
+`summary` and `blocks`. A `photo` takes a public HTTPS `url`; a `collage`
+takes HTTPS `urls`. A `buttons` block accepts up to eight buttons with a text
+label and either `url` or `callback_data`. Standard keyboards are also supported.
+
+To reuse an existing rich layout, put an output reference such as
+`"{{steps.list.rich}}"` in the blocks field. The rich list renderers in the
+built-in templates expose this output alongside their text, keyboard and count.
+
+For a temporary private chat preview, enter a **Draft ID** such as
+`{{event.updateId}}` and use a `thinking` block while waiting for real work.
+Repeated drafts with the same ID update the preview. A later Send action without
+a Draft ID posts the finished reply. Drafts expire and are not saved to the inbox.
+
 ## Variables, conditions and SQL
 
 Declare text, number or boolean variables under **Variables and API credentials**.

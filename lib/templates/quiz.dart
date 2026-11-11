@@ -60,6 +60,10 @@ BotTemplateDraft buildQuiz(
       'view',
       '{{steps.question.rows}}',
       '{{item.question}}\nA. {{item.a}}\nB. {{item.b}}\nC. {{item.c}}',
+      rowBlocks: [
+        paragraph('{{item.question}}'),
+        bullets(['A · {{item.a}}', 'B · {{item.b}}', 'C · {{item.c}}']),
+      ],
       header:
           '{{steps.stats.rows.0.topic}} · {{steps.stats.rows.0.position}} answered\n\n',
       empty:
@@ -118,6 +122,14 @@ BotTemplateDraft buildQuiz(
       say(
         'feedback',
         '{{steps.explanation.rows.0.result}} Answer: {{steps.explanation.rows.0.correct}}\n{{steps.explanation.rows.0.explanation}}',
+        rich: [
+          heading('{{steps.explanation.rows.0.result}}'),
+          paragraph('Correct answer: {{steps.explanation.rows.0.correct}}'),
+          details(
+            'Why this is the answer',
+            '{{steps.explanation.rows.0.explanation}}',
+          ),
+        ],
       ),
       sql(
         'best',
@@ -137,6 +149,8 @@ BotTemplateDraft buildQuiz(
       'scores_view',
       '{{steps.scores.rows}}',
       '{{item.topic}}: {{item.best}}',
+      header: 'Your best scores',
+      columns: {'Topic': '{{item.topic}}', 'Best score': '{{item.best}}'},
       empty: 'Finish a quiz to record your first score.',
       footerButtons: [
         [button('Topics', 'quiz:home')],

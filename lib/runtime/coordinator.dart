@@ -92,7 +92,7 @@ class BotRuntime extends ChangeNotifier {
     };
     BotTelegramPort? telegram;
     try {
-      await bot.bot.init().timeout(const Duration(seconds: 22));
+      await bot.bot.initialize().timeout(const Duration(seconds: 22));
       if (manifest != null && setup != null) {
         final http = _clients[bot] =
             httpClientFactory?.call() ?? BoundedJsonTransport();
@@ -207,7 +207,7 @@ class BotRuntime extends ChangeNotifier {
     final runners = _runners.remove(bot) ?? [];
     final drained = Future.wait(runners.map((runner) => runner.stop()));
     try {
-      // Televerse's supported stop closes its API client. Do this before waiting
+      // Close the Telegram session before waiting
       // for actions so a stalled Telegram send cannot hold the Stop operation.
       await bot.stop();
     } finally {

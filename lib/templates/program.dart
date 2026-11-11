@@ -32,10 +32,29 @@ VirtAct say(
   String text, {
   Map<String, dynamic>? buttons,
   Map<String, dynamic>? only,
+  List<Map<String, dynamic>>? rich,
+  String? draftId,
 }) => templateAction(VirtActType.reply, text, name, {
   if (buttons != null) 'keyboard': buttons,
+  if (rich != null) 'richBlocks': jsonEncode(rich),
+  if (draftId != null) 'draftId': draftId,
   if (only != null) 'when': only,
 });
+Map<String, dynamic> heading(String text) => {'type': 'heading', 'text': text};
+Map<String, dynamic> paragraph(String text) => {
+  'type': 'paragraph',
+  'text': text,
+};
+Map<String, dynamic> details(String summary, String body) => {
+  'type': 'details',
+  'summary': summary,
+  'blocks': [paragraph(body)],
+};
+Map<String, dynamic> bullets(List<String> items) => {
+  'type': 'list',
+  'items': items,
+};
+
 VirtAct setValue(
   String name,
   dynamic value, {
@@ -61,8 +80,20 @@ VirtAct render(
   String footer = '',
   List<Map<String, dynamic>> buttons = const [],
   List<List<Map<String, dynamic>>> footerButtons = const [],
+  Map<String, String>? columns,
+  List<Map<String, dynamic>>? rowBlocks,
+  bool buttonsInMessage = false,
+  String? photoField,
+  List<String> photoHosts = const [],
 }) => templateAction(VirtActType.renderList, row, name, {
   'items': items,
+  'richLayout': {
+    if (columns != null) 'columns': columns,
+    if (rowBlocks != null) 'rowBlocks': rowBlocks,
+    if (buttonsInMessage) 'buttonsInMessage': true,
+    if (photoField != null) 'photoField': photoField,
+    if (photoHosts.isNotEmpty) 'photoHosts': photoHosts,
+  },
   'header': header,
   'emptyText': empty,
   'footer': footer,
@@ -76,6 +107,7 @@ VirtAct sendList(
   Map<String, dynamic>? only,
 }) => templateAction(VirtActType.reply, '{{steps.$name.text}}', output, {
   'keyboardOutput': '{{steps.$name.keyboard}}',
+  'richBlocks': jsonEncode('{{steps.$name.rich}}'),
   if (only != null) 'when': only,
 });
 VariableDefinition variable(

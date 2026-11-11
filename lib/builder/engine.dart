@@ -332,7 +332,13 @@ class BuilderEngine {
     }
     final markdown = config['format'] == 'MarkdownV2';
     final event = values['event'] as BuilderJson;
+    final richSource = config['richBlocks']?.toString().trim() ?? '';
+    final draftId = field('draftId');
     final arguments = <String, dynamic>{
+      if (richSource.isNotEmpty)
+        'richBlocks': BuilderValues.json(richSource, values),
+      if (draftId.isNotEmpty) 'draftId': draftId,
+      if (draftId.isNotEmpty) 'userId': event['userId'],
       'text': BuilderValues.text(step.text, values, markdown: markdown),
       'format': markdown ? 'MarkdownV2' : null,
       'chatId': field('chatId', event['chatId']?.toString() ?? ''),

@@ -43,6 +43,7 @@ class BuilderSession {
         : <String>[];
     await engine.run('${event.type.name}:${event.query}', {
       'type': event.type.name,
+      'updateId': context.update.updateId,
       'text': text,
       'query': context.inlineQuery?.query ?? event.query,
       'arguments': commandText,

@@ -1,3 +1,7 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:televerse/televerse.dart';
 import 'package:bottogram/runtime/coordinator.dart';
@@ -29,8 +33,9 @@ class TestLease implements ExecutionLease {
 class InitializedBot extends Fake implements Bot<Context> {
   int initializations = 0;
   @override
-  Future<void> init() async {
+  Future<BotInfo> initialize() async {
     initializations++;
+    return const BotInfo();
   }
 }
 
@@ -57,6 +62,52 @@ class RuntimeBot extends VirtBot {
 }
 
 void main() {
+  test(
+    'stopping a real SDK session cancels an outstanding long poll',
+    () async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final poll = Completer<void>();
+      var initializations = 0;
+      server.listen((request) async {
+        if (request.uri.pathSegments.last == 'getUpdates') {
+          if (!poll.isCompleted) poll.complete();
+          // Hold the request open until the client cancels the long poll.
+          return;
+        }
+        initializations++;
+        request.response.headers.contentType = ContentType.json;
+        request.response.write(
+          jsonEncode({
+            'ok': true,
+            'result': {
+              'id': 99,
+              'is_bot': true,
+              'first_name': 'Test',
+              'username': 'fixture_bot',
+            },
+          }),
+        );
+        await request.response.close();
+      });
+      final bot = VirtBot(
+        'Test',
+        '99:fixture',
+        addSamples: false,
+        telegramBaseUrl: 'http://127.0.0.1:${server.port}',
+      );
+      try {
+        await bot.start(pluginRuntime: true);
+        await poll.future.timeout(const Duration(seconds: 5));
+        expect(bot.active, true);
+        await bot.stop().timeout(const Duration(seconds: 5));
+        expect(bot.active, false);
+        expect(initializations, 1);
+      } finally {
+        await server.close(force: true);
+        if (bot.active) await bot.stop();
+      }
+    },
+  );
   test(
     'one lifecycle owner serializes duplicate Starts and aggregates two bot leases',
     () async {

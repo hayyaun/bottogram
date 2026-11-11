@@ -14,6 +14,11 @@ abstract final class BuilderListRenderer {
     }
     final rows = <List<Map<String, dynamic>>>[];
     final parts = <String>[];
+    final layout = config['richLayout'];
+    final itemBlocks = <Map<String, dynamic>>[];
+    final pictures = <String>[];
+    final columns = layout is Map ? layout['columns'] as Map? : null;
+    final cells = <List<dynamic>>[if (columns != null) columns.keys.toList()];
     for (final (index, item) in items.indexed) {
       final local = <String, dynamic>{
         ...values,
@@ -21,6 +26,31 @@ abstract final class BuilderListRenderer {
         'index': index + 1,
       };
       parts.add(BuilderValues.text(step.text, local));
+      if (columns != null) {
+        cells.add([
+          for (final source in columns.values)
+            BuilderValues.text(source.toString(), local),
+        ]);
+      }
+      final blocks = layout is Map ? layout['rowBlocks'] : null;
+      if (blocks is List) {
+        itemBlocks.addAll(
+          (BuilderValues.resolve(blocks, local) as List)
+              .cast<Map<String, dynamic>>(),
+        );
+      }
+      final hosts = layout is Map ? layout['photoHosts'] : null;
+      if (layout is Map && item is Map && hosts is List) {
+        final source = item[layout['photoField']];
+        final uri = source is String ? Uri.tryParse(source) : null;
+        if (uri != null &&
+            uri.scheme == 'https' &&
+            uri.userInfo.isEmpty &&
+            hosts.contains(uri.host) &&
+            pictures.length < 5) {
+          pictures.add(uri.toString());
+        }
+      }
       final buttons = BuilderValues.json(
         config['buttons']?.toString() ?? '[]',
         local,
@@ -58,11 +88,34 @@ abstract final class BuilderListRenderer {
         'Rendered content is too large. Use a smaller page.',
       );
     }
+    final header = text('header').trim().split('\n');
+    final footerText = text('footer').trim();
+    final richButtons = layout is Map && layout['buttonsInMessage'] == true;
     return {
+      if (layout is Map)
+        'rich': [
+          if (header.first.isNotEmpty)
+            {'type': 'heading', 'text': header.first},
+          if (header.length > 1)
+            {'type': 'paragraph', 'text': header.skip(1).join('\n')},
+          if (items.isEmpty)
+            {'type': 'paragraph', 'text': body}
+          else if (columns != null)
+            {'type': 'table', 'rows': cells}
+          else if (itemBlocks.isNotEmpty)
+            ...itemBlocks
+          else
+            {'type': 'list', 'items': parts},
+          if (pictures.length == 1) {'type': 'photo', 'url': pictures.single},
+          if (pictures.length > 1) {'type': 'collage', 'urls': pictures},
+          if (footerText.isNotEmpty) {'type': 'footer', 'text': footerText},
+          if (richButtons)
+            for (final row in rows) {'type': 'buttons', 'buttons': row},
+        ],
       'ok': true,
       'text': result,
       'count': items.length,
-      'keyboard': {'inline_keyboard': rows},
+      'keyboard': {'inline_keyboard': richButtons ? [] : rows},
     };
   }
 

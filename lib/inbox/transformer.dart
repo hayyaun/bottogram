@@ -5,20 +5,20 @@ import 'diagnostics.dart';
 
 /// Observes documented Bot API responses before Televerse dispatches handlers.
 /// It must return the original response even if local inbox storage fails.
-class InboxTransformer implements Transformer {
+class InboxTransformer extends Transformer {
   InboxTransformer(this.repository);
   final Future<InboxRepository> Function() repository;
 
   @override
   Future<Map<String, dynamic>> transform(
     APICaller call,
-    APIMethod method, [
+    String method, [
     Payload? payload,
   ]) async {
     final response = await call(method, payload);
     final result = response['result'];
     final incoming =
-        method == APIMethod.getUpdates && result is List && result.isNotEmpty;
+        method == 'getUpdates' && result is List && result.isNotEmpty;
     final outgoing =
         result is Map &&
         result['message_id'] is int &&

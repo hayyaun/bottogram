@@ -309,6 +309,20 @@ class BuilderEngine {
         (step.kind == 'reply' && widgetHtml.isNotEmpty ||
             step.kind == 'editText' && widgetData.isNotEmpty) &&
         (widgetWhen is! Map || BuilderValues.matches(widgetWhen, values));
+    final chatData = useWidget && widgetData.isNotEmpty
+        ? BuilderValues.json(widgetData, values)
+        : null;
+    final sendWidget =
+        useWidget &&
+        !(step.kind == 'reply' &&
+            config['widgetFallback'] == true &&
+            chatData != null &&
+            utf8
+                    .encode(
+                      chatData is String ? chatData : jsonEncode(chatData),
+                    )
+                    .length >
+                1024);
     final arguments = <String, dynamic>{
       if (richSource.isNotEmpty)
         'richBlocks': BuilderValues.json(richSource, values),
@@ -326,13 +340,11 @@ class BuilderEngine {
       'callbackId': event['callbackId'],
       'widgetQueryId': event['widgetQueryId'],
       if (widgetHtml.isNotEmpty) 'widgetConfigured': true,
-      if (useWidget)
+      if (sendWidget)
         'widget': {
           'html': widgetHtml,
           'caption': field('widgetCaption'),
-          'chatData': widgetData.isEmpty
-              ? null
-              : BuilderValues.json(widgetData, values),
+          'chatData': chatData,
           'allowQueries': config['widgetQueries'] == true,
         },
       'inlineQueryId': event['inlineQueryId'],

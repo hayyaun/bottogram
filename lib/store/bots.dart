@@ -209,8 +209,13 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     )..setup = setup;
     if (template != null) bot.events = template.events;
     dynamic key;
+    var installedParts = false;
     try {
       if (template != null) {
+        if (!template.parts.isEmpty) {
+          await builder.installParts(template.parts, botName: name);
+          installedParts = true;
+        }
         for (final definition in template.variables) {
           await builder.addDefinition(builderId, definition);
         }
@@ -220,6 +225,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     } catch (_) {
       if (key != null) await _box!.delete(key);
       await plugins.discard(setup);
+      if (installedParts) await builder.removeParts(template!.parts);
       if (template != null) await builder.remove(builderId);
       rethrow;
     }
@@ -387,13 +393,8 @@ class BotsCubit extends Cubit<List<VirtBot>> {
         return null;
       }
       final store = BuilderStore.shared;
-      if (items.any(
-        (i) => state[i].events.any(
-          (event) => event.acts.any((act) => act.libraryName != null),
-        ),
-      )) {
-        await store.ready;
-      }
+      await store.ready;
+      final library = store.parts;
       final copies = [
         for (final i in items)
           VirtBot(state[i].name, state[i].token, addSamples: false)
@@ -401,7 +402,10 @@ class BotsCubit extends Cubit<List<VirtBot>> {
               for (final event in state[i].events)
                 VirtEvent(type: event.type, query: event.query)
                   ..config = event.config
-                  ..acts = event.acts.map(store.resolveAction).toList(),
+                  ..acts = [
+                    for (final action in event.acts)
+                      store.resolveAction(action, library: library),
+                  ],
             ],
       ];
       final tempBox = await Hive.openBox<VirtBot>(exportBoxName);

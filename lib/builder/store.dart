@@ -5,6 +5,7 @@ import 'package:path/path.dart' as p;
 import '../plugins/secret_vault.dart';
 import '../units/virt_act.dart';
 import 'engine.dart';
+import 'parts.dart';
 import 'values.dart';
 import 'database.dart';
 
@@ -36,14 +37,13 @@ class VariableDefinition {
           throw BuilderFailure('$scope.$name requires a finite number.');
         }
       case 'boolean':
-        result =
-            value is bool
-                ? value
-                : value == 'true'
-                ? true
-                : value == 'false'
-                ? false
-                : null;
+        result = value is bool
+            ? value
+            : value == 'true'
+            ? true
+            : value == 'false'
+            ? false
+            : null;
         if (result == null) {
           throw BuilderFailure('$scope.$name requires true or false.');
         }
@@ -77,12 +77,12 @@ class BuilderStore {
   static final shared = BuilderStore();
   // Bot definition keys are SHA-256 hashes.
   static const _actionLibraryKey = 'action-library';
+  static const _partsLibraryKey = 'parts-library';
   final SecretVault vault;
   BotDatabases? _data;
-  BotDatabases get data =>
-      _data ??= BotDatabases(
-        root: p.join(p.dirname(_definitions!.path!), 'bot_data'),
-      );
+  BotDatabases get data => _data ??= BotDatabases(
+    root: p.join(p.dirname(_definitions!.path!), 'bot_data'),
+  );
   Box<dynamic>? _definitions;
   Future<void>? _opening;
   Future<void> _tail = Future.value();
@@ -123,7 +123,89 @@ class BuilderStore {
 
   VirtAct? libraryAction(String? name) => _savedActions[name] as VirtAct?;
 
-  VirtAct resolveAction(VirtAct placement) {
+  BuilderParts get parts => BuilderParts(
+    _definitions?.isOpen == true
+        ? _definitions!.get(_partsLibraryKey) as Map?
+        : null,
+  );
+
+  Future<void> installParts(BuilderParts definitions, {String? botName}) =>
+      _serialize(() async {
+        final updated = parts;
+        if (definitions.lists.keys.any(updated.lists.containsKey) ||
+            definitions.rows.keys.any(updated.rows.containsKey)) {
+          throw const BuilderFailure(
+            'These library entries are already installed.',
+          );
+        }
+        void add(
+          Map<String, Map<String, dynamic>> source,
+          Map<String, Map<String, dynamic>> destination,
+        ) {
+          final names = destination.values
+              .map((part) => (part['label'] as String).toLowerCase())
+              .toSet();
+          final prefix = botName == null
+              ? ''
+              : '${String.fromCharCodes(botName.runes.take(16))} · ';
+          for (final entry in source.entries) {
+            final base = '$prefix${entry.value['label']}';
+            var label = base;
+            var suffix = 2;
+            while (!names.add(label.toLowerCase())) {
+              label = '$base (${suffix++})';
+            }
+            destination[entry.key] = {...entry.value, 'label': label};
+          }
+        }
+
+        add(definitions.lists, updated.lists);
+        add(definitions.rows, updated.rows);
+        await _writeParts(updated);
+      });
+
+  Future<void> removeParts(BuilderParts definitions) => _serialize(() async {
+    final updated = parts;
+    definitions.lists.keys.forEach(updated.lists.remove);
+    definitions.rows.keys.forEach(updated.rows.remove);
+    await _writeParts(updated);
+  });
+
+  Future<void> savePart(
+    String id,
+    Map<String, dynamic> definition, {
+    required bool isList,
+  }) => _serialize(() async {
+    final label = definition['label'] as String;
+    if (label.trim().isEmpty || label.length > 80) {
+      throw const BuilderFailure(
+        'Enter a library name of up to 80 characters.',
+      );
+    }
+    final updated = parts;
+    final entries = isList ? updated.lists : updated.rows;
+    if (entries.entries.any(
+      (entry) =>
+          entry.key != id &&
+          (entry.value['label'] as String).toLowerCase() == label.toLowerCase(),
+    )) {
+      throw const BuilderFailure(
+        'This library already has an entry with that name.',
+      );
+    }
+    entries[id] = definition;
+    await _writeParts(updated);
+  });
+
+  Future<void> _writeParts(BuilderParts updated) => _definitions!.put(
+    _partsLibraryKey,
+    jsonDecode(jsonEncode(updated.toJson())),
+  );
+
+  VirtAct resolveAction(VirtAct placement, {BuilderParts? library}) =>
+      (library ?? parts).resolve(actionDefinition(placement));
+
+  VirtAct actionDefinition(VirtAct placement) {
     final name = placement.libraryName;
     if (name == null) return placement;
     final definition = libraryAction(name);
@@ -271,10 +353,9 @@ class BuilderStore {
       return {'bot': <String, dynamic>{}, 'user': <String, dynamic>{}};
     }
     final botValues = await data.read(bot, 'bot', '');
-    final userValues =
-        userId == null
-            ? <String, dynamic>{}
-            : await data.read(bot, 'user', _key(bot, 'user', userId));
+    final userValues = userId == null
+        ? <String, dynamic>{}
+        : await data.read(bot, 'user', _key(bot, 'user', userId));
     return {
       'bot': {
         for (final d in definitions.where((d) => d.scope == 'bot'))
@@ -283,8 +364,9 @@ class BuilderStore {
       'user': {
         if (userId != null)
           for (final d in definitions.where((d) => d.scope == 'user'))
-            d.name:
-                userValues.containsKey(d.name) ? userValues[d.name] : d.initial,
+            d.name: userValues.containsKey(d.name)
+                ? userValues[d.name]
+                : d.initial,
       },
     };
   }
@@ -297,10 +379,9 @@ class BuilderStore {
     dynamic value, {
     bool increment = false,
   }) => _serialize(() async {
-    final definition =
-        (await definitions(
-          bot,
-        )).where((d) => d.scope == scope && d.name == name).firstOrNull;
+    final definition = (await definitions(
+      bot,
+    )).where((d) => d.scope == scope && d.name == name).firstOrNull;
     if (definition == null) {
       throw BuilderFailure(
         'Unknown variable: $scope.$name. Create it in Variables first.',

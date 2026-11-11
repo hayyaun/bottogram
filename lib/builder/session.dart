@@ -25,16 +25,20 @@ class BuilderSession {
   late final BuilderTelegramPort telegram;
   final List<Timer> _timers = [];
   bool _closed = false;
-  static List<BuilderStep> steps(VirtEvent event, {BuilderStore? store}) =>
-      event.acts
-          .map((store ?? BuilderStore.shared).resolveAction)
-          .map(
-            (act) => BuilderStep(act.type.name, act.text, {
-              ...act.config,
-              if (act.rmu != null) 'keyboard': act.rmu!.hydrate().toJson(),
-            }),
-          )
-          .toList();
+  static List<BuilderStep> steps(VirtEvent event, {BuilderStore? store}) {
+    final repository = store ?? BuilderStore.shared;
+    final library = repository.parts;
+    return event.acts
+        .map((act) => repository.resolveAction(act, library: library))
+        .map(
+          (act) => BuilderStep(act.type.name, act.text, {
+            ...act.config,
+            if (act.rmu != null) 'keyboard': act.rmu!.hydrate().toJson(),
+          }),
+        )
+        .toList();
+  }
+
   Future<void> receive(VirtEvent event, Context context) async {
     final message = context.message ?? context.callbackQuery?.message;
     final widget = context.widgetQuery;

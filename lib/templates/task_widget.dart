@@ -19,6 +19,9 @@ button.danger{color:var(--tg-theme-destructive-text-color)}
 .title{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hint{font-size:13px;color:var(--tg-theme-hint-color)}
 #notice:empty{display:none}
+.progress{display:grid;gap:5px;padding:8px 0}
+progress{width:100%;height:10px;accent-color:var(--tg-theme-button-color)}
+.progress small{color:var(--tg-theme-hint-color)}
 </style>
 <div id="board"></div>
 <p id="notice" class="hint"></p>
@@ -87,8 +90,18 @@ function draw() {
     const pagination = [];
     if (state.p > 0) pagination.push(button('‹ Previous', 'page', state.p - 1));
     if (state.p + 1 < state.n) pagination.push(button('Next ›', 'page', state.p + 1));
+    const summary = element('div', null, 'progress');
+    const total = Number(state.a) + Number(state.d);
+    if (total) {
+      const progress = element('progress');
+      progress.max = total;
+      progress.value = state.d;
+      progress.setAttribute('aria-label', 'Tasks completed');
+      summary.append(element('small', state.d + ' of ' + total + ' completed'), progress);
+    }
     board.replaceChildren(
       element('h2', state.h),
+      ...(total ? [summary] : []),
       controls(button('Open · ' + state.a, 'open', null, state.t === 0 ? 'selected' : '', state.t === 0),
                button('Completed · ' + state.d, 'completed', null, state.t === 1 ? 'selected' : '', state.t === 1)),
       tasks,

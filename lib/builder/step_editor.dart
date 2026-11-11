@@ -1,8 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../ui/design.dart';
+import '../units/virt_act.dart';
+import '../widgets/builder_part_picker.dart';
 import 'catalog.dart';
 import 'engine.dart';
+import 'parts.dart';
+import 'store.dart';
 import 'text_editor.dart';
 import 'values.dart';
 
@@ -36,9 +40,13 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   final _form = GlobalKey<FormState>();
   late String _format, _method, _scope, _onError, _operator;
   late bool _showAlert, _conditional;
-  late bool _groupItemButtons =
-      (widget.initial.config['richLayout'] as Map?)?['groupItemButtons'] ==
-      true;
+  late Map<String, dynamic> _layout = Map<String, dynamic>.from(
+    widget.initial.config['richLayout'] as Map? ?? {},
+  );
+  late bool _hasRichLayout = widget.initial.config['richLayout'] is Map;
+  late bool _groupItemButtons = _layout['groupItemButtons'] == true;
+  late String? _sharedList = widget.initial.config['sharedList'] as String?;
+  String? _newListLabel;
   late bool _widgetQueries = widget.initial.config['widgetQueries'] == true;
   var _saving = false;
   String? _error;
@@ -83,6 +91,86 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
 
   String value(String name) =>
       _fields[name]?.text ?? widget.initial.config[name]?.toString() ?? '';
+  Future<void> _chooseList() async {
+    final store = BuilderStore.shared;
+    final entries = store.parts.lists;
+    final id = await pickBuilderPart(context, 'List library', entries);
+    if (id == null || !mounted) return;
+    final list = entries[id]!;
+    final config = list['config'] as Map;
+    setState(() {
+      _newListLabel = null;
+      _sharedList = id;
+      field('text').text = list['text'] as String;
+      for (final entry in BuilderParts.listDefaults.entries) {
+        field(entry.key).text = config[entry.key]?.toString() ?? entry.value;
+      }
+      _hasRichLayout = config['richLayout'] is Map;
+      _layout = Map<String, dynamic>.from(config['richLayout'] as Map? ?? {});
+      _groupItemButtons = _layout['groupItemButtons'] == true;
+    });
+  }
+
+  Future<void> _nameList() async {
+    final name = await nameBuilderPart(context, 'Save list to library');
+    if (name == null || !mounted) return;
+    setState(() {
+      _sharedList = BuilderParts.newId();
+      _newListLabel = name;
+    });
+  }
+
+  Widget _listRows(String fieldName, {required bool footer}) {
+    final Object? parsed;
+    try {
+      final text = value(fieldName).trim();
+      parsed = jsonDecode(text.isEmpty ? '[]' : text);
+    } on FormatException {
+      return const SizedBox.shrink();
+    }
+    final rows = footer
+        ? List<dynamic>.of(parsed is List ? parsed : [])
+        : [parsed];
+    final local = [
+      for (final row in rows)
+        if (row is List) row,
+    ];
+    void update(List<dynamic> values) => setState(() {
+      field(fieldName).text = const JsonEncoder.withIndent(
+        '  ',
+      ).convert(footer ? values : values.firstOrNull ?? []);
+    });
+    return BuilderRowLibrary(
+      kind: BuilderParts.inline,
+      allowConditions: true,
+      allowItemBindings: !footer,
+      localRows: local,
+      links: [
+        for (final row in rows)
+          if (row is Map && row['ref'] is String) row['ref'] as String,
+      ],
+      onSaveAndLink: (index, id) {
+        final raw = [
+          for (final (i, row) in rows.indexed)
+            if (row is List) i,
+        ];
+        rows[raw[index]] = {'ref': id};
+        update(rows);
+      },
+      onLink: (id) => update([
+        if (footer) ...rows,
+        {'ref': id},
+      ]),
+      onUnlink: (id) {
+        final index = rows.indexWhere((row) => row is Map && row['ref'] == id);
+        if (index != -1) update(rows..removeAt(index));
+      },
+    );
+  }
+
+  bool _rowRef(Object? value) =>
+      value is Map && value.length == 1 && value['ref'] is String;
+
   Future<void> save({Future<void> Function(BuilderStep)? commit}) async {
     if (!_form.currentState!.validate()) return;
     final config = <String, dynamic>{...widget.initial.config};
@@ -124,9 +212,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         }
       }
       if (kind == 'renderList') {
-        final layout = Map<String, dynamic>.from(
-          config['richLayout'] as Map? ?? {},
-        );
+        final layout = Map.of(_layout);
         if (_groupItemButtons && layout['columns'] != null) {
           throw const BuilderFailure(
             'Buttons next to items require a list layout.',
@@ -135,15 +221,25 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         if (_groupItemButtons) {
           layout['groupItemButtons'] = true;
           config['richLayout'] = layout;
-        } else if (config['richLayout'] is Map) {
+        } else if (_hasRichLayout) {
           config['richLayout'] = layout..remove('groupItemButtons');
+        } else {
+          config.remove('richLayout');
         }
         final itemData = value('itemData').trim();
         if (itemData.isNotEmpty) jsonDecode(itemData);
-        for (final key in ['buttons', 'footerButtons']) {
-          if (jsonDecode(value(key).isEmpty ? '[]' : value(key)) is! List) {
-            throw const BuilderFailure('List buttons must be JSON arrays.');
-          }
+        final item = jsonDecode(
+          value('buttons').trim().isEmpty ? '[]' : value('buttons'),
+        );
+        final footer = jsonDecode(
+          value('footerButtons').trim().isEmpty ? '[]' : value('footerButtons'),
+        );
+        if (item is! List && !_rowRef(item) ||
+            footer is! List ||
+            footer.any((row) => row is! List && !_rowRef(row))) {
+          throw const BuilderFailure(
+            'Enter button arrays or choose saved rows.',
+          );
         }
       }
       if (kind == 'sql') {
@@ -211,8 +307,36 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         _saving = true;
         _error = null;
       });
+      if (kind == 'renderList') {
+        if (_sharedList case final id?) {
+          final store = BuilderStore.shared;
+          final previous = store.parts.lists[id];
+          final label = _newListLabel ?? previous?['label'] as String?;
+          if (label == null) {
+            throw const BuilderFailure('Choose a list from the library.');
+          }
+          final definition = BuilderParts.list(
+            label,
+            VirtAct(type: VirtActType.renderList, text: field('text').text)
+              ..config = config,
+          );
+          if (previous == null ||
+              !BuilderParts.sameList(previous, definition)) {
+            await store.savePart(id, definition, isList: true);
+            _newListLabel = null;
+          }
+          config.removeWhere((key, _) => BuilderParts.listFields.contains(key));
+          config['sharedList'] = id;
+        } else {
+          config.remove('sharedList');
+        }
+      }
       await (commit ?? widget.onSave)(
-        BuilderStep(kind, field('text').text, config),
+        BuilderStep(
+          kind,
+          _sharedList == null ? field('text').text : '',
+          config,
+        ),
       );
     } on FormatException {
       if (mounted) {
@@ -306,6 +430,41 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                 ),
               const SizedBox(height: 16),
               if (kind == 'renderList') ...[
+                if (_sharedList case final id?)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.link),
+                    title: Text(
+                      _newListLabel ??
+                          BuilderStore.shared.parts.lists[id]?['label']
+                              as String? ??
+                          'Unavailable list',
+                    ),
+                    subtitle: const Text(
+                      'Layout edits apply to every linked list.',
+                    ),
+                    trailing: TextButton(
+                      onPressed: () => setState(() {
+                        _sharedList = null;
+                        _newListLabel = null;
+                      }),
+                      child: const Text('Make local copy'),
+                    ),
+                  ),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      onPressed: _chooseList,
+                      child: const Text('Choose saved list'),
+                    ),
+                    if (_sharedList == null)
+                      TextButton(
+                        onPressed: _nameList,
+                        child: const Text('Save list to library'),
+                      ),
+                  ],
+                ),
                 _input(
                   'items',
                   'Items reference',
@@ -336,6 +495,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                   help:
                       'Example: [{"text":"{{item.title}}","callback_data":"open:{{item.id}}"}]',
                 ),
+                _listRows('buttons', footer: false),
                 _input(
                   'footerButtons',
                   'Footer button rows (JSON array)',
@@ -343,6 +503,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                   lines: 3,
                   help: 'Example: [[{"text":"Back","callback_data":"home"}]]',
                 ),
+                _listRows('footerButtons', footer: true),
                 _input(
                   'itemData',
                   'Data for each item (optional JSON)',
@@ -681,6 +842,9 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
       controller: field(key, fallback),
+      onChanged: {'buttons', 'footerButtons'}.contains(key)
+          ? (_) => setState(() {})
+          : null,
       minLines: lines,
       maxLines: lines == 1 ? 1 : 10,
       decoration: InputDecoration(

@@ -277,5 +277,5 @@ SELECT coalesce((SELECT q.id FROM q JOIN survey_runs r ON q.n=r.position WHERE r
     ),
     ...show(),
   ]);
-  return p.draft;
+  return p.finish('Feedback');
 }

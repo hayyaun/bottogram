@@ -22,11 +22,15 @@ The catalog order is:
 7. Event registration: seat counts, duplicate-safe registration, cancellation and
    admin counts. One guarded SQL statement performs the capacity check and insert.
 
-New bots from the templates use Telegram rich messages: native lists for
-browsing, tables for prices and reports, and expandable sections for longer
-details and explanations. The crypto template shows a temporary progress
-preview while it fetches prices, then posts a table with a refresh button and
-coin images when the response supplies URLs from the provider's image hosts.
+New bots from the templates use Telegram rich messages for lists, tables and
+expandable details. Repeated list layouts and button rows are saved to the
+builder libraries so they can be edited once and reused in other events or bots.
+
+The quiz presents questions in a widget with answer buttons and a progress
+indicator. Use **/quiz_text** for the rich text view or **/quiz** to return to
+widgets. The crypto template shows a progress preview while fetching prices
+and then a market widget with a refresh button. **/prices_text** shows the rich
+table with coin images when the response supplies supported image URLs.
 Existing bots keep their saved actions.
 
 ## Using the task board
@@ -37,8 +41,8 @@ title. **Complete** moves it to Completed, where **Reopen** brings it back.
 Open **Details** to rename a task or confirm its deletion.
 
 The board uses a Telegram widget in private chats. It updates in the same
-message and shows navigation buttons only for pages you can visit. Send task
-titles in chat when the board asks for them.
+message, shows completion progress and only offers navigation to available pages.
+Send task titles in chat when the board asks for them.
 
 Send **/tasks_text** if your Telegram client cannot display the widget.
 Bottogram remembers that preference. Use **/tasks_widget** to switch back.
@@ -77,7 +81,7 @@ database editor or automatic data reset.
 
 ## CoinGecko behavior
 
-The template performs a request only after **/prices** or a Refresh click.
+The template performs a request only after **/prices**, **/prices_text** or a Refresh click.
 **/start**, app launch and polling timers do not request prices. A default
 15-second per-bot cooldown limits repeated requests; it is adjustable during
 setup. There are no automatic retries. Unavailable services, rate limits,

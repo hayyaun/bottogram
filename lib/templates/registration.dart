@@ -118,5 +118,5 @@ BotTemplateDraft buildRegistration(
     ),
     sendList('report'),
   ]);
-  return p.draft;
+  return p.finish('Event Registration');
 }

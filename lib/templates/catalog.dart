@@ -14,9 +14,10 @@ abstract final class BotTemplates {
     BotTemplate(
       id: 'quiz',
       name: 'Quiz with scores',
-      summary: 'Topics, multiple-choice questions and personal best scores.',
+      summary:
+          'Play through interactive question cards and track your best scores.',
       description:
-          'Choose a topic, answer questions, read explanations and keep a personal best for each topic. Repeated answers cannot award extra points.',
+          'Choose a topic, answer inside the quiz widget, read explanations and keep a personal best for each topic. Repeated answers cannot award extra points.',
       fields: [
         TemplateField(
           'title',
@@ -100,9 +101,10 @@ abstract final class BotTemplates {
     BotTemplate(
       id: 'crypto',
       name: 'Crypto prices',
-      summary: 'Request current prices for five leading cryptocurrencies.',
+      summary:
+          'See five leading cryptocurrencies in a refreshable market snapshot.',
       description:
-          'Fetch the top five coins by market capitalization from CoinGecko only after /prices or Refresh. No API key or scheduled polling. Includes a shared cooldown and a friendly retry message for unavailable data or service failures. Keyless access has shared rate limits and is intended for testing and educational use.',
+          'Fetch the top five coins by market capitalization from CoinGecko with /prices or Refresh. Use /prices_text for the text view. No API key or scheduled polling. Includes a shared cooldown and a friendly retry message for unavailable data or service failures. Keyless access has shared rate limits and is intended for testing and educational use.',
       fields: [
         TemplateField('currency', 'Quote currency (e.g. usd, eur)', 'usd'),
         TemplateField(

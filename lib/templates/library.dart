@@ -193,5 +193,5 @@ BotTemplateDraft buildLibrary(
     setValue('page', 0),
     ...listing(),
   ]);
-  return p.draft;
+  return p.finish('Resource Library');
 }

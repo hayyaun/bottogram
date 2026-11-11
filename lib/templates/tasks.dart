@@ -184,7 +184,7 @@ WITH counts AS (
 ), position AS (
   SELECT *, max(0,min(?,pages-1)) AS page FROM pages
 )
-SELECT *, page-1 AS previous, page+1 AS next,
+SELECT *, page-1 AS previous, page+1 AS next, open_count+done_count AS total_count,
        CASE WHEN tab=0 THEN '• Open' ELSE 'Open' END AS open_tab,
        CASE WHEN tab=1 THEN '• Completed' ELSE 'Completed' END AS done_tab,
        (CASE WHEN tab=1 THEN 'Completed tasks' ELSE 'Open tasks' END) ||
@@ -220,6 +220,8 @@ FROM tasks WHERE user_id=? AND done=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)
       '{{item.title}}',
       header: '${settings['title']!}\n{{steps.pages.rows.0.view_label}}\n\n',
       empty: '{{steps.pages.rows.0.empty_text}}',
+      footer:
+          '\n\n{{steps.pages.rows.0.done_count}} of {{steps.pages.rows.0.total_count}} completed',
       groupItemButtons: true,
       itemData: ['{{item.widget_id}}', '{{item.widget_title}}'],
       buttons: [
@@ -461,5 +463,5 @@ FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
     check('entering_title', '{{user.inputMode}}', 'browse', 'notEquals'),
     ...saveTitle('{{event.input}}'),
   ]);
-  return program.draft;
+  return program.finish('Personal Task List');
 }

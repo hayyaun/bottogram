@@ -86,15 +86,11 @@ class VirtBot extends HiveObject {
     }
     if (_active) await stop(); // stop before restart
     if (!pluginRuntime) {
-      final linked = events
-          .expand((event) => event.acts)
-          .where((action) => action.libraryName != null);
-      if (linked.isNotEmpty) {
-        final store = BuilderStore.shared;
-        await store.ready;
-        for (final action in linked) {
-          store.resolveAction(action);
-        }
+      final store = BuilderStore.shared;
+      await store.ready;
+      final library = store.parts;
+      for (final action in events.expand((event) => event.acts)) {
+        store.resolveAction(action, library: library);
       }
     }
     await bot.initialize().timeout(const Duration(seconds: 22));
@@ -173,7 +169,7 @@ class VirtBot extends HiveObject {
     }
   }
 
-  List<VirtEvent> bindKeyboardEvents(VirtRMU? keyboard) {
+  List<VirtEvent> bindKeyboardEvents(VirtRMU? keyboard, {Map? markup}) {
     final added = <VirtEvent>[];
     void bind(VirtEventType type, String query) {
       if (events.any((event) => event.type == type && event.query == query)) {
@@ -193,6 +189,21 @@ class VirtBot extends HiveObject {
       for (final item in keyboard.items.whereType<KeyValue>()) {
         if (!isValidUrl(item.value)) {
           bind(VirtEventType.callbackQuery, item.value);
+        }
+      }
+    }
+    for (final (key, type, field) in [
+      ('inline_keyboard', VirtEventType.callbackQuery, 'callback_data'),
+      ('keyboard', VirtEventType.text, 'text'),
+    ]) {
+      if (markup?[key] case final List rows) {
+        for (final row in rows.whereType<List>()) {
+          for (final button in row.whereType<Map>()) {
+            if (button[field] case final String value
+                when value.isNotEmpty && !value.contains('{{')) {
+              bind(type, value);
+            }
+          }
         }
       }
     }

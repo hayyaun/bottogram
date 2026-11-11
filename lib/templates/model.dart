@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../builder/store.dart';
+import '../builder/parts.dart';
 import '../units/virt_act.dart';
 import '../units/virt_event.dart';
 
@@ -22,7 +23,9 @@ class TemplateDataset {
 }
 
 class BotTemplateDraft {
-  const BotTemplateDraft(this.events, this.variables);
+  BotTemplateDraft(this.events, this.variables, {BuilderParts? parts})
+    : parts = parts ?? BuilderParts();
+  final BuilderParts parts;
   final List<VirtEvent> events;
   final List<VariableDefinition> variables;
 }

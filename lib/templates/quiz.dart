@@ -1,3 +1,4 @@
+import 'card_widgets.dart';
 import 'program.dart';
 
 BotTemplateDraft buildQuiz(
@@ -5,27 +6,30 @@ BotTemplateDraft buildQuiz(
   List<Map<String, dynamic>> rows,
   String admin,
 ) {
-  final p = TemplateProgram([
-    sql(
-      'setup_questions',
-      'CREATE TABLE IF NOT EXISTS quiz_questions(id INTEGER PRIMARY KEY,topic TEXT NOT NULL,question TEXT NOT NULL,a TEXT NOT NULL,b TEXT NOT NULL,c TEXT NOT NULL,correct TEXT NOT NULL,explanation TEXT NOT NULL)',
-    ),
-    sql(
-      'setup_runs',
-      'CREATE TABLE IF NOT EXISTS quiz_runs(user_id TEXT PRIMARY KEY,topic TEXT NOT NULL,position INTEGER NOT NULL,score INTEGER NOT NULL)',
-    ),
-    sql(
-      'setup_scores',
-      'CREATE TABLE IF NOT EXISTS quiz_scores(user_id TEXT NOT NULL,topic TEXT NOT NULL,best INTEGER NOT NULL,PRIMARY KEY(user_id,topic))',
-    ),
-    seed(
-      'quiz_questions',
-      ['id', 'topic', 'question', 'a', 'b', 'c', 'correct', 'explanation'],
-      [
-        for (final (i, row) in rows.indexed) {'id': i + 1, ...row},
-      ],
-    ),
-  ]);
+  final p = TemplateProgram(
+    [
+      sql(
+        'setup_questions',
+        'CREATE TABLE IF NOT EXISTS quiz_questions(id INTEGER PRIMARY KEY,topic TEXT NOT NULL,question TEXT NOT NULL,a TEXT NOT NULL,b TEXT NOT NULL,c TEXT NOT NULL,correct TEXT NOT NULL,explanation TEXT NOT NULL)',
+      ),
+      sql(
+        'setup_runs',
+        'CREATE TABLE IF NOT EXISTS quiz_runs(user_id TEXT PRIMARY KEY,topic TEXT NOT NULL,position INTEGER NOT NULL,score INTEGER NOT NULL)',
+      ),
+      sql(
+        'setup_scores',
+        'CREATE TABLE IF NOT EXISTS quiz_scores(user_id TEXT NOT NULL,topic TEXT NOT NULL,best INTEGER NOT NULL,PRIMARY KEY(user_id,topic))',
+      ),
+      seed(
+        'quiz_questions',
+        ['id', 'topic', 'question', 'a', 'b', 'c', 'correct', 'explanation'],
+        [
+          for (final (i, row) in rows.indexed) {'id': i + 1, ...row},
+        ],
+      ),
+    ],
+    [variable('textQuiz', false)],
+  );
   Acts menu() => [
     sql(
       'topics',
@@ -44,7 +48,9 @@ BotTemplateDraft buildQuiz(
     sendList('menu'),
   ];
   p.command('start', menu());
-  p.click('quiz:home', menu());
+  p.command('quiz_text', [setValue('textQuiz', true), ...menu()]);
+  p.command('quiz', [setValue('textQuiz', false), ...menu()]);
+  p.click('quiz:home', menu(), widgetQueries: true);
   Acts showQuestion() => [
     sql(
       'stats',
@@ -60,6 +66,13 @@ BotTemplateDraft buildQuiz(
       'view',
       '{{steps.question.rows}}',
       '{{item.question}}\nA. {{item.a}}\nB. {{item.b}}\nC. {{item.c}}',
+      itemData: [
+        '{{item.id}}',
+        '{{item.question}}',
+        '{{item.a}}',
+        '{{item.b}}',
+        '{{item.c}}',
+      ],
       rowBlocks: [
         paragraph('{{item.question}}'),
         bullets(['A · {{item.a}}', 'B · {{item.b}}', 'C · {{item.c}}']),
@@ -79,7 +92,23 @@ BotTemplateDraft buildQuiz(
         ],
       ],
     ),
-    sendList('view'),
+    ...sendListWidget(
+      'view',
+      quizQuestionWidget,
+      {
+        'items': '{{steps.view.items}}',
+        'topic': '{{steps.stats.rows.0.topic}}',
+        'answered': '{{steps.stats.rows.0.position}}',
+        'total': '{{steps.stats.rows.0.total}}',
+      },
+      caption: 'Quiz question · Send /quiz_text for the text view.',
+      widgetWhen: {
+        'all': [
+          when('{{steps.view.count}}', 0, 'greater'),
+          when('{{user.textQuiz}}', false),
+        ],
+      },
+    ),
   ];
   p.click('quiz:topic:', [
     sql(
@@ -96,48 +125,53 @@ BotTemplateDraft buildQuiz(
     ...showQuestion(),
   ], prefix: true);
   for (final letter in ['A', 'B', 'C']) {
-    p.click('quiz:$letter:', [
-      sql(
-        'answer',
-        'WITH q AS (SELECT id,correct,row_number() OVER(ORDER BY id) AS n FROM quiz_questions WHERE topic=(SELECT topic FROM quiz_runs WHERE user_id=?)) UPDATE quiz_runs SET score=score+CASE WHEN (SELECT correct FROM q WHERE id=?)=? THEN 1 ELSE 0 END,position=position+1 WHERE user_id=? AND EXISTS(SELECT 1 FROM q WHERE id=? AND n=quiz_runs.position+1)',
-        [
-          '{{event.userId}}',
-          '{{event.input}}',
-          letter,
-          '{{event.userId}}',
-          '{{event.input}}',
-        ],
-      ),
-      say(
-        'stale',
-        'This question was already answered or belongs to an earlier quiz.',
-        only: when('{{steps.answer.affectedRows}}', 0),
-      ),
-      check('fresh_answer', '{{steps.answer.affectedRows}}', 0, 'greater'),
-      sql(
-        'explanation',
-        'SELECT CASE WHEN correct=? THEN \'Correct!\' ELSE \'Not quite.\' END AS result,correct,explanation FROM quiz_questions WHERE id=?',
-        [letter, '{{event.input}}'],
-      ),
-      say(
-        'feedback',
-        '{{steps.explanation.rows.0.result}} Answer: {{steps.explanation.rows.0.correct}}\n{{steps.explanation.rows.0.explanation}}',
-        rich: [
-          heading('{{steps.explanation.rows.0.result}}'),
-          paragraph('Correct answer: {{steps.explanation.rows.0.correct}}'),
-          details(
-            'Why this is the answer',
-            '{{steps.explanation.rows.0.explanation}}',
-          ),
-        ],
-      ),
-      sql(
-        'best',
-        'INSERT INTO quiz_scores(user_id,topic,best) SELECT user_id,topic,score FROM quiz_runs WHERE user_id=? AND position=(SELECT count(*) FROM quiz_questions WHERE topic=quiz_runs.topic) ON CONFLICT(user_id,topic) DO UPDATE SET best=max(best,excluded.best)',
-        ['{{event.userId}}'],
-      ),
-      ...showQuestion(),
-    ], prefix: true);
+    p.click(
+      'quiz:$letter:',
+      [
+        sql(
+          'answer',
+          'WITH q AS (SELECT id,correct,row_number() OVER(ORDER BY id) AS n FROM quiz_questions WHERE topic=(SELECT topic FROM quiz_runs WHERE user_id=?)) UPDATE quiz_runs SET score=score+CASE WHEN (SELECT correct FROM q WHERE id=?)=? THEN 1 ELSE 0 END,position=position+1 WHERE user_id=? AND EXISTS(SELECT 1 FROM q WHERE id=? AND n=quiz_runs.position+1)',
+          [
+            '{{event.userId}}',
+            '{{event.input}}',
+            letter,
+            '{{event.userId}}',
+            '{{event.input}}',
+          ],
+        ),
+        say(
+          'stale',
+          'This question was already answered or belongs to an earlier quiz.',
+          only: when('{{steps.answer.affectedRows}}', 0),
+        ),
+        check('fresh_answer', '{{steps.answer.affectedRows}}', 0, 'greater'),
+        sql(
+          'explanation',
+          'SELECT CASE WHEN correct=? THEN \'Correct!\' ELSE \'Not quite.\' END AS result,correct,explanation FROM quiz_questions WHERE id=?',
+          [letter, '{{event.input}}'],
+        ),
+        say(
+          'feedback',
+          '{{steps.explanation.rows.0.result}} Answer: {{steps.explanation.rows.0.correct}}\n{{steps.explanation.rows.0.explanation}}',
+          rich: [
+            heading('{{steps.explanation.rows.0.result}}'),
+            paragraph('Correct answer: {{steps.explanation.rows.0.correct}}'),
+            details(
+              'Why this is the answer',
+              '{{steps.explanation.rows.0.explanation}}',
+            ),
+          ],
+        ),
+        sql(
+          'best',
+          'INSERT INTO quiz_scores(user_id,topic,best) SELECT user_id,topic,score FROM quiz_runs WHERE user_id=? AND position=(SELECT count(*) FROM quiz_questions WHERE topic=quiz_runs.topic) ON CONFLICT(user_id,topic) DO UPDATE SET best=max(best,excluded.best)',
+          ['{{event.userId}}'],
+        ),
+        ...showQuestion(),
+      ],
+      prefix: true,
+      widgetQueries: true,
+    );
   }
   Acts scores() => [
     sql(
@@ -160,5 +194,5 @@ BotTemplateDraft buildQuiz(
   ];
   p.command('score', scores());
   p.click('quiz:scores', scores());
-  return p.draft;
+  return p.finish('Quiz');
 }

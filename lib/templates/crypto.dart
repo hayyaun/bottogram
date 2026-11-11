@@ -1,3 +1,4 @@
+import 'card_widgets.dart';
 import 'program.dart';
 
 BotTemplateDraft buildCrypto(
@@ -23,7 +24,7 @@ BotTemplateDraft buildCrypto(
       buttons: buttons,
     ),
   ]);
-  Acts prices() => [
+  Acts prices({bool widget = true}) => [
     sql(
       'gate',
       'INSERT INTO price_requests(id,last_at) VALUES(1,unixepoch(?)) ON CONFLICT(id) DO UPDATE SET last_at=excluded.last_at WHERE price_requests.last_at<=excluded.last_at-?',
@@ -56,6 +57,12 @@ BotTemplateDraft buildCrypto(
       '{{item.market_cap_rank}}. {{item.name}} ({{item.symbol}})\n{{item.current_price}} ${currency.toUpperCase()}',
       header:
           'Current prices · ${currency.toUpperCase()}\nTop five by market capitalization\n\n',
+      itemData: [
+        '{{item.market_cap_rank}}',
+        '{{item.name}}',
+        '{{item.symbol}}',
+        '{{item.current_price}}',
+      ],
       columns: {
         'Rank': '{{item.market_cap_rank}}',
         'Asset': '{{item.name}} ({{item.symbol}})',
@@ -81,9 +88,20 @@ BotTemplateDraft buildCrypto(
       buttons: buttons,
       only: when('{{steps.quotes.ok}}', false),
     ),
-    sendList('quotes', only: when('{{steps.quotes.ok}}', true)),
+    if (widget)
+      ...sendListWidget(
+        'quotes',
+        marketSnapshotWidget,
+        {'items': '{{steps.quotes.items}}', 'currency': currency.toUpperCase()},
+        caption: 'CoinGecko prices · Send /prices_text for the text view.',
+        only: when('{{steps.quotes.ok}}', true),
+        widgetWhen: when('{{steps.quotes.count}}', 0, 'greater'),
+      )
+    else
+      sendList('quotes', only: when('{{steps.quotes.ok}}', true)),
   ];
   p.command('prices', prices());
-  p.click('prices:refresh', prices());
-  return p.draft;
+  p.command('prices_text', prices(widget: false));
+  p.click('prices:refresh', prices(), widgetQueries: true);
+  return p.finish('Crypto Price Watch');
 }

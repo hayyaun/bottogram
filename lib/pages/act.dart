@@ -29,9 +29,13 @@ class _ActPageState extends State<ActPage> {
   final _store = BuilderStore.shared;
   late final _name = widget.act.libraryName;
   late final _source = _store.libraryAction(_name) ?? widget.act;
-  late final draft = VirtAct(type: _source.type, text: _source.text)
-    ..config = Map.of(_source.config)
-    ..rmu = _source.rmu?.copy(_source.rmu?.name ?? '');
+  late final _layout =
+      _store.parts.lists.containsKey(_source.config['sharedList'])
+      ? _store.parts.expandList(_source)
+      : _source;
+  late final draft = VirtAct(type: _layout.type, text: _layout.text)
+    ..config = Map.of(_layout.config)
+    ..rmu = _layout.rmu?.copy(_layout.rmu?.name ?? '');
 
   String get _output =>
       widget.act.config['output']?.toString() ??
@@ -59,7 +63,10 @@ class _ActPageState extends State<ActPage> {
     }
     for (final (index, placement) in widget.ev.acts.indexed) {
       if (identical(placement, widget.act)) break;
-      final act = _store.libraryAction(placement.libraryName) ?? placement;
+      final source = _store.libraryAction(placement.libraryName) ?? placement;
+      final act = _store.parts.lists.containsKey(source.config['sharedList'])
+          ? _store.parts.expandList(source)
+          : source;
       final name = placement.config['output'] ?? 'step${index + 1}';
       _references.add(
         'steps.$name.${act.type == VirtActType.http
@@ -173,11 +180,17 @@ class _ActPageState extends State<ActPage> {
       );
     }
     final definition = VirtAct(type: draft.type, text: step.text)
-      ..config = step.config
+      ..config = {...step.config}
       ..rmu = draft.rmu;
+    if (draft.config.containsKey('keyboard')) {
+      definition.config['keyboard'] = draft.config['keyboard'];
+    } else {
+      definition.config.remove('keyboard');
+    }
+    final resolved = _store.parts.resolve(definition);
     if (_name case final String name) {
       // The library's suggested output name is independent of this placement.
-      definition.config = {...step.config, 'output': _source.config['output']};
+      definition.config['output'] = _source.config['output'];
       await _store.saveLibraryAction(name, definition, replace: true);
       if (mounted) Navigator.pop(context, true);
       return;
@@ -202,7 +215,12 @@ class _ActPageState extends State<ActPage> {
       ..text = placement.text
       ..config = placement.config
       ..rmu = placement.rmu;
-    final added = widget.bot.bindKeyboardEvents(definition.rmu);
+    final added = widget.bot.bindKeyboardEvents(
+      resolved.rmu,
+      markup: resolved.config['keyboard'] is Map
+          ? resolved.config['keyboard'] as Map
+          : null,
+    );
     try {
       await bots.saveBot(widget.bot);
     } catch (_) {

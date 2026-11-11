@@ -126,9 +126,16 @@ class _EventPageState extends State<EventPage> {
         name: name,
         output: _nextOutput(definition.config['output'] as String?),
       );
-      widget.ev.acts.add(act);
-      final added = widget.bot.bindKeyboardEvents(definition.rmu);
+      var added = <VirtEvent>[];
       try {
+        final resolved = store.resolveAction(act);
+        widget.ev.acts.add(act);
+        added = widget.bot.bindKeyboardEvents(
+          resolved.rmu,
+          markup: resolved.config['keyboard'] is Map
+              ? resolved.config['keyboard'] as Map
+              : null,
+        );
         await context.read<BotsCubit>().saveBot(widget.bot);
       } catch (_) {
         widget.ev.acts.remove(act);

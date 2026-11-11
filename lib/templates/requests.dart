@@ -270,5 +270,5 @@ BotTemplateDraft buildRequests(
       only: when('{{steps.input.rows.0.stage}}', 'subject', 'notEquals'),
     ),
   ]);
-  return p.draft;
+  return p.finish('Support Requests');
 }

@@ -211,7 +211,7 @@ class TemplateHarness {
         11,
         10,
       ).add(Duration(seconds: 20 * tick++)).toIso8601String(),
-    }, BuilderSession.steps(event));
+    }, BuilderSession.steps(event, store: store));
     if (!allowErrors) {
       expect(
         console.entries(id).where((e) => e.status == 'error'),
@@ -274,6 +274,7 @@ void main() {
         '99',
       );
       final id = builderBotId(name + harnesses.length.toString());
+      if (!draft.parts.isEmpty) await store.installParts(draft.parts);
       for (final d in draft.variables) {
         await store.addDefinition(id, d);
       }
@@ -315,6 +316,11 @@ void main() {
         final h = await create('quiz');
         await h.command('start');
         await h.click('quiz:topic:Everyday knowledge');
+        final widget = h.telegram.calls.last['widget'] as Map;
+        expect(widget['allowQueries'], true);
+        expect(widget['chatData']['items'][0][0], 1);
+        expect(h.draft.parts.lists, isNotEmpty);
+        expect(h.draft.parts.rows, isNotEmpty);
         await h.click('quiz:A:1');
         await h.click('quiz:A:1');
         expect(
@@ -681,6 +687,7 @@ void main() {
         final output = h.telegram.calls;
         expect(output[output.length - 2]['draftId'], isNotEmpty);
         expect(output.last['draftId'], isNull);
+        expect(output.last['widget']['chatData']['items'][0][1], 'Bitcoin');
         expect(
           (output.last['richBlocks'] as List).map((block) => block['type']),
           containsAllInOrder(['heading', 'table', 'collage', 'buttons']),

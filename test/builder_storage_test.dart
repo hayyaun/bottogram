@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:bottogram/builder/database.dart';
 import 'package:bottogram/builder/session.dart';
+import 'package:bottogram/builder/parts.dart';
+import 'package:bottogram/builder/list_renderer.dart';
 import 'package:bottogram/builder/storage_snapshot.dart';
 import 'package:bottogram/builder/store.dart';
 import 'package:bottogram/builder/values.dart';
@@ -184,6 +186,85 @@ void main() {
       expect(
         (exported.rmu as VirtRMUInlineKeyboard).items.single?.value,
         'open',
+      );
+    },
+  );
+
+  test(
+    'list and row links survive reopening and exports carry copies',
+    () async {
+      const listId = 'items';
+      const rowId = 'open';
+      Future<void> saveRow(String label) => store.savePart(
+        rowId,
+        BuilderParts.row('Open item', BuilderParts.inline, [
+          {'text': label, 'callback_data': 'open:{{item.id}}'},
+        ]),
+        isList: false,
+      );
+      Future<void> saveList(String text) => store.savePart(
+        listId,
+        BuilderParts.list(
+          'Items',
+          VirtAct(type: VirtActType.renderList, text: text)
+            ..config = {'buttons': '{"ref":"open"}'},
+        ),
+        isList: true,
+      );
+      await saveRow('View {{item.name}}');
+      await saveList('{{item.name}}');
+      var box = await Hive.openBox<VirtBot>('part-bots');
+      for (final (index, source) in ['first', 'second'].indexed) {
+        await box.add(
+          VirtBot(source, '${index + 1}:fixture', addSamples: false)
+            ..events = [
+              VirtEvent(type: VirtEventType.command, query: 'items')
+                ..acts.add(
+                  VirtAct(type: VirtActType.renderList, text: '')
+                    ..config = {
+                      'items': '{{event.$source}}',
+                      'output': source,
+                      'sharedList': listId,
+                    },
+                ),
+            ],
+        );
+      }
+      await box.close();
+      await Hive.box<dynamic>('builder_definitions_v1').close();
+      await store.ready;
+      box = await Hive.openBox<VirtBot>('part-bots');
+
+      final events = box.values.map((bot) => bot.events.single).toList();
+      final copy = store.resolveAction(events.first.acts.single);
+      expect(copy.config.containsKey('sharedList'), false);
+      expect(
+        jsonDecode(copy.config['buttons'] as String)[0]['text'],
+        'View {{item.name}}',
+      );
+      await saveRow('Open {{item.name}}');
+      await saveList('Item: {{item.name}}');
+
+      for (final (index, source) in ['first', 'second'].indexed) {
+        final step = BuilderSession.steps(events[index], store: store).single;
+        expect(step.config['output'], source);
+        final result = BuilderListRenderer.render(step, {
+          'event': {
+            source: [
+              {'id': index + 1, 'name': source},
+            ],
+          },
+        });
+        expect(result['text'], 'Item: $source');
+        expect(result['keyboard']['inline_keyboard'][0][0], {
+          'text': 'Open $source',
+          'callback_data': 'open:${index + 1}',
+        });
+      }
+      expect(copy.text, '{{item.name}}');
+      expect(
+        jsonDecode(copy.config['buttons'] as String)[0]['text'],
+        'View {{item.name}}',
       );
     },
   );

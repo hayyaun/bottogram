@@ -47,6 +47,19 @@ link. When the action uses earlier outputs, variables, credentials or callback
 events, configure those dependencies in each destination bot. A bot backup
 contains editable copies of its linked actions, independent of the library.
 
+## Reuse lists and button rows
+
+In **Render list**, use **Save list to library** or **Choose saved list**.
+Linked lists share item formatting, rich layout, and row buttons. Each
+event selects its own **Items reference** and output name. **Make local
+copy** detaches the list layout so you can edit it independently.
+
+In a keyboard editor, save an existing row, create a **New shared row**,
+or **Choose saved row**. You can also use inline rows in the item buttons
+and footer of **Render list**. Editing a shared row updates every action
+that links to it. Add the appropriate callback handler in each bot when a
+row uses dynamic callback data. Bot backups carry copies of all linked pieces.
+
 ## References and types
 
 - `{{event.text}}`, `{{event.firstName}}`, `{{event.username}}`

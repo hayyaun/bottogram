@@ -1,3 +1,5 @@
+import '../builder/parts.dart';
+import 'builder_part_picker.dart';
 import 'package:bottogram/pages/templates.dart';
 import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/units/virt_act.dart';
@@ -87,6 +89,98 @@ class _RmuEditorState extends State<RMUEditor> {
     });
   }
 
+  Widget _rowLibrary() {
+    final raw = widget.act.config['keyboard'];
+    if (raw != null && raw is! Map) return const SizedBox.shrink();
+    final keyboard = raw as Map? ?? {};
+    final kind = switch (current) {
+      VirtRMUType.inlineKeyboard => BuilderParts.inline,
+      VirtRMUType.keyboard => BuilderParts.reply,
+      _ =>
+        keyboard.containsKey(BuilderParts.reply)
+            ? BuilderParts.reply
+            : BuilderParts.inline,
+    };
+    final saved = List<dynamic>.of(keyboard[kind] as List? ?? []);
+    final manual = List<List>.from(
+      rmu?.hydrate().toJson()[kind] as List? ?? [],
+    );
+    final local = [
+      ...manual,
+      for (final row in saved)
+        if (row is List) row,
+    ];
+    void update(List<dynamic> rows) => setState(() {
+      final next = Map<String, dynamic>.from(keyboard);
+      if (rows.isEmpty) {
+        next.remove(kind);
+      } else {
+        next[kind] = rows;
+        if (kind == BuilderParts.reply) next['resize_keyboard'] = true;
+      }
+      if (!next.containsKey(BuilderParts.inline) &&
+          !next.containsKey(BuilderParts.reply)) {
+        widget.act.config.remove('keyboard');
+      } else {
+        widget.act.config['keyboard'] = next;
+      }
+    });
+    final other = kind == BuilderParts.inline
+        ? BuilderParts.reply
+        : BuilderParts.inline;
+    if (keyboard.containsKey(other)) {
+      return const Text(
+        'Switch back to the linked rows’ keyboard type to edit or remove them.',
+      );
+    }
+    return BuilderRowLibrary(
+      kind: kind,
+      localRows: local,
+      firstEditableRow: manual.length,
+      onEditLocal: (index, buttons) {
+        final indices = [
+          for (final (i, row) in saved.indexed)
+            if (row is List) i,
+        ];
+        saved[indices[index - manual.length]] = buttons;
+        update(saved);
+      },
+      links: [
+        for (final row in saved)
+          if (row is Map && row['ref'] is String) row['ref'] as String,
+      ],
+      onSaveAndLink: (index, id) {
+        if (index < manual.length) {
+          // Save an existing visual row in place, preserving its position.
+          final rows = [...manual, ...saved];
+          rows[index] = {'ref': id};
+          buffer[current] = switch (current) {
+            VirtRMUType.inlineKeyboard => VirtRMUInlineKeyboard(),
+            VirtRMUType.keyboard => VirtRMUKeyboard(),
+            _ => null,
+          };
+          widget.act.rmu = rmu;
+          update(rows);
+        } else {
+          final rawRows = [
+            for (final (i, row) in saved.indexed)
+              if (row is List) i,
+          ];
+          saved[rawRows[index - manual.length]] = {'ref': id};
+          update(saved);
+        }
+      },
+      onLink: (id) => update([
+        ...saved,
+        {'ref': id},
+      ]),
+      onUnlink: (id) {
+        final index = saved.indexWhere((row) => row is Map && row['ref'] == id);
+        if (index != -1) update(saved..removeAt(index));
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) => BSection(
     title: 'Keyboard',
@@ -133,6 +227,7 @@ class _RmuEditorState extends State<RMUEditor> {
             rmu: rmu as VirtRMUInlineKeyboard,
           ),
         },
+        _rowLibrary(),
         if (rmu != null) ...[
           const SizedBox(height: 16),
           Align(

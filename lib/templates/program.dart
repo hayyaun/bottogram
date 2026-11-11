@@ -1,5 +1,6 @@
 import 'dart:convert';
 import '../builder/store.dart';
+import '../builder/parts.dart';
 import '../builder/values.dart';
 import '../units/virt_act.dart';
 import '../units/virt_event.dart';
@@ -121,6 +122,32 @@ VirtAct sendList(
   'richBlocks': jsonEncode('{{steps.$name.rich}}'),
   if (only != null) 'when': only,
 });
+Acts sendListWidget(
+  String name,
+  String html,
+  Map<String, dynamic> state, {
+  required String caption,
+  Map<String, dynamic>? widgetWhen,
+  Map<String, dynamic>? only,
+}) => [
+  sendList(name, output: 'widget', only: only)
+    ..config.addAll({
+      'widgetHtml': html,
+      'widgetChatData': jsonEncode(state),
+      'widgetCaption': caption,
+      'widgetQueries': true,
+      'widgetFallback': true,
+      'onError': 'continue',
+      if (widgetWhen != null) 'widgetWhen': widgetWhen,
+    }),
+  sendList(
+    name,
+    only: {
+      'all': [if (only != null) only, when('{{steps.widget.ok}}', false)],
+    },
+  ),
+];
+
 VariableDefinition variable(
   String name,
   dynamic initial, {
@@ -202,17 +229,95 @@ class TemplateProgram {
     String data,
     Acts actions, {
     bool prefix = false,
+    bool widgetQueries = false,
     String? inputSeparator,
-  }) => on(
-    VirtEventType.callbackQuery,
-    data,
-    actions,
-    match: prefix ? 'prefix' : 'exact',
-    inputSeparator: inputSeparator,
-  );
+  }) {
+    on(
+      VirtEventType.callbackQuery,
+      data,
+      actions,
+      match: prefix ? 'prefix' : 'exact',
+      inputSeparator: inputSeparator,
+    );
+    if (widgetQueries) events.last.config['widgetQueries'] = true;
+  }
+
   void text(Acts actions) =>
       on(VirtEventType.text, 'Text input', actions, match: 'any');
-  BotTemplateDraft get draft => BotTemplateDraft(events, variables);
+  BotTemplateDraft finish(String name) {
+    final parts = BuilderParts();
+    final acts = events.expand((event) => event.acts).toList();
+    final rows = <String, List<({List rows, int index})>>{};
+    void collect(List raw) {
+      for (final (index, row) in raw.indexed) {
+        if (row is List && row.isNotEmpty) {
+          rows.putIfAbsent(jsonEncode(row), () => []).add((
+            rows: raw,
+            index: index,
+          ));
+        }
+      }
+    }
+
+    // Convert the generated JSON arrays to editable copies before linking rows.
+    final updateLists = <void Function()>[];
+    for (final act in acts) {
+      if (act.config['keyboard'] case final Map keyboard) {
+        if (keyboard[BuilderParts.inline] case final List original) {
+          final copied = List<dynamic>.of(original);
+          act.config['keyboard'] = {...keyboard, BuilderParts.inline: copied};
+          collect(copied);
+        }
+      }
+      if (act.type != VirtActType.renderList) continue;
+      final item = <dynamic>[jsonDecode(act.config['buttons'] as String)];
+      final footer = jsonDecode(act.config['footerButtons'] as String) as List;
+      collect(item);
+      collect(footer);
+      updateLists.add(() {
+        act.config['buttons'] = jsonEncode(item.single);
+        act.config['footerButtons'] = jsonEncode(footer);
+      });
+    }
+    var rowNumber = 0;
+    for (final entry in rows.entries.where((entry) => entry.value.length > 1)) {
+      final id = BuilderParts.newId();
+      final row = jsonDecode(entry.key) as List;
+      parts.rows[id] = BuilderParts.row(
+        '$name · Button row ${++rowNumber}',
+        BuilderParts.inline,
+        row,
+      );
+      for (final placement in entry.value) {
+        placement.rows[placement.index] = {'ref': id};
+      }
+    }
+    for (final update in updateLists) {
+      update();
+    }
+
+    final lists = <String, List<VirtAct>>{};
+    for (final act in acts.where((act) => act.type == VirtActType.renderList)) {
+      final definition = BuilderParts.list(act.config['output'] as String, act);
+      lists.putIfAbsent(jsonEncode(definition), () => []).add(act);
+    }
+    for (final entry in lists.entries.where(
+      (entry) => entry.value.length > 1,
+    )) {
+      final id = BuilderParts.newId();
+      final list = jsonDecode(entry.key) as Map<String, dynamic>;
+      list['label'] = "$name · ${list['label']}";
+      parts.lists[id] = list;
+      for (final act in entry.value) {
+        act.text = '';
+        act.config.removeWhere(
+          (key, _) => BuilderParts.listFields.contains(key),
+        );
+        act.config['sharedList'] = id;
+      }
+    }
+    return BotTemplateDraft(events, variables, parts: parts);
+  }
 }
 
 VirtAct seed(

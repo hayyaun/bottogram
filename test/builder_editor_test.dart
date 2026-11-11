@@ -1,6 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:bottogram/builder/engine.dart';
+import 'package:bottogram/builder/parts.dart';
+import 'package:bottogram/builder/store.dart';
+import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/builder/step_editor.dart';
 import 'package:bottogram/builder/text_editor.dart';
 import 'package:bottogram/ui/design.dart';
@@ -8,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 
 void main() {
   testWidgets(
@@ -72,24 +77,85 @@ void main() {
     expect(find.textContaining('Invalid JSON.'), findsOneWidget);
   });
 
+  testWidgets('choosing a saved list keeps the event item source and output', (
+    tester,
+  ) async {
+    late BuilderStore store;
+    late Directory directory;
+    await tester.runAsync(() async {
+      store = BuilderStore.shared;
+      directory = await Directory.systemTemp.createTemp('list-editor-');
+      Hive.init(directory.path);
+      await store.savePart(
+        'inventory',
+        BuilderParts.list(
+          'Inventory',
+          VirtAct(type: VirtActType.renderList, text: '{{item.title}}')
+            ..config = {
+              'header': 'Inventory on hand',
+              'buttons': '[]',
+              'footerButtons': '[]',
+            },
+        ),
+        isList: true,
+      );
+    });
+    addTearDown(() async {
+      await store.close();
+      await Hive.close();
+      await directory.delete(recursive: true);
+    });
+    await tester.binding.setSurfaceSize(const Size(390, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final commit = Completer<BuilderStep>();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: BottogramDesign.theme,
+        home: BuilderStepEditor(
+          initial: const BuilderStep('renderList', 'Local row', {
+            'output': 'stock',
+            'items': '{{steps.query.rows}}',
+          }),
+          onSave: (value) async => commit.complete(value),
+        ),
+      ),
+    );
+    await tester.tap(find.text('Choose saved list'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Inventory'));
+    await tester.pumpAndSettle();
+    expect(find.text('Inventory on hand'), findsOneWidget);
+    await tester.ensureVisible(find.text('Save action'));
+    await tester.pumpAndSettle();
+    final saved = await tester.runAsync(() async {
+      await tester.tap(find.text('Save action'));
+      await tester.pump();
+      return commit.future.timeout(const Duration(seconds: 5));
+    });
+    await tester.pumpAndSettle();
+    expect(saved?.config['sharedList'], 'inventory');
+    expect(saved?.config['items'], '{{steps.query.rows}}');
+    expect(saved?.config['output'], 'stock');
+  });
+
   for (final width in [390.0, 1100.0]) {
     for (final kind in ['reply', 'http']) {
       testWidgets('$kind editor fits at $width px', (tester) async {
         if (Platform.environment['CAPTURE_BUILDER_UI'] == '1') {
           await tester.runAsync(() async {
             final sdk = Platform.environment['FLUTTER_ROOT']!;
-            for (final entry
-                in {
-                  'Host Grotesk': 'assets/fonts/HostGrotesk.ttf',
-                  'Noto Sans Arabic': 'assets/fonts/NotoSansArabic.ttf',
-                  'MaterialIcons':
-                      '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
-                }.entries) {
-              final loader = FontLoader(entry.key)..addFont(
-                Future.value(
-                  ByteData.sublistView(await File(entry.value).readAsBytes()),
-                ),
-              );
+            for (final entry in {
+              'Host Grotesk': 'assets/fonts/HostGrotesk.ttf',
+              'Noto Sans Arabic': 'assets/fonts/NotoSansArabic.ttf',
+              'MaterialIcons':
+                  '$sdk/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+            }.entries) {
+              final loader = FontLoader(entry.key)
+                ..addFont(
+                  Future.value(
+                    ByteData.sublistView(await File(entry.value).readAsBytes()),
+                  ),
+                );
               await loader.load();
             }
           });

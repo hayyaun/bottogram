@@ -125,6 +125,16 @@ abstract interface class AutomationAction {
   Future<Json> execute(Json event);
 }
 
+num? minimumValue(Json result, Json config) {
+  final items = valueAt(result, config['itemsPath'] as String);
+  if (items is! List) return null;
+  final amounts = items
+      .map((item) => valueAt(item, config['valuePath'] as String))
+      .whereType<num>()
+      .where((value) => value.isFinite && value >= 0);
+  return amounts.isEmpty ? null : amounts.reduce((a, b) => a < b ? a : b);
+}
+
 dynamic valueAt(dynamic value, String path) {
   for (final part in path.split('.')) {
     if (value is! Map || !value.containsKey(part)) return null;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../runtime/telegram_presentation.dart';
 import '../runtime/registry.dart';
 import '../runtime/telegram_config.dart';
 import '../runtime/telegram_interaction.dart';
@@ -128,7 +129,7 @@ class PluginCapabilityReview extends StatelessWidget {
         ]) ...[
           if (component.type == 'telegram.notify-admin.v1')
             const Text('Sends notifications to the configured admin.'),
-          if (component.config['photo'] case final Map<String, dynamic> photo)
+          for (final photo in presentationPhotos(component.config))
             Text(
               'Downloads photos: ${_fieldLabel(photo['originField'] as String)} → ${photo['path']}',
             ),

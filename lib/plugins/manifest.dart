@@ -432,8 +432,8 @@ class PluginManifest {
                   )) {
                 reject('Status actions require a declared boolean setting.');
               }
-              if (c['photo'] is Json) {
-                validateTargetFields([c['photo'] as Json]);
+              if (component.type == presentationAction) {
+                validateTargetFields(presentationPhotos(c));
               }
             }
             if (component.errorMap.values.any(

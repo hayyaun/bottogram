@@ -43,6 +43,7 @@ dependencies:
   equatable: ^2.0.7
   share_plus: 13.3.1
   intl: ^0.20.2
+  image: ^4.5.4
   path_provider: ^2.1.5
   file_picker: 13.3.2
   path: ^1.9.1
@@ -106,7 +107,7 @@ flutter:
     - examples/plugins/inshopa.catalog.bottogram-plugin.json
     - examples/plugins/inshopa.sales.bottogram-plugin.json
     - examples/plugins/inshopa.sales.local.bottogram-plugin.json
-    - examples/plugins/inshopa.storefront.0.8.1.bottogram-plugin.json
+    - examples/plugins/inshopa.storefront.0.8.2.bottogram-plugin.json
     - examples/plugins/inshopa.storefront.local.bottogram-plugin.json
     - assets/icon/foreground.png
     - assets/fonts/HostGrotesk-OFL.txt

@@ -18,7 +18,7 @@ import 'runtime_lifecycle_test.dart' show TestLease;
 
 PluginManifest shipped(String filename) => PluginManifest.parse(
   File(
-    '${filename == 'inshopa.storefront' ? 'test/fixtures' : 'examples/plugins'}/$filename.bottogram-plugin.json',
+    '${{'inshopa.storefront', 'inshopa.storefront.0.8.1'}.contains(filename) ? 'test/fixtures' : 'examples/plugins'}/$filename.bottogram-plugin.json',
   ).readAsBytesSync(),
 );
 
@@ -74,6 +74,7 @@ class TelegramFixture {
         'setMyCommands',
         'deleteMyCommands',
         'editMessageWidgetData',
+        'deleteMessage',
         'answerWidgetQuery',
         'answerCallbackQuery',
       }.contains(method)) {

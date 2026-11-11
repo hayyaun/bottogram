@@ -176,18 +176,19 @@ class BotTelegramPort implements TelegramPort, TelegramInteractions {
     Json data,
     String caption,
     Json? keyboard,
-  ) {
+  ) async {
     final chat = ID.create(int.parse(event['chatId'] as String));
     if (event['interaction'] == 'widget' && event['editWidget'] == true) {
-      return _deliver(
+      await _deliver(
         () => bot.api.editMessageWidgetData(
           chatId: chat,
           messageId: event['messageId'] as int,
           chatData: jsonEncode(data),
         ),
       );
+      return;
     }
-    return _deliver(
+    await _deliver(
       () => bot.api.sendWidget(
         chat,
         html,
@@ -197,6 +198,15 @@ class BotTelegramPort implements TelegramPort, TelegramInteractions {
         replyMarkup: _keyboard(keyboard),
       ),
     );
+    if (event['interaction'] == 'widget' && event['replaceWidget'] == true) {
+      try {
+        await bot.api
+            .deleteMessage(chat, event['messageId'] as int)
+            .timeout(const Duration(seconds: 3));
+      } catch (_) {
+        // An older message may be outside Telegram's deletion window.
+      }
+    }
   }
 
   Future<void> _deliver(Future<dynamic> Function() request) async {

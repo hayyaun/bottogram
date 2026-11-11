@@ -205,19 +205,8 @@ class HttpGetAction implements AutomationAction {
       }
       final minimum = config['minimum'] as Json?;
       if (minimum != null) {
-        final items = valueAt(result, minimum['itemsPath'] as String);
-        if (items is List) {
-          final amounts = items
-              .map((item) => valueAt(item, minimum['valuePath'] as String))
-              .whereType<num>()
-              .where((value) => value.isFinite && value >= 0);
-          if (amounts.isNotEmpty) {
-            result = {
-              ...result,
-              'minimum': amounts.reduce((a, b) => a < b ? a : b),
-            };
-          }
-        }
+        final amount = minimumValue(result, minimum);
+        if (amount != null) result = {...result, 'minimum': amount};
       }
       if (cacheKey != null) {
         final cache = context.lastResponses;

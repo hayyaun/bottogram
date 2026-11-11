@@ -1,11 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'dart:typed_data';
 
+import 'http_request.dart';
 import 'ports.dart';
 import 'registry.dart';
 import 'telegram_config.dart';
 import 'telegram_destinations.dart';
+import 'widget_thumbnails.dart';
 
 const presentationAction = 'telegram.present.v1';
 const statusAction = 'telegram.status.v1';
@@ -48,6 +50,7 @@ void _buttons(dynamic raw, {required bool channel}) {
       AutomationRegistry.keys(button, {
         'text',
         'when',
+        'unless',
         'callback',
         'url',
         'deepLink',
@@ -55,6 +58,7 @@ void _buttons(dynamic raw, {required bool channel}) {
       });
       _template(button['text'], 150);
       if (button['when'] != null) AutomationRegistry.path(button['when']);
+      if (button['unless'] != null) AutomationRegistry.path(button['unless']);
       final types = [
         'callback',
         'url',
@@ -84,6 +88,37 @@ void _buttons(dynamic raw, {required bool channel}) {
       }
     }
   }
+}
+
+Iterable<Json> presentationPhotos(Json config) sync* {
+  if (config['photo'] case final Json photo) yield photo;
+  if (config['widget']?['thumbnails']?['photo'] case final Json photo) {
+    yield photo;
+  }
+}
+
+Iterable<Json> presentationLookupRequests(Json config) sync* {
+  if (config['list']?['lookup']?['request'] case final Json request) {
+    yield request;
+  }
+}
+
+void _validatePhoto(Json photo) {
+  AutomationRegistry.keys(photo, {
+    'originField',
+    'path',
+    'argumentPath',
+    'itemsPath',
+    'itemIdPath',
+  });
+  validateWebAppTarget({
+    'originField': photo['originField'],
+    'path': photo['path'],
+    'argumentPath': photo['argumentPath'],
+  }, allowArgument: true);
+  if (photo['argumentPath'] != 'media') AutomationRegistry.invalid();
+  AutomationRegistry.path(photo['itemsPath']);
+  AutomationRegistry.path(photo['itemIdPath']);
 }
 
 void validatePresentation(Json config) {
@@ -117,14 +152,27 @@ void validatePresentation(Json config) {
   }
   if (config['widget'] != null) {
     final widget = AutomationRegistry.object(config['widget']);
-    AutomationRegistry.keys(widget, {'html', 'data', 'editOnWidget'});
-    final html = utf8.encode(AutomationRegistry.string(widget['html'], 32768));
-    if (html.length > 32768 ||
-        html.contains(0) ||
-        ZLibEncoder(level: 9).convert(html).length > 4096 ||
+    AutomationRegistry.keys(widget, {
+      'html',
+      'data',
+      'editOnWidget',
+      'thumbnails',
+    });
+    final html = AutomationRegistry.string(widget['html'], 32768);
+    if (!widgetHtmlFits(html) ||
         widget['editOnWidget'] != null && widget['editOnWidget'] is! bool ||
         config['photo'] != null) {
       AutomationRegistry.invalid();
+    }
+    if (widget['thumbnails'] != null) {
+      final thumbs = AutomationRegistry.object(widget['thumbnails']);
+      AutomationRegistry.keys(thumbs, {'photo'});
+      if (config['list'] == null ||
+          widget['editOnWidget'] == true ||
+          html.split(widgetRowsSlot).length != 2) {
+        AutomationRegistry.invalid();
+      }
+      _validatePhoto(AutomationRegistry.object(thumbs['photo']));
     }
     _data(widget['data']);
   }
@@ -135,29 +183,33 @@ void validatePresentation(Json config) {
       'data',
       'keyboard',
       'emptyText',
+      'lookup',
     });
     AutomationRegistry.path(list['itemsPath']);
     AutomationRegistry.string(list['emptyText'], 200);
     _data(list['data']);
+    if (list['lookup'] != null) {
+      final lookup = AutomationRegistry.object(list['lookup']);
+      AutomationRegistry.keys(lookup, {
+        'request',
+        'parameter',
+        'itemIdPath',
+        'minimum',
+      });
+      AutomationRegistry.object(lookup['request']);
+      AutomationRegistry.identifier(lookup['parameter']);
+      AutomationRegistry.path(lookup['itemIdPath']);
+      if (lookup['minimum'] != null) {
+        final minimum = AutomationRegistry.object(lookup['minimum']);
+        AutomationRegistry.keys(minimum, {'itemsPath', 'valuePath'});
+        AutomationRegistry.path(minimum['itemsPath']);
+        AutomationRegistry.path(minimum['valuePath']);
+      }
+    }
     _buttons(list['keyboard'], channel: false);
   }
   if (config['photo'] != null) {
-    final photo = AutomationRegistry.object(config['photo']);
-    AutomationRegistry.keys(photo, {
-      'originField',
-      'path',
-      'argumentPath',
-      'itemsPath',
-      'itemIdPath',
-    });
-    validateWebAppTarget({
-      'originField': photo['originField'],
-      'path': photo['path'],
-      'argumentPath': photo['argumentPath'],
-    }, allowArgument: true);
-    if (photo['argumentPath'] != 'media') AutomationRegistry.invalid();
-    AutomationRegistry.path(photo['itemsPath']);
-    AutomationRegistry.path(photo['itemIdPath']);
+    _validatePhoto(AutomationRegistry.object(config['photo']));
   }
 }
 
@@ -241,8 +293,10 @@ class TelegramStatusAction implements AutomationAction {
 String _truncate(String text, int length) =>
     String.fromCharCodes(text.runes.take(length));
 
-bool _has(Json event, String path) {
-  final value = valueAt(event, path);
+bool _has(Json event, String path, {Object? item}) {
+  final value = item != null && path.startsWith('item.')
+      ? valueAt(item, path.substring(5))
+      : valueAt(event, path);
   return value != null && value != false && value.toString().trim().isNotEmpty;
 }
 
@@ -269,32 +323,50 @@ class TelegramPresentationAction implements AutomationAction {
           _render(line, event),
     ];
     final list = config['list'] as Json?;
-    final items = list == null
+    var items = list == null
         ? const []
         : (valueAt(event, list['itemsPath'] as String) as List)
-              .take(8)
+              .take(maxWidgetRows)
               .toList();
+    if (list?['lookup'] case final Json lookup) {
+      items = await _lookupItems(lookup, items);
+    }
     if (list != null && items.isEmpty) lines.add(list['emptyText'] as String);
     final text = lines.where((line) => line.isNotEmpty).join('\n\n');
     final rows = _keyboard(config['keyboard'], event);
     final widget = config['widget'] as Json?;
     if (widget != null) {
       final data = _project(widget['data'] as Json, event);
-      if (list != null) {
-        data['items'] = [
+      final thumbnails = widget['thumbnails'] as Json?;
+      final projected = [
+        if (list != null)
           for (final item in items)
             _project(list['data'] as Json, event, item: item),
-        ];
-      }
+      ];
+      if (list != null && thumbnails == null) data['items'] = projected;
       if (utf8.encode(jsonEncode(data)).length <= 1024) {
-        await context.interactions.widget(
-          {...event, 'editWidget': widget['editOnWidget'] == true},
-          widget['html'] as String,
-          data,
-          _truncate(text, 1024),
-          _markup(rows),
-        );
-        return event;
+        final template = widget['html'] as String;
+        final html = thumbnails == null
+            ? template
+            : await embedWidgetRows(
+                template,
+                projected,
+                await _loadThumbnails(thumbnails, items),
+              );
+        if (html != null) {
+          await context.interactions.widget(
+            {
+              ...event,
+              'editWidget': widget['editOnWidget'] == true,
+              'replaceWidget': thumbnails != null,
+            },
+            html,
+            data,
+            _truncate(text, 1024),
+            _markup(rows),
+          );
+          return event;
+        }
       }
       // Large input uses the same text and inline actions without a widget.
     }
@@ -326,11 +398,59 @@ class TelegramPresentationAction implements AutomationAction {
     return event;
   }
 
-  Future<Uint8List?> _photo(Json photo, Json event) async {
+  Future<List<dynamic>> _lookupItems(Json lookup, List<dynamic> items) {
+    final request = HttpRequest(lookup['request'] as Json, context);
+    return Future.wait(
+      items.map((item) async {
+        if (item is! Json) return item;
+        final id = valueAt(item, lookup['itemIdPath'] as String);
+        if (id is! String || !validPathArgument(id)) return item;
+        try {
+          final detail = await request
+              .fetch(pathParameters: {lookup['parameter'] as String: id})
+              .timeout(const Duration(seconds: 4));
+          final minimum = lookup['minimum'] as Json?;
+          final price = minimum == null ? null : minimumValue(detail, minimum);
+          return {
+            ...item,
+            'detail': {...detail, if (price != null) 'minimum': price},
+          };
+        } on RuntimeFailure {
+          return item;
+        } on TimeoutException {
+          return item;
+        }
+      }),
+    );
+  }
+
+  Future<List<Uint8List?>> _loadThumbnails(Json config, List<dynamic> items) {
+    final photo = config['photo'] as Json;
+    return Future.wait(
+      items.map((item) async {
+        if (item is! Json) return null;
+        try {
+          return await _photo(
+            photo,
+            item,
+            firstOnly: true,
+          ).timeout(const Duration(seconds: 4), onTimeout: () => null);
+        } on RuntimeFailure {
+          return null;
+        }
+      }),
+    );
+  }
+
+  Future<Uint8List?> _photo(
+    Json photo,
+    Json event, {
+    bool firstOnly = false,
+  }) async {
     final transport = context.http;
     final items = valueAt(event, photo['itemsPath'] as String);
     if (transport is! PhotoTransport || items is! List) return null;
-    for (final item in items) {
+    for (final item in firstOnly ? items.take(1) : items) {
       final id = valueAt(item, photo['itemIdPath'] as String);
       if (id is! String || !validPathArgument(id)) continue;
       final url = resolveWebAppTarget(
@@ -354,7 +474,10 @@ class TelegramPresentationAction implements AutomationAction {
     for (final row in raw as List? ?? const []) {
       final buttons = <Json>[];
       for (final button in (row as List).cast<Json>()) {
-        if (button['when'] != null && !_has(event, button['when'] as String)) {
+        if ((button['when'] != null &&
+                !_has(event, button['when'] as String, item: item)) ||
+            (button['unless'] != null &&
+                _has(event, button['unless'] as String, item: item))) {
           continue;
         }
         final label = _truncate(

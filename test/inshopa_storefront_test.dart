@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:bottogram/plugins/bot_setup.dart';
@@ -12,6 +13,7 @@ import 'package:bottogram/runtime/progress_store.dart';
 import 'package:bottogram/runtime/telegram_port.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:image/image.dart' as image;
 
 import 'automation_runtime_test.dart'
     show FakeHttp, FakeTelegram, MemoryProgress, until;
@@ -19,6 +21,7 @@ import 'plugins_test.dart' show MemoryVault;
 import 'storefront_presentation_test.dart' show PluginHarness, shipped;
 
 const package = 'inshopa.storefront.0.8.1';
+const thumbnailPackage = 'inshopa.storefront.0.8.2';
 const productId = 'e6af6af3-a42d-4a71-87d5-aac75e232183';
 const nextId = '11111111-1111-1111-1111-111111111111';
 const otherId = '22222222-2222-2222-2222-222222222222';
@@ -95,6 +98,66 @@ class FanOutHttp extends FakeHttp implements PhotoTransport {
       Uint8List.fromList([255, 216, 255, 217]);
 }
 
+class ThumbnailHttp extends FakeHttp implements PhotoTransport {
+  final ids = [
+    productId,
+    nextId,
+    otherId,
+    for (var i = 3; i < 12; i++)
+      '00000000-0000-0000-0000-${i.toString().padLeft(12, '0')}',
+  ];
+  final mediaRequests = <Uri>[];
+
+  @override
+  Future<Json> get(Uri url, Map<String, String> headers) async {
+    requests.add((url, headers));
+    if (url.path.endsWith('/products')) {
+      final offset = int.parse(url.queryParameters['offset']!);
+      final limit = int.parse(url.queryParameters['limit']!);
+      return {
+        'products': [
+          for (final id in ids.skip(offset).take(limit))
+            {'id': id, 'title': 'محصول فروشگاه ${ids.indexOf(id) + 1}'},
+        ],
+      };
+    }
+    final id = url.pathSegments.last;
+    final index = ids.indexOf(id);
+    return {
+      'images': [
+        {'id': id},
+      ],
+      'variants': [
+        if (index != 3) ...[
+          {'price_irr': 25000000 + index},
+          {'price_irr': 19000000 + index},
+        ],
+      ],
+    };
+  }
+
+  @override
+  Future<Uint8List?> jpeg(Uri url) async {
+    mediaRequests.add(url);
+    final id = url.pathSegments.last;
+    final seed = ids.indexOf(id);
+    if (id == otherId) return Uint8List.fromList([255, 216, 255, 217]);
+    final random = Random(seed);
+    final photo = image.Image(width: 84, height: 64);
+    for (final pixel in photo) {
+      final block = ((pixel.x ~/ 7) * 11 + (pixel.y ~/ 7) * 7 + seed) * 25;
+      photo.setPixelRgb(
+        pixel.x,
+        pixel.y,
+        (block + random.nextInt(40)) % 256,
+        (block * 2 + random.nextInt(40)) % 256,
+        (block * 3 + random.nextInt(40)) % 256,
+      );
+    }
+    return image.encodeJpg(photo);
+  }
+}
+
 class CatalogFixture implements JsonTransport, PhotoTransport {
   List<String> ids = [productId];
   final availablePhotos = <String>{};
@@ -134,6 +197,99 @@ class CatalogFixture implements JsonTransport, PhotoTransport {
 }
 
 void main() {
+  test(
+    'ten priced catalog rows fit Telegram and navigation replaces the old widget',
+    () async {
+      final http = ThumbnailHttp();
+      final h = await PluginHarness.create(
+        package: thumbnailPackage,
+        transport: http,
+      );
+      addTearDown(h.close);
+      await h.runtime.start(h.bot);
+      await h.api.command('shop');
+      await until(
+        () => h.api.calls.where((call) => call.$1 == 'sendWidget').length == 1,
+      );
+
+      List<Map<String, dynamic>> verifyHtml(Map<String, dynamic> payload) {
+        final html = payload['html'] as String;
+        final bytes = utf8.encode(html);
+        expect(bytes.length, lessThanOrEqualTo(32768));
+        expect(
+          ZLibEncoder(level: 9).convert(bytes).length,
+          lessThanOrEqualTo(4096),
+        );
+        final rows =
+            (jsonDecode(
+                      RegExp(
+                        r'const products = (\[.*\]);',
+                      ).firstMatch(html)!.group(1)!,
+                    )
+                    as List)
+                .cast<Map<String, dynamic>>();
+        for (final url
+            in rows.map((row) => row['thumbnail']).whereType<String>()) {
+          expect(url, startsWith('data:image/jpeg;base64,'));
+          final thumbnail = image.decodeJpg(base64Decode(url.split(',').last));
+          expect(thumbnail, isNotNull);
+          expect(
+            max(thumbnail!.width, thumbnail.height),
+            lessThanOrEqualTo(32),
+          );
+        }
+        return rows;
+      }
+
+      final first = h.api.calls
+          .singleWhere((call) => call.$1 == 'sendWidget')
+          .$2;
+      final firstRows = verifyHtml(first);
+      expect(firstRows, hasLength(10));
+      expect(firstRows.where((row) => row['thumbnail'] != null), hasLength(9));
+      expect(firstRows[2]['thumbnail'], isNull);
+      expect(firstRows[2]['price'], '19000002');
+      expect(firstRows[3]['price'], isEmpty);
+      expect(firstRows.first['id'], http.ids.first);
+      expect(jsonDecode(first['chat_data'])['next'], '2');
+      expect(
+        http.mediaRequests.map((url) => url.pathSegments.last),
+        unorderedEquals(http.ids.take(10)),
+      );
+
+      await h.api.widgetTap('catalog:2');
+      await until(() => h.api.calls.any((call) => call.$1 == 'deleteMessage'));
+      final secondIndex = h.api.calls.lastIndexWhere(
+        (call) => call.$1 == 'sendWidget',
+      );
+      final deleteIndex = h.api.calls.lastIndexWhere(
+        (call) => call.$1 == 'deleteMessage',
+      );
+      expect(secondIndex, lessThan(deleteIndex));
+      final second = h.api.calls[secondIndex].$2;
+      final secondRows = verifyHtml(second);
+      expect(secondRows.map((row) => row['id']), http.ids.skip(10));
+      expect(secondRows.last['price'], '19000011');
+      expect(jsonDecode(second['chat_data'])['previous'], '1');
+      expect(jsonDecode(second['chat_data'])['next'], isEmpty);
+      expect(h.api.calls[deleteIndex].$2['message_id'], 200);
+      expect(
+        h.api.calls.any((call) => call.$1 == 'editMessageWidgetData'),
+        false,
+      );
+
+      await h.command('products');
+      final keyboard =
+          h.api.messages.last['reply_markup']['inline_keyboard'] as List;
+      expect(
+        keyboard.take(10).map((row) => row.single['callback_data']),
+        http.ids.take(10).map((id) => 'product:$id'),
+      );
+      expect(keyboard.first.single['text'], startsWith('19000000 ریال'));
+      expect(keyboard[3].single['text'], isNot(contains('ریال')));
+    },
+  );
+
   test(
     'private welcome and menus route buyer and seller commands and paginate one widget',
     () async {
@@ -400,9 +556,8 @@ void main() {
         await Hive.close();
         await directory.delete(recursive: true);
       });
-      final next = shipped(package);
-      final older = jsonDecode(next.source) as Json..['version'] = '0.8.0';
-      final previous = PluginManifest.parse(utf8.encode(jsonEncode(older)));
+      final next = shipped(thumbnailPackage);
+      final previous = shipped(package);
       await repository.install(previous);
       await repository.install(next);
       const token = '99:fixture';
@@ -425,7 +580,10 @@ void main() {
       await progress.write(from, {'initialized': true, 'pageCursor': '100'});
       await progress.write('$from:delivered:sample', {'complete': true});
       final plan = await repository.reviewUpgrade(1, token, next);
-      expect(plan.preservedAutomationIds, contains('paid-orders'));
+      expect(
+        plan.preservedAutomationIds,
+        containsAll(['paid-orders', 'new-published-products']),
+      );
       final updated = await repository.upgrade(
         1,
         token,

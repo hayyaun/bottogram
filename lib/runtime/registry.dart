@@ -126,8 +126,18 @@ class AutomationRegistry {
     }),
     actions: Map.unmodifiable({
       presentationAction: ComponentRegistration(
-        validatePresentation,
+        (config) {
+          validatePresentation(config);
+          final lookup = config['list']?['lookup'] as Json?;
+          if (lookup != null) {
+            _request(
+              lookup['request'] as Json,
+              pathParameters: {lookup['parameter'] as String},
+            );
+          }
+        },
         TelegramPresentationAction.new,
+        requests: presentationLookupRequests,
       ),
       statusAction: ComponentRegistration(
         validateTelegramStatus,

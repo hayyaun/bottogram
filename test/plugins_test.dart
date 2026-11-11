@@ -812,7 +812,7 @@ void main() {
       });
       expect(
         bundled.installed.map((p) => p.version),
-        ['0.8.2'],
+        ['0.8.3'],
       );
       expect(bundled.installed.every((p) => p.executable), isTrue);
       final reopened = PluginRepository(vault: vault);
@@ -837,7 +837,7 @@ void main() {
       final local = package(
         (jsonDecode(
                 File(
-                  'examples/plugins/inshopa.storefront.0.8.2.bottogram-plugin.json',
+                  'examples/plugins/inshopa.storefront.0.8.3.bottogram-plugin.json',
                 ).readAsStringSync(),
               )
               as Map<String, dynamic>)

@@ -1,7 +1,7 @@
 # Storefront navigation
 
 This document describes the original Inshopa 0.6.0 navigation.
-The bundled [0.8.2 package](../examples/plugins/inshopa.storefront.0.8.2.bottogram-plugin.json)
+The bundled [0.8.3 package](../examples/plugins/inshopa.storefront.0.8.3.bottogram-plugin.json)
 adds HTML storefront widgets and product broadcasts.
 There is no Inshopa source, API, page, authentication, database or configuration
 change.

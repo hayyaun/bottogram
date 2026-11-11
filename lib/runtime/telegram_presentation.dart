@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'ports.dart';
 import 'registry.dart';
 import 'telegram_config.dart';
+import 'telegram_destinations.dart';
 
 const presentationAction = 'telegram.present.v1';
 const statusAction = 'telegram.status.v1';
@@ -166,7 +167,12 @@ void validateTelegramStatus(Json config) {
     'setting',
     'channelLabels',
     'settingLabels',
+    'photo',
   });
+  if (config['photo'] != null &&
+      (config['photo'] is! bool || config['channelField'] == null)) {
+    AutomationRegistry.invalid();
+  }
   if (config['channelField'] == null && config['setting'] == null) {
     AutomationRegistry.invalid();
   }
@@ -198,17 +204,34 @@ class TelegramStatusAction implements AutomationAction {
 
   @override
   Future<Json> execute(Json event) async {
-    final channel = context.fields[config['channelField']]?.trim() ?? '';
-    final channelStatus = channel.isEmpty
+    final field = config['channelField'] as String?;
+    final labels = config['channelLabels'] as Json?;
+    final destinations =
+        parseTelegramDestinations(context.fields[field] ?? '') ?? const [];
+    final checked = await Future.wait(
+      destinations.map(
+        (id) => context.interactions.canPost(
+          id,
+          chatTypes: context.destinationChatTypes[field] ?? const {'channel'},
+          photo: config['photo'] == true,
+        ),
+      ),
+    );
+    final summary = checked.isEmpty
         ? 'unset'
-        : await context.interactions.canPost(channel)
+        : checked.every((allowed) => allowed)
         ? 'ready'
         : 'denied';
     final on = context.settings[config['setting']] == true;
     return {
       ...event,
       'status': {
-        'channel': config['channelLabels']?[channelStatus],
+        'channel': labels?[summary],
+        if (destinations.isNotEmpty)
+          'destinations': [
+            for (final (index, id) in destinations.indexed)
+              '$id · ${labels![checked[index] ? 'ready' : 'denied']}',
+          ].join('\n'),
         'setting': config['settingLabels']?[on ? 'on' : 'off'],
       },
     };
@@ -238,7 +261,7 @@ class TelegramPresentationAction implements AutomationAction {
     final channelField = config['channelField'] as String?;
     final chat = channelField == null
         ? event['chatId'] as String
-        : int.parse(context.fields[channelField]!.trim()).toString();
+        : event['destinationChatId'] as String;
     final lines = [
       for (final line in (config['lines'] as List).cast<Json>())
         if ((line['when'] == null || _has(event, line['when'] as String)) &&

@@ -64,7 +64,11 @@ class ChannelFixture extends FakeTelegram implements TelegramInteractions {
   @override
   String get username => 'shop_bot';
   @override
-  Future<bool> canPost(String chatId) async => allowed;
+  Future<bool> canPost(
+    String chatId, {
+    Set<String> chatTypes = const {'channel'},
+    bool photo = true,
+  }) async => allowed;
   @override
   void interaction(String kind, void Function(Json event) receive) {}
   @override
@@ -86,6 +90,30 @@ class ChannelFixture extends FakeTelegram implements TelegramInteractions {
     String caption,
     Json? keyboard,
   ) async => throw StateError('Unexpected widget');
+}
+
+class FanOutHttp extends FakeHttp implements PhotoTransport {
+  @override
+  Future<Json> get(Uri url, Map<String, String> headers) async {
+    if (url.path.endsWith('/products')) {
+      return {
+        'products': [
+          {'id': productId},
+        ],
+      };
+    }
+    return {
+      'product': {'title': 'New product'},
+      'variants': [],
+      'images': [
+        {'id': productId},
+      ],
+    };
+  }
+
+  @override
+  Future<Uint8List?> jpeg(Uri url) async =>
+      Uint8List.fromList([255, 216, 255, 217]);
 }
 
 class CatalogFixture implements JsonTransport, PhotoTransport {
@@ -519,6 +547,91 @@ void main() {
       expect(post['chat_id'].toString(), '-100123');
       expect(post['caption'], 'محصول تازه');
       expect(jsonDecode(post['reply_markup']), keyboard);
+    },
+  );
+
+  test(
+    'selected channels and groups receive separate deliveries despite denied destinations',
+    () async {
+      final h = await PluginHarness.create(
+        package: 'inshopa.storefront.0.8.1',
+        transport: FanOutHttp(),
+      );
+      addTearDown(h.close);
+      h.api.groupPhotoPermissions.addAll({-1002: true, -1003: false});
+      h.api.deniedChannels.add(-1004);
+      final setup = h.bot.setup!;
+      h.bot.setup = setup.copyWith(
+        values: {
+          ...setup.values,
+          'telegramChannelId': '-1001, -1002\n-1003، -1004\n-1001',
+        },
+      );
+      final field = h.manifest.fields.singleWhere(
+        (field) => field.key == 'telegramChannelId',
+      );
+      expect(field.validate(h.bot.setup!.values[field.key]!), isNull);
+      expect(field.validate('-1001, @unresolved_channel'), isNotNull);
+      final namespace =
+          '${setup.instanceId}:${h.manifest.digest}:new-published-products';
+      for (final destination in ['-1001', '-1002', '-1003', '-1004']) {
+        await h.progress.write('$namespace:channel:$destination', {
+          'initialized': true,
+        });
+      }
+      await h.runtime.start(h.bot);
+      await until(
+        () =>
+            h.api.calls.where((call) => call.$1 == 'sendPhoto').length == 2 &&
+            h.runtime.failuresFor(h.bot).length == 2 &&
+            h.progress.values.keys
+                    .where((key) => key.contains(':delivered:'))
+                    .length ==
+                2,
+      );
+      final posts = h.api.calls
+          .where((call) => call.$1 == 'sendPhoto')
+          .map((call) => call.$2);
+      expect(
+        posts.map((post) => post['chat_id']),
+        unorderedEquals(['-1001', '-1002']),
+      );
+      expect(
+        posts.every(
+          (post) =>
+              post['reply_markup'].toString().contains('start=p_$productId'),
+        ),
+        true,
+      );
+      expect(
+        h.runtime.failuresFor(h.bot).map((failure) => failure.destination),
+        unorderedEquals(['-1003', '-1004']),
+      );
+    },
+  );
+
+  test(
+    'a saved single destination is valid in the widened field and keeps its automation',
+    () {
+      final current = shipped(package);
+      final target = shipped('inshopa.storefront.0.8.1');
+      final setup = BotSetup(
+        instanceId: 'fixture',
+        tokenFingerprint: 'fixture',
+        adminTelegramUserId: '123',
+        pluginKey: current.storageKey,
+        pluginDigest: current.digest,
+        values: {
+          'storefrontUrl': 'https://shop.example.test',
+          'telegramChannelId': '-1001',
+        },
+        secretFields: ['apiKey'],
+      );
+      final plan = PluginUpgradePlan.review(current, target, setup);
+      expect(
+        plan.preservedAutomationIds,
+        containsAll(['paid-orders', 'new-published-products']),
+      );
     },
   );
 

@@ -114,6 +114,7 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
                         label: field.label,
                         secret: field.type == PluginFieldType.secret,
                         numeric: field.type == PluginFieldType.integer,
+                        multiline: field.type == PluginFieldType.telegramChats,
                         helpText:
                             field.type == PluginFieldType.secret &&
                                 widget.setup.secretFields.contains(field.key)
@@ -135,7 +136,7 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
         Text(
           widget.plugin.destinationFields.isEmpty
               ? 'Saving changed parameters restarts a running bot and resets its automation progress.'
-              : 'Saving changes restarts a running bot. Channel-only changes keep existing automation progress.',
+              : 'Saving changes restarts a running bot. Changes to Telegram destinations keep existing automation progress.',
         ),
         const SizedBox(height: 16),
         if (_error != null) ...[

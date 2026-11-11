@@ -24,6 +24,7 @@ class PluginSetupFields extends StatelessWidget {
             helpText: field.helpText,
             secret: field.type == PluginFieldType.secret,
             numeric: field.type == PluginFieldType.integer,
+            multiline: field.type == PluginFieldType.telegramChats,
             validator: (v) => field.validate(v ?? ''),
           ),
         ),
@@ -39,6 +40,7 @@ class SecretFormField extends StatefulWidget {
     this.helpText,
     this.secret = false,
     this.numeric = false,
+    this.multiline = false,
     this.validator,
   });
   final TextEditingController controller;
@@ -46,6 +48,7 @@ class SecretFormField extends StatefulWidget {
   final String? helpText;
   final bool secret;
   final bool numeric;
+  final bool multiline;
   final String? Function(String?)? validator;
   @override
   State<SecretFormField> createState() => _SecretFormFieldState();
@@ -60,27 +63,30 @@ class _SecretFormFieldState extends State<SecretFormField> {
     obscureText: widget.secret && !_visible,
     enableSuggestions: !widget.secret,
     autocorrect: !widget.secret,
-    keyboardType:
-        widget.numeric
-            ? const TextInputType.numberWithOptions(signed: true)
-            : TextInputType.text,
+    minLines: widget.multiline ? 2 : 1,
+    maxLines: widget.multiline ? 4 : 1,
+    keyboardType: widget.numeric
+        ? const TextInputType.numberWithOptions(signed: true)
+        : widget.multiline
+        ? TextInputType.multiline
+        : TextInputType.text,
     decoration: InputDecoration(
       labelText: widget.label,
       helperText: widget.helpText,
       helperMaxLines: 3,
-      suffixIcon:
-          widget.secret
-              ? IconButton(
-                tooltip:
-                    _visible ? 'Hide ${widget.label}' : 'Show ${widget.label}',
-                onPressed: () => setState(() => _visible = !_visible),
-                icon: Icon(
-                  _visible
-                      ? Icons.visibility_off_outlined
-                      : Icons.visibility_outlined,
-                ),
-              )
-              : null,
+      suffixIcon: widget.secret
+          ? IconButton(
+              tooltip: _visible
+                  ? 'Hide ${widget.label}'
+                  : 'Show ${widget.label}',
+              onPressed: () => setState(() => _visible = !_visible),
+              icon: Icon(
+                _visible
+                    ? Icons.visibility_off_outlined
+                    : Icons.visibility_outlined,
+              ),
+            )
+          : null,
     ),
   );
 }

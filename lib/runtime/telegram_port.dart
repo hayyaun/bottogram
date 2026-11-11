@@ -113,20 +113,39 @@ class BotTelegramPort implements TelegramPort, TelegramInteractions {
   }
 
   @override
-  Future<bool> canPost(String chatId) async {
+  Future<bool> canPost(
+    String chatId, {
+    Set<String> chatTypes = const {'channel'},
+    bool photo = true,
+  }) async {
     final id = ID.create(int.parse(chatId));
     try {
       final chat = await bot.api
           .getChat(id)
           .timeout(const Duration(seconds: 10));
-      if (chat.type != ChatType.channel) return false;
+      if (!chatTypes.contains(chat.type.name)) return false;
       final botId = bot.me.id;
       if (botId == null) return false;
       final member = await bot.api
           .getChatMember(id, botId)
           .timeout(const Duration(seconds: 10));
-      return member is ChatMemberOwner ||
-          member is ChatMemberAdministrator && member.canPostMessages == true;
+      if (member is ChatMemberOwner) return true;
+      if (chat.type == ChatType.channel) {
+        return member is ChatMemberAdministrator &&
+            member.canPostMessages == true;
+      }
+      return switch (member) {
+        ChatMemberAdministrator() => true,
+        ChatMemberMember() =>
+          (photo
+                  ? chat.permissions?.canSendPhotos
+                  : chat.permissions?.canSendMessages) ==
+              true,
+        ChatMemberRestricted() =>
+          member.isMember &&
+              (photo ? member.canSendPhotos : member.canSendMessages),
+        _ => false,
+      };
     } catch (_) {
       return false;
     }

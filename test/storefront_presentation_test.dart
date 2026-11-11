@@ -28,6 +28,8 @@ class TelegramFixture {
   bool failMenu = false;
   bool failMessages = false;
   bool canPost = true;
+  final groupPhotoPermissions = <int, bool>{};
+  final deniedChannels = <int>{};
   late final bot = Bot.local('99:test-token', 'http://127.0.0.1:${server.port}')
     ..onError((error) => errors.add(error));
 
@@ -75,9 +77,16 @@ class TelegramFixture {
       }.contains(method)) {
         result = true;
       } else if (method == 'getChat') {
+        final chat = int.parse(body['chat_id'].toString());
+        final group = fixture.groupPhotoPermissions[chat];
         result = {
-          'id': int.parse(body['chat_id'].toString()),
-          'type': 'channel',
+          'id': chat,
+          'type': group == null ? 'channel' : 'supergroup',
+          if (group != null)
+            'permissions': {
+              'can_send_messages': true,
+              'can_send_photos': group,
+            },
           'title': 'Test channel',
           'accent_color_id': 0,
           'max_reaction_count': 11,
@@ -85,10 +94,13 @@ class TelegramFixture {
           'accepted_gift_types': <String, dynamic>{},
         };
       } else if (method == 'getChatMember') {
+        final chat = int.parse(body['chat_id'].toString());
+        final group = fixture.groupPhotoPermissions.containsKey(chat);
         result = {
-          'status': 'administrator',
+          'status': group ? 'member' : 'administrator',
           'user': {'id': 99, 'is_bot': true, 'first_name': 'Shop'},
-          'can_post_messages': fixture.canPost,
+          'can_post_messages':
+              fixture.canPost && !fixture.deniedChannels.contains(chat),
           'can_be_edited': false,
           'is_anonymous': false,
           'can_manage_chat': true,

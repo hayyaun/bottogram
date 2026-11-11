@@ -610,18 +610,18 @@ are checked when a command or button is used.
 - `http.get-json.v1` can bind event values to complete URL path segments.
   Pagination with `pageSize` and `itemsPath` fetches one extra result and exposes
   `items`, `page`, `previous`, and `next` under the action's result key.
-- For channel delivery, declare an optional negative integer setup field with
-  bounds between `-4503599627370495` and `-1`. Reference it from the final
-  `telegram.present.v1` action as `channelField` in a
+- For Telegram broadcasts, declare a `telegramChats` setup field with allowed
+  `chatTypes`, using `channel`, `group`, or `supergroup`. The field accepts up
+  to twelve negative numeric IDs separated by commas or line breaks. Reference
+  it with `channelField` in the final `telegram.present.v1` action of a
   `http.poll-list.v1` automation. To attach a `photo`, use a required public
-  HTTPS origin field and a bounded resource ID. The channel must grant the bot
-  permission to post. A blank destination disables polling. Use
-  `initialSync: "baseline"` to record existing items quietly. Delivery receipts
-  are kept per channel. Missing media is retried on later scans.
-- `telegram.status.v1` can report the current channel posting permission and a
+  HTTPS origin field and a bounded resource ID. Each chat gets a separate
+  baseline, retry schedule and delivery receipts. Channels require the bot's
+  post permission, and groups require permission to send the configured content.
+- `telegram.status.v1` can report the current destination posting permissions and a
   boolean plugin setting from an admin-only interaction.
 
-See the [Inshopa 0.8.0 package](../examples/plugins/inshopa.storefront.0.8.0.bottogram-plugin.json)
+See the [Inshopa 0.8.1 package](../examples/plugins/inshopa.storefront.0.8.1.bottogram-plugin.json)
 for complete declarations, including a Telegram deep link generated from the
 bot's username and a same-origin Mini App button with a bound path segment.
 

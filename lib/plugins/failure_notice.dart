@@ -39,6 +39,10 @@ class PluginFailureNotice extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(failure.message),
+        if (failure.destination case final String destination) ...[
+          const SizedBox(height: 8),
+          Text('Telegram chat $destination'),
+        ],
         if (failure.help != null) ...[
           const SizedBox(height: 8),
           Text(failure.help!),

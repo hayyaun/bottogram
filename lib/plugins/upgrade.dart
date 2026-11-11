@@ -161,7 +161,8 @@ Map<String, String> _fieldAliases(
   if (before.entries.any(
         (entry) =>
             after.containsKey(entry.key) &&
-            canonicalJson(entry.value) != canonicalJson(after[entry.key]),
+            canonicalJson(entry.value) != canonicalJson(after[entry.key]) &&
+            !_widensDestination(current, target, entry.key),
       ) ||
       target.fields
           .where((field) => !before.containsKey(field.key))
@@ -251,6 +252,23 @@ Json _configWithAliases(
   return rewrite(component.config) as Json;
 }
 
+bool _widensDestination(
+  PluginManifest current,
+  PluginManifest target,
+  String key,
+) {
+  if (!current.destinationFields.contains(key) ||
+      !target.destinationFields.contains(key)) {
+    return false;
+  }
+  final before = current.fields.firstWhere((field) => field.key == key);
+  final after = target.fields.firstWhere((field) => field.key == key);
+  return before.type == PluginFieldType.integer &&
+      after.type == PluginFieldType.telegramChats &&
+      !after.required &&
+      after.chatTypes.contains('channel');
+}
+
 Map<String, dynamic> _fieldSchema(PluginManifest manifest) => {
   for (final f in manifest.fields)
     f.key: {
@@ -259,6 +277,7 @@ Map<String, dynamic> _fieldSchema(PluginManifest manifest) => {
       'default': f.defaultValue,
       'min': f.min,
       'max': f.max,
+      'chatTypes': f.chatTypes.toList()..sort(),
     },
 };
 

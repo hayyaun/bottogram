@@ -7,6 +7,7 @@ import 'setting.dart';
 import '../runtime/registry.dart';
 import '../runtime/ports.dart' show Json;
 import '../runtime/telegram_config.dart';
+import '../runtime/telegram_destinations.dart';
 import '../runtime/telegram_interaction.dart';
 import '../runtime/telegram_presentation.dart';
 import '../runtime/http_headers.dart';
@@ -21,7 +22,7 @@ class PluginException implements Exception {
   String toString() => message;
 }
 
-enum PluginFieldType { text, secret, integer }
+enum PluginFieldType { text, secret, integer, telegramChats }
 
 class PluginField {
   const PluginField({
@@ -33,6 +34,7 @@ class PluginField {
     this.defaultValue,
     this.min,
     this.max,
+    this.chatTypes = const {},
   });
 
   final String key;
@@ -43,10 +45,15 @@ class PluginField {
   final String? defaultValue;
   final int? min;
   final int? max;
+  final Set<String> chatTypes;
 
   String? validate(String value) {
     if (value.trim().isEmpty) return required ? '$label is required.' : null;
     if (value.length > 4096) return '$label is too long.';
+    if (type == PluginFieldType.telegramChats &&
+        parseTelegramDestinations(value) == null) {
+      return 'Enter up to $maxTelegramDestinations negative numeric Telegram chat IDs, separated by commas or line breaks.';
+    }
     if (type == PluginFieldType.integer) {
       final number = int.tryParse(value.trim());
       if (number == null) return 'Enter a whole number.';
@@ -233,6 +240,7 @@ class PluginManifest {
         'default',
         'min',
         'max',
+        'chatTypes',
       });
       final key = text(field['key'], 'field key', 64);
       if (!RegExp(r'^[a-zA-Z][a-zA-Z0-9_]*$').hasMatch(key) ||
@@ -248,6 +256,22 @@ class PluginManifest {
       if (type == null || field['required'] is! bool) {
         reject('Invalid setup field type or required flag.');
       }
+      final rawChatTypes = field['chatTypes'];
+      var chatTypes = const <String>{};
+      if (type == PluginFieldType.telegramChats) {
+        if (!live ||
+            rawChatTypes is! List ||
+            rawChatTypes.isEmpty ||
+            rawChatTypes.toSet().length != rawChatTypes.length ||
+            !rawChatTypes.every(telegramDestinationChatTypes.contains)) {
+          reject(
+            'Telegram destination fields require supported, unique chat types.',
+          );
+        }
+        chatTypes = Set.unmodifiable((rawChatTypes as List).cast<String>());
+      } else if (rawChatTypes != null) {
+        reject('Only Telegram destination fields can declare chat types.');
+      }
       final min = field['min'];
       final max = field['max'];
       if ((min != null && min is! int) ||
@@ -259,6 +283,7 @@ class PluginManifest {
       final defaultValue = field['default'];
       if (defaultValue != null &&
           (type == PluginFieldType.secret ||
+              type == PluginFieldType.telegramChats ||
               (defaultValue is! String && defaultValue is! int))) {
         reject(
           'Secret fields cannot include defaults; other defaults must be text or integers.',
@@ -275,6 +300,7 @@ class PluginManifest {
         defaultValue: defaultValue?.toString(),
         min: min as int?,
         max: max as int?,
+        chatTypes: chatTypes,
       );
       if (parsed.defaultValue != null &&
           parsed.validate(parsed.defaultValue!) != null) {
@@ -367,13 +393,14 @@ class PluginManifest {
         bool channelFieldExists(Object? key) => fields.any(
           (f) =>
               f.key == key &&
-              f.type == PluginFieldType.integer &&
-              !f.required &&
-              f.defaultValue == null &&
-              f.min != null &&
-              f.min! >= -4503599627370495 &&
-              f.max != null &&
-              f.max! <= -1,
+              (f.type == PluginFieldType.telegramChats ||
+                  f.type == PluginFieldType.integer &&
+                      !f.required &&
+                      f.defaultValue == null &&
+                      f.min != null &&
+                      f.min! >= -4503599627370495 &&
+                      f.max != null &&
+                      f.max! <= -1),
         );
         for (final automation in automations) {
           if (automation.enabledBySetting != null &&
@@ -396,7 +423,7 @@ class PluginManifest {
               if (c['channelField'] != null &&
                   !channelFieldExists(c['channelField'])) {
                 reject(
-                  'Channel destinations require an optional negative integer field.',
+                  'Telegram delivery requires a chat list or an optional negative channel ID field.',
                 );
               }
               if (c['setting'] != null &&
@@ -443,6 +470,7 @@ class PluginManifest {
                   (f) =>
                       f.key == binding.field &&
                       f.type != PluginFieldType.secret &&
+                      f.type != PluginFieldType.telegramChats &&
                       (binding.transform == 'value' ||
                           f.type == PluginFieldType.text) &&
                       f.required,

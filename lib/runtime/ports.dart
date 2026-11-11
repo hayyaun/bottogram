@@ -47,7 +47,11 @@ abstract interface class TelegramPort {
 abstract interface class TelegramInteractions {
   String get username;
   void interaction(String kind, void Function(Json event) receive);
-  Future<bool> canPost(String chatId);
+  Future<bool> canPost(
+    String chatId, {
+    Set<String> chatTypes = const {'channel'},
+    bool photo = true,
+  });
   Future<void> photo(
     String chatId,
     Uint8List bytes,
@@ -81,6 +85,7 @@ class RuntimeContext {
     required this.fields,
     required this.adminId,
     this.settings = const {},
+    this.destinationChatTypes = const {},
   });
   final JsonTransport http;
   final TelegramPort telegram;
@@ -88,6 +93,7 @@ class RuntimeContext {
   final Map<String, String> fields;
   final String adminId;
   final Map<String, Object> settings;
+  final Map<String, Set<String>> destinationChatTypes;
   final lastResponses = <String, Json>{};
 
   TelegramInteractions get interactions => telegram as TelegramInteractions;

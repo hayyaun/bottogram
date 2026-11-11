@@ -27,6 +27,10 @@ class AutomationRunner {
   final void Function(String? error) onStatus;
   final Json? errorMessages;
   final String? channelId;
+
+  Set<String> get _chatTypes =>
+      context.destinationChatTypes[definition.destinationField] ??
+      const {'channel'};
   final void Function(FailurePresentation? failure)? onFailure;
   final AutomationRegistry registry;
   AutomationTrigger? _trigger;
@@ -131,9 +135,13 @@ class AutomationRunner {
           if (channelId != null && !channelChecked) {
             failureMapping = definition.actions.last.errorMap;
             executingComponent = true;
-            if (!await context.interactions.canPost(channelId!)) {
+            if (!await context.interactions.canPost(
+              channelId!,
+              chatTypes: _chatTypes,
+              photo: definition.actions.last.config['photo'] != null,
+            )) {
               throw const RuntimeFailure(
-                'The bot cannot post to the configured Telegram channel.',
+                'The bot cannot post to the configured Telegram chat.',
                 code: 'telegram.channel_unavailable',
                 retryAfter: Duration(seconds: 60),
               );
@@ -185,7 +193,9 @@ class AutomationRunner {
           var deferred = false;
           while ((pending['index'] as int) < events.length && !_stopped) {
             final index = pending['index'] as int;
-            var event = events[index];
+            var event = channelId == null
+                ? events[index]
+                : {...events[index], 'destinationChatId': channelId};
             final receiptKey =
                 '$key:delivered:${sha256.convert(utf8.encode(event['id'] as String))}';
             final seen = durable
@@ -329,6 +339,7 @@ class AutomationRunner {
       error,
       errorMessages ?? const {},
       mapping,
+      destination: channelId,
     );
     onStatus(presentation.message);
     onFailure?.call(presentation);

@@ -115,7 +115,7 @@ class PluginCapabilityReview extends StatelessWidget {
         Text(automationSummary(automation)),
         if (automation.destinationField case final String field)
           Text(
-            'Posts to channel: ${_fieldLabel(field)}'
+            'Posts to Telegram chats: ${_fieldLabel(field)}'
             '${fields?[field]?.trim().isNotEmpty == true ? ' → ${fields![field]}' : ' (optional)'}',
           ),
         if (automation.enabledBySetting != null)

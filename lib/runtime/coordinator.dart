@@ -9,6 +9,7 @@ import 'ports.dart';
 import 'progress_store.dart';
 import 'telegram_port.dart';
 import 'telegram_interaction.dart';
+import 'telegram_destinations.dart';
 import 'failure_presentation.dart';
 
 /// Lifecycle operations serialize; long-running automations never occupy this
@@ -119,6 +120,10 @@ class BotRuntime extends ChangeNotifier {
           fields: setup.values,
           adminId: setup.adminTelegramUserId,
           settings: settings,
+          destinationChatTypes: {
+            for (final field in manifest.fields)
+              if (field.chatTypes.isNotEmpty) field.key: field.chatTypes,
+          },
         );
         final runners = _runners[bot] = [];
         for (final definition in manifest.automations) {
@@ -127,10 +132,10 @@ class BotRuntime extends ChangeNotifier {
             continue;
           }
           final field = definition.destinationField;
-          final channel = field == null
-              ? null
-              : int.tryParse(setup.values[field]?.trim() ?? '');
-          if (field != null && channel == null) continue;
+          final destinations = field == null
+              ? const <String?>[null]
+              : parseTelegramDestinations(setup.values[field] ?? '') ??
+                    const [];
           final trigger = definition.trigger;
           if (trigger.type == interactionTrigger &&
               interactionRoutes(
@@ -140,37 +145,43 @@ class BotRuntime extends ChangeNotifier {
           }
           final namespace =
               '${setup.instanceId}:${manifest.digest}:${definition.id}';
-          final runner = AutomationRunner(
-            definition: definition,
-            context: context,
-            store: progress,
-            key: channel == null ? namespace : '$namespace:channel:$channel',
-            channelId: channel?.toString(),
-            errorMessages: manifest.errorMessages,
-            onFailure: (failure) {
-              if (_closed || !_bots.contains(bot)) return;
-              if (failure == null) {
-                _failureDetails[bot]?.remove(definition.id);
-              } else {
-                _failureDetails.putIfAbsent(bot, () => {})[definition.id] =
-                    failure;
-              }
-              notifyListeners();
-            },
-            onStatus: (error) {
-              if (_closed || !_bots.contains(bot)) return;
-              if (error == null) {
-                _errors[bot]?.remove(definition.id);
-              } else {
-                _errors[bot]?[definition.id] = error;
-              }
-              bot.runtimeError = errorFor(bot);
-              notifyListeners();
-            },
-          );
-          runners.add(runner);
-          // Registers command handlers synchronously before Telegram polling.
-          unawaited(runner.start());
+          for (final destination in destinations) {
+            final key = destination == null
+                ? definition.id
+                : '${definition.id}:$destination';
+            final runner = AutomationRunner(
+              definition: definition,
+              context: context,
+              store: progress,
+              key: destination == null
+                  ? namespace
+                  : '$namespace:channel:$destination',
+              channelId: destination,
+              errorMessages: manifest.errorMessages,
+              onFailure: (failure) {
+                if (_closed || !_bots.contains(bot)) return;
+                if (failure == null) {
+                  _failureDetails[bot]?.remove(key);
+                } else {
+                  _failureDetails.putIfAbsent(bot, () => {})[key] = failure;
+                }
+                notifyListeners();
+              },
+              onStatus: (error) {
+                if (_closed || !_bots.contains(bot)) return;
+                if (error == null) {
+                  _errors[bot]?.remove(key);
+                } else {
+                  _errors[bot]?[key] = error;
+                }
+                bot.runtimeError = errorFor(bot);
+                notifyListeners();
+              },
+            );
+            runners.add(runner);
+            // Registers command handlers synchronously before Telegram polling.
+            unawaited(runner.start());
+          }
         }
       }
       bot.pluginWidgetQueries = acceptsWidgets;

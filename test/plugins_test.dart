@@ -812,12 +812,12 @@ void main() {
       });
       expect(
         bundled.installed.map((p) => p.version),
-        unorderedEquals(['0.7.1', '0.8.0']),
+        unorderedEquals(['0.7.1', '0.8.0', '0.8.1']),
       );
       expect(bundled.installed.every((p) => p.executable), isTrue);
       final reopened = PluginRepository(vault: vault);
       await reopened.ready;
-      expect(reopened.installed, hasLength(2));
+      expect(reopened.installed, hasLength(3));
       for (final plugin in reopened.installed) {
         await reopened.uninstall(plugin.storageKey);
       }
@@ -847,7 +847,7 @@ void main() {
       await repository.install(local);
       final bundled = PluginRepository(vault: vault);
       await bundled.ready;
-      expect(bundled.installed, hasLength(3));
+      expect(bundled.installed, hasLength(4));
       expect(
         bundled.installed.map((p) => p.digest),
         containsAll([old.digest, local.digest]),

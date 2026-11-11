@@ -9,6 +9,7 @@ class FailurePresentation {
     this.help,
     this.action,
     this.hostNotice,
+    this.destination,
   });
 
   final String code;
@@ -17,6 +18,7 @@ class FailurePresentation {
   final String? help;
   final String? action;
   final String? hostNotice;
+  final String? destination;
 }
 
 final _resourceId = RegExp(r'^[a-zA-Z][a-zA-Z0-9_.-]{0,63}$');
@@ -88,8 +90,9 @@ Map<String, String> validateErrorMap(dynamic raw) {
 FailurePresentation renderFailure(
   RuntimeFailure error,
   Json catalog,
-  Map<String, String> mapping,
-) {
+  Map<String, String> mapping, {
+  String? destination,
+}) {
   final notice = error.code == 'telegram.delivery_unconfirmed'
       ? 'Telegram may already have delivered this message. Retrying can send it again.'
       : null;
@@ -102,6 +105,7 @@ FailurePresentation renderFailure(
       help: resource['help'] as String?,
       action: resource['action'] as String?,
       hostNotice: notice,
+      destination: destination,
     );
   }
   return FailurePresentation(
@@ -109,5 +113,6 @@ FailurePresentation renderFailure(
     title: 'Automation issue',
     message: error.message,
     hostNotice: notice,
+    destination: destination,
   );
 }

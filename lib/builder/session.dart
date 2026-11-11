@@ -34,7 +34,8 @@ class BuilderSession {
       .toList();
   Future<void> receive(VirtEvent event, Context context) async {
     final message = context.message ?? context.callbackQuery?.message;
-    final from = context.from;
+    final widget = context.widgetQuery;
+    final from = widget?.from ?? context.from;
     final text = message is Message
         ? message.text ?? message.caption ?? ''
         : '';
@@ -44,7 +45,7 @@ class BuilderSession {
     final input = event.config.containsKey('match')
         ? BuilderEventMatch.remainder(
                 event.type == VirtEventType.callbackQuery
-                    ? context.callbackQuery?.data ?? ''
+                    ? widget?.data ?? context.callbackQuery?.data ?? ''
                     : event.type == VirtEventType.inlineQuery
                     ? context.inlineQuery?.query ?? ''
                     : text,
@@ -63,10 +64,11 @@ class BuilderSession {
       'firstName': from?.firstName ?? '',
       'lastName': from?.lastName ?? '',
       'username': from?.username ?? '',
-      'chatId': message?.chat.id,
-      'messageId': message?.messageId,
+      'chatId': widget?.chat?.id ?? message?.chat.id,
+      'messageId': widget?.messageId ?? message?.messageId,
+      'widgetQueryId': widget?.id,
       'callbackId': context.callbackQuery?.id,
-      'callbackData': context.callbackQuery?.data,
+      'callbackData': widget?.data ?? context.callbackQuery?.data,
       'input': input,
       'inputParts': BuilderEventMatch.splitInput(
         input,
@@ -90,6 +92,51 @@ class BuilderSession {
         /* An expired click has already been reported by its action. */
       }
     }
+  }
+
+  bool registerWidgetQueries(Bot bot, Iterable<VirtEvent> events) {
+    final handlers = events
+        .where(
+          (event) =>
+              event.type == VirtEventType.callbackQuery &&
+              event.config['widgetQueries'] == true,
+        )
+        .toList();
+    if (handlers.isEmpty) return false;
+    bot.onWidgetQuery((context) async {
+      final query = context.widgetQuery!;
+      final type = query.type;
+      // Only original, non-shared widgets in the sender's private chat.
+      if (query.chat?.type == ChatType.private &&
+          query.chat?.id == query.from.id &&
+          query.messageId != null &&
+          query.widgetId == null &&
+          type is WidgetQueryTypeData &&
+          type.walletCard == null) {
+        final event = handlers
+            .where(
+              (event) =>
+                  BuilderEventMatch.remainder(
+                    query.data,
+                    event.query,
+                    event.config['match']?.toString() ?? 'exact',
+                  ) !=
+                  null,
+            )
+            .firstOrNull;
+        if (event != null) {
+          await receive(event, context);
+          if (telegram.takeWidgetAnswer(query.id) || _closed) return;
+        }
+      }
+      if (_closed) return;
+      try {
+        await bot.api.answerWidgetQuery(query.id);
+      } catch (_) {
+        // An expired request must not stop the bot's polling session.
+      }
+    });
+    return true;
   }
 
   void startPolling(Iterable<VirtEvent> events) {

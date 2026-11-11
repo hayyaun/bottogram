@@ -117,6 +117,7 @@ void main() {
       );
       final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
       final calls = <(String, Map)>[];
+      var rejectWidget = false;
       final address = 'http://127.0.0.1:${server.port}';
       server.listen((request) async {
         request.response.headers.contentType = ContentType.json;
@@ -129,6 +130,18 @@ void main() {
         final raw = await utf8.decoder.bind(request).join();
         final body = raw.isEmpty ? <String, dynamic>{} : jsonDecode(raw) as Map;
         calls.add((method, body));
+        if (method == 'sendWidget' && rejectWidget) {
+          request.response.statusCode = 400;
+          request.response.write(
+            jsonEncode({
+              'ok': false,
+              'error_code': 400,
+              'description': 'Widget rejected',
+            }),
+          );
+          await request.response.close();
+          return;
+        }
         final dynamic result;
         if (method == 'getMe') {
           result = {
@@ -137,8 +150,12 @@ void main() {
             'first_name': 'Test',
             'username': 'test_bot',
           };
-        } else if (method == 'answerCallbackQuery' ||
-            method == 'answerInlineQuery') {
+        } else if ({
+          'answerCallbackQuery',
+          'answerInlineQuery',
+          'answerWidgetQuery',
+          'editMessageWidgetData',
+        }.contains(method)) {
           result = true;
         } else {
           result = message(
@@ -217,6 +234,21 @@ void main() {
           )..config = {'title': 'Greeting', 'output': 'result'},
         );
       inline.add(bot, execute: (ctx) => session.receive(inline, ctx));
+      final widgetButton =
+          VirtEvent(type: VirtEventType.callbackQuery, query: 'board:')
+            ..config = {
+              'match': 'prefix',
+              'widgetQueries': true,
+              'inputSeparator': ':',
+            }
+            ..acts.addAll([
+              VirtAct(type: VirtActType.callbackAnswer, text: 'Saved'),
+              VirtAct(type: VirtActType.editText, text: '')
+                ..config = {
+                  'widgetChatData': '{"page":"{{event.inputParts.1}}"}',
+                },
+            ]);
+      expect(session.registerWidgetQueries(bot, [widgetButton]), true);
       try {
         await bot.initialize();
         await bot.dispatch(
@@ -286,6 +318,60 @@ void main() {
               .single['input_message_content']['message_text'],
           'Hello Alex',
         );
+
+        final widgetArguments = {
+          'chatId': '1',
+          'text': 'Text board',
+          'widgetConfigured': true,
+          'widget': {
+            'html': '<p>Board</p>',
+            'caption': '/tasks_text',
+            'chatData': {'page': 1},
+            'allowQueries': true,
+          },
+        };
+        final sent = await session.telegram.execute('reply', widgetArguments);
+        expect(sent['widget'], true);
+        expect(calls.last.$1, 'sendWidget');
+        expect(calls.last.$2['allow_queries'], true);
+        expect(calls.last.$2['chat_data'], '{"page":1}');
+        expect(calls.last.$2['public_data'], isNull);
+
+        Update query(int updateId, int senderId) => Update.fromJson({
+          'update_id': updateId,
+          'widget_query': {
+            'id': 'widget-$updateId',
+            'from': {'id': senderId, 'is_bot': false, 'first_name': 'Alex'},
+            'chat': {'id': 1, 'type': 'private'},
+            'message_id': sent['messageId'],
+            'chat_instance': 'chat',
+            'type': {'type': 'data'},
+            'data': 'board:123:2',
+          },
+        });
+        await bot.dispatch(query(4, 1));
+        final widgetAnswer = calls[calls.length - 2];
+        expect(widgetAnswer.$1, 'answerWidgetQuery');
+        expect(widgetAnswer.$2, {
+          'widget_query_id': 'widget-4',
+          'data': 'Saved',
+        });
+        expect(calls.last.$1, 'editMessageWidgetData');
+        expect(calls.last.$2['message_id'], sent['messageId']);
+        expect(calls.last.$2['chat_data'], '{"page":"2"}');
+        await bot.dispatch(query(5, 2));
+        expect(
+          calls.where((call) => call.$1 == 'editMessageWidgetData'),
+          hasLength(1),
+        );
+        expect(calls.last.$1, 'answerWidgetQuery');
+
+        rejectWidget = true;
+        await expectLater(
+          session.telegram.execute('reply', widgetArguments),
+          throwsA(isA<TeleverseException>()),
+        );
+        expect(calls.last.$1, 'sendWidget');
       } finally {
         await session.close();
         bot.api.closeClient();

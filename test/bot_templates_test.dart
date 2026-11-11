@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:bottogram/builder/console.dart';
 import 'package:bottogram/builder/database.dart';
@@ -19,6 +20,7 @@ import 'plugins_test.dart' show MemoryVault;
 class TemplateTelegram implements BuilderTelegram {
   final calls = <BuilderJson>[];
   bool failEdit = false;
+  bool failWidgetSend = false;
   @override
   Future<BuilderJson> execute(String kind, BuilderJson args) async {
     expect((args['text'] as String).length, lessThanOrEqualTo(4096));
@@ -37,8 +39,30 @@ class TemplateTelegram implements BuilderTelegram {
     final messageId = kind == 'editText'
         ? int.parse(args['messageId'].toString())
         : calls.length + 1;
-    calls.add({'kind': kind, ...args, 'resultMessageId': messageId});
-    return {'ok': true, 'messageId': messageId, 'chatId': args['chatId']};
+    final widget = args['widget'] is Map;
+    if (widget && kind == 'reply' && failWidgetSend) {
+      throw StateError('Widget send unavailable');
+    }
+    if (widget) {
+      final state = args['widget']['chatData'];
+      expect(
+        utf8.encode(state is String ? state : jsonEncode(state)).length,
+        lessThanOrEqualTo(1024),
+      );
+    }
+    calls.add({
+      'kind': kind,
+      ...args,
+      'resultMessageId': messageId,
+      'resultWidget': widget,
+    });
+    return {
+      'ok': true,
+      'messageId': messageId,
+      'chatId': args['chatId'],
+      if (args['widgetConfigured'] == true || args['widget'] is Map)
+        'widget': widget,
+    };
   }
 }
 
@@ -323,7 +347,7 @@ void main() {
       'task board edits in place, uses scoped controls and rejects stale taps',
       () async {
         final h = await create('tasks');
-        await h.command('start');
+        await h.command('tasks_text');
         final firstMessage = h.panel()['resultMessageId'];
         expect(h.panel()['text'], contains('No open tasks'));
         expect(h.controls().map((b) => b['text']), isNot(contains('Next ›')));
@@ -341,7 +365,7 @@ void main() {
         ]);
 
         final oldCompletion = h.control('Complete', task: 'Buy milk');
-        await h.command('start', user: 2);
+        await h.command('tasks_text', user: 2);
         await h.click(oldCompletion, user: 2, messageId: firstMessage);
         expect((await h.query('SELECT done FROM tasks')).single['done'], 0);
         await h.click(oldCompletion);
@@ -387,6 +411,7 @@ void main() {
       'task paging uses only valid destinations and quick add preserves titles',
       () async {
         final h = await create('tasks');
+        await h.command('tasks_text');
         await h.command('add');
         expect(h.panel()['text'], contains('Add a task'));
         await h.tap('Cancel');
@@ -440,6 +465,56 @@ void main() {
           ),
           isEmpty,
         );
+      },
+    );
+    nativeFlowTest(
+      'task widget updates private chat data and remembers the text-board choice',
+      () async {
+        final h = await create('tasks');
+        await h.command('start');
+        expect(h.panel()['resultWidget'], true);
+        expect(h.panel()['widget']['allowQueries'], true);
+        expect(h.panel()['widget']['caption'], contains('/tasks_text'));
+        final widgetMessage = h.panel()['resultMessageId'];
+        Map data() {
+          final state = h.panel()['widget']['chatData'];
+          return (state is String ? jsonDecode(state) : state) as Map;
+        }
+
+        String request(String operation, [Object? argument]) => [
+          'task',
+          operation,
+          data()['r'],
+          if (argument != null) argument,
+        ].join(':');
+        await h.click(request('add'));
+        expect(data()['v'], 'add');
+        await h.text('Pay the electric bill');
+        final items = data()['l'] as List;
+        expect(items.single[1], 'Pay the electric bill');
+        final oldRequest = request('complete', items.single[0]);
+        await h.click(oldRequest);
+        expect(data()['d'], 1);
+        expect(h.panel()['resultMessageId'], widgetMessage);
+        await h.click(oldRequest);
+        expect(h.messages.last, contains('This view has changed'));
+        expect(data()['d'], 1);
+
+        await h.command('tasks_text');
+        expect(h.panel()['resultWidget'], false);
+        await h.command('add', arguments: 'Buy coffee');
+        expect(h.panel()['resultWidget'], false);
+        await h.command('tasks_widget');
+        expect(h.panel()['resultWidget'], true);
+        expect((data()['l'] as List).single[1], 'Buy coffee');
+
+        h.telegram.failWidgetSend = true;
+        await h.send(VirtEventType.command, 'tasks', allowErrors: true);
+        expect(h.messages.last, contains('/tasks_text'));
+        h.console.clear(h.id);
+        await h.command('tasks_text');
+        expect(h.panel()['resultWidget'], false);
+        expect(h.panel()['text'], contains('Buy coffee'));
       },
     );
     nativeFlowTest(

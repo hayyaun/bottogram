@@ -68,6 +68,9 @@ class _ActPageState extends State<ActPage> {
       );
       if (act.type == VirtActType.renderList) {
         _references.add('steps.$name.keyboard');
+        if (act.config['itemData']?.toString().trim().isNotEmpty == true) {
+          _references.add('steps.$name.items');
+        }
         if (act.config['richLayout'] is Map) {
           _references.add('steps.$name.rich');
         }

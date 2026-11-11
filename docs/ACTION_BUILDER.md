@@ -136,6 +136,25 @@ shows a Next button only when the page result has a next page.
 ]]
 ```
 
+### Telegram widgets
+
+Under **Telegram widget** in **Send text**, supply self-contained HTML and
+optional JSON chat data. The HTML is fixed when sent. Widget chat data is
+limited to 1024 UTF-8 bytes and is visible only in the chat where the widget
+was sent. Set a caption so older clients can show how to reach the text view.
+To reuse a list as widget data, set **Data for each item** in **Render list**
+and bind its `items` output into the widget's JSON.
+
+Enable **Allow widget requests** on the message and **Accept widget requests**
+on a matching callback event. Call `TelegramWidget.request(data)` in a widget
+button's click handler. The same **Answer button click** action sends the
+widget's answer. Use **Edit message text** with new widget chat data to update
+the widget. The widget can redraw on `chatDataChanged`.
+
+The builder accepts widget requests from original widgets in private chats.
+Use the Telegram widget profile to check supported HTML, CSS, and JavaScript.
+[Telegram Widgets](https://core.telegram.org/bots/widgets)
+
 ## Variables, conditions and SQL
 
 Declare text, number or boolean variables under **Variables and API credentials**.

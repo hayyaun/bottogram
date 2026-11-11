@@ -1,4 +1,7 @@
+import 'dart:convert';
+
 import 'program.dart';
+import 'task_widget.dart';
 
 const _revision = '{{event.updateId}}';
 const _buttonValue = '{{event.inputParts.1}}';
@@ -25,6 +28,8 @@ BotTemplateDraft buildTasks(
       variable('tab', 0),
       variable('page', 0),
       variable('panelMessage', 0),
+      variable('panelWidget', false),
+      variable('textBoard', false),
       variable('panelRevision', 0),
       variable('inputMode', 'browse'),
       variable('renameTask', 0),
@@ -77,10 +82,30 @@ BotTemplateDraft buildTasks(
       prefix: true,
       inputSeparator: ':',
     );
+    program.events.last.config['widgetQueries'] = true;
   }
 
-  Acts publish(VirtAct message, {bool fresh = false, String mode = 'browse'}) {
+  Map<String, dynamic> widgetCondition(bool fresh) => fresh
+      ? when('{{user.textBoard}}', false)
+      : when('{{user.panelWidget}}', true);
+
+  Acts publish(
+    VirtAct message,
+    Object widgetState, {
+    bool fresh = false,
+    String mode = 'browse',
+  }) {
     final output = message.config['output'];
+    message.config.addAll({
+      'widgetChatData': jsonEncode(widgetState),
+      'widgetWhen': widgetCondition(fresh),
+      if (fresh) ...{
+        'widgetHtml': taskBoardWidget,
+        'widgetCaption': 'Task board · For the text version, send /tasks_text.',
+        'widgetQueries': true,
+        'onError': 'continue',
+      },
+    });
     if (!fresh) {
       message
         ..type = VirtActType.editText
@@ -89,15 +114,18 @@ BotTemplateDraft buildTasks(
     }
     return [
       message,
-      if (!fresh) ...[
-        say(
-          'recover_board',
-          'The board could not refresh. Open /tasks to see your current list.',
-          only: when('{{steps.$output.ok}}', false),
-        ),
-        check('updated_board', '{{steps.$output.ok}}', true),
+      say(
+        'recover_$output',
+        fresh
+            ? 'Could not open the board. Send /tasks_text to open the text version.'
+            : 'The board could not refresh. Open /tasks or /tasks_text to see your current list.',
+        only: when('{{steps.$output.ok}}', false),
+      ),
+      check('updated_$output', '{{steps.$output.ok}}', true),
+      if (fresh) ...[
+        setValue('panelMessage', '{{steps.$output.messageId}}'),
+        setValue('panelWidget', '{{steps.$output.widget}}'),
       ],
-      if (fresh) setValue('panelMessage', '{{steps.$output.messageId}}'),
       setValue('panelRevision', _revision),
       setValue(
         'inputMode',
@@ -113,6 +141,7 @@ BotTemplateDraft buildTasks(
     List<List<Map<String, dynamic>>> controls, {
     bool fresh = false,
     String mode = 'browse',
+    required String widgetView,
     String? note,
     String output = 'panel',
   }) => publish(
@@ -126,6 +155,15 @@ BotTemplateDraft buildTasks(
       ],
       buttons: keyboard(controls),
     ),
+    {
+      'v': widgetView,
+      'r': _revision,
+      if (widgetView != 'add') ...{
+        'i': '{{steps.task.rows.0.widget_id}}',
+        'h': '{{steps.task.rows.0.widget_title}}',
+      },
+      if (widgetView == 'details') 'status': '{{steps.task.rows.0.status}}',
+    },
     fresh: fresh,
     mode: mode,
   );
@@ -152,16 +190,26 @@ SELECT *, page-1 AS previous, page+1 AS next,
        (CASE WHEN tab=1 THEN 'Completed tasks' ELSE 'Open tasks' END) ||
        (CASE WHEN pages>1 THEN ' · Page ' || (page+1) || ' of ' || pages ELSE '' END) AS view_label,
        CASE WHEN tab=1 THEN 'Completed tasks will appear here.'
-            ELSE 'No open tasks. Tap Add task or type /add followed by a task name.' END AS empty_text
+            ELSE 'No open tasks. Tap Add task or type /add followed by a task name.' END AS empty_text,
+       CASE WHEN length(CAST(json_quote(?) AS BLOB))<=80
+            THEN ? ELSE substr(?,1,12)||'…' END AS widget_title
 FROM position
 ''',
-      ['{{event.userId}}', '{{user.tab}}', '{{user.page}}'],
+      [
+        '{{event.userId}}',
+        '{{user.tab}}',
+        '{{user.page}}',
+        for (var i = 0; i < 3; i++) settings['title']!,
+      ],
     ),
     sql(
       'tasks',
       '''
 SELECT id,title,CASE WHEN done=1 THEN 'Reopen' ELSE 'Complete' END AS action,
-       CASE WHEN done=1 THEN 'reopen' ELSE 'complete' END AS callback
+       CASE WHEN done=1 THEN 'reopen' ELSE 'complete' END AS callback,
+       CAST(id AS TEXT) AS widget_id,
+       CASE WHEN length(CAST(json_quote(title) AS BLOB))<=120
+            THEN title ELSE substr(title,1,18)||'…' END AS widget_title
 FROM tasks WHERE user_id=? AND done=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)
 ''',
       ['{{event.userId}}', '{{user.tab}}', '{{steps.pages.rows.0.page}}'],
@@ -173,6 +221,7 @@ FROM tasks WHERE user_id=? AND done=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)
       header: '${settings['title']!}\n{{steps.pages.rows.0.view_label}}\n\n',
       empty: '{{steps.pages.rows.0.empty_text}}',
       groupItemButtons: true,
+      itemData: ['{{item.widget_id}}', '{{item.widget_title}}'],
       buttons: [
         control('{{item.action}}', '{{item.callback}}', value: '{{item.id}}'),
         control('Details', 'details', value: '{{item.id}}'),
@@ -209,7 +258,17 @@ FROM tasks WHERE user_id=? AND done=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)
         [control('+ Add task', 'add', style: 'primary')],
       ],
     ),
-    ...publish(sendList('board', output: 'panel'), fresh: fresh),
+    ...publish(sendList('board', output: 'panel'), {
+      'v': 'board',
+      'r': _revision,
+      'h': '{{steps.pages.rows.0.widget_title}}',
+      't': '{{user.tab}}',
+      'p': '{{steps.pages.rows.0.page}}',
+      'n': '{{steps.pages.rows.0.pages}}',
+      'a': '{{steps.pages.rows.0.open_count}}',
+      'd': '{{steps.pages.rows.0.done_count}}',
+      'l': '{{steps.board.items}}',
+    }, fresh: fresh),
   ];
 
   Acts openBoard() => [
@@ -226,6 +285,7 @@ FROM tasks WHERE user_id=? AND done=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)
     ],
     fresh: fresh,
     mode: 'add',
+    widgetView: 'add',
     output: fresh ? 'add_prompt' : 'panel',
   );
 
@@ -233,7 +293,9 @@ FROM tasks WHERE user_id=? AND done=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)
     sql(
       'task',
       '''
-SELECT coalesce(t.id,0) AS id, t.title,
+SELECT coalesce(t.id,0) AS id, t.title, CAST(t.id AS TEXT) AS widget_id,
+       CASE WHEN length(CAST(json_quote(t.title) AS BLOB))<=800
+            THEN t.title ELSE substr(t.title,1,120)||'…' END AS widget_title,
        CASE WHEN t.done=1 THEN 'Completed' ELSE 'Open' END AS status
 FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
 ''',
@@ -247,9 +309,13 @@ FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
     check('task_exists', _taskId, 0, 'greater'),
   ];
 
-  Acts saveTitle(String input, {bool fresh = false}) {
+  Acts saveTitle(
+    String input, {
+    bool fresh = false,
+    bool onlyWithArguments = false,
+  }) {
     final adding = fresh ? null : when('{{user.inputMode}}', 'add');
-    return [
+    final actions = <VirtAct>[
       sql(
         'title',
         'SELECT value, length(value) BETWEEN 1 AND 200 AS valid FROM (SELECT trim(?,char(9,10,11,12,13,32)) AS value)',
@@ -289,16 +355,36 @@ FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
       ),
       ...board(fresh: fresh),
     ];
+    if (onlyWithArguments) {
+      for (final action in actions) {
+        final condition = action.config['when'];
+        action.config['when'] = {
+          'all': [
+            when('{{event.argumentsText}}', '', 'notEquals'),
+            if (condition != null) condition,
+          ],
+        };
+      }
+    }
+    return actions;
   }
 
   program.command('start', openBoard());
   program.command('tasks', openBoard());
+  program.command('tasks_text', [setValue('textBoard', true), ...openBoard()]);
+  program.command('tasks_widget', [
+    setValue('textBoard', false),
+    ...openBoard(),
+  ]);
   program.command('cancel', openBoard());
   program.command('add', [
-    for (final action in addPrompt(fresh: true))
-      action..config['when'] = when('{{event.argumentsText}}', ''),
-    check('has_title', '{{event.argumentsText}}', '', 'notEquals'),
-    ...saveTitle('{{event.argumentsText}}', fresh: true),
+    ...saveTitle(
+      '{{event.argumentsText}}',
+      fresh: true,
+      onlyWithArguments: true,
+    ),
+    check('prompt_only', '{{event.argumentsText}}', ''),
+    ...addPrompt(fresh: true),
   ]);
 
   click('add', addPrompt());
@@ -330,7 +416,7 @@ FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
         control('Delete…', 'confirm', value: _taskId),
       ],
       [control('Back to tasks', 'back')],
-    ]),
+    ], widgetView: 'details'),
   ]);
   click('rename', [
     ...findTask(),
@@ -341,6 +427,7 @@ FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
         [control('Cancel', 'details', value: _taskId)],
       ],
       mode: 'rename',
+      widgetView: 'rename',
       note: 'Send the new name as your next message.',
     ),
     setValue('renameTask', _taskId),
@@ -352,7 +439,7 @@ FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
         control('Delete task', 'delete', value: _taskId, style: 'danger'),
         control('Cancel', 'details', value: _taskId),
       ],
-    ]),
+    ], widgetView: 'delete'),
   ]);
   click('delete', [
     sql('delete_task', 'DELETE FROM tasks WHERE user_id=? AND id=?', [
@@ -364,6 +451,7 @@ FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
   program.click('task:', [
     answer('old_button', 'Open /tasks to use the current task board.'),
   ], prefix: true);
+  program.events.last.config['widgetQueries'] = true;
   program.text([
     say(
       'task_hint',

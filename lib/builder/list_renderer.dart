@@ -13,6 +13,11 @@ abstract final class BuilderListRenderer {
       );
     }
     final rows = <List<Map<String, dynamic>>>[];
+    final itemData = config['itemData']?.toString().trim() ?? '';
+    final itemTemplate = itemData.isEmpty
+        ? null
+        : BuilderValues.decodeJson(itemData);
+    final projected = <Object?>[];
     final parts = <String>[];
     final layout = config['richLayout'];
     final itemBlocks = <Map<String, dynamic>>[];
@@ -37,6 +42,9 @@ abstract final class BuilderListRenderer {
         'item': item,
         'index': index + 1,
       };
+      if (itemTemplate != null) {
+        projected.add(BuilderValues.resolve(itemTemplate, local));
+      }
       final part = BuilderValues.text(step.text, local);
       parts.add(part);
       if (columns != null) {
@@ -92,7 +100,7 @@ abstract final class BuilderListRenderer {
         : parts.join(text('separator', '\n'));
     final result = '${text('header')}$body${text('footer')}';
     if (result.length > 4096 ||
-        utf8.encode(jsonEncode([rows, itemBlocks])).length > 65536) {
+        utf8.encode(jsonEncode([rows, itemBlocks, projected])).length > 65536) {
       throw const BuilderFailure(
         'Rendered content is too large. Use a smaller page.',
       );
@@ -124,6 +132,7 @@ abstract final class BuilderListRenderer {
       'ok': true,
       'text': result,
       'count': items.length,
+      if (itemTemplate != null) 'items': projected,
       'keyboard': {'inline_keyboard': richButtons ? [] : rows},
     };
   }

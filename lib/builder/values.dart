@@ -128,7 +128,21 @@ abstract final class BuilderValues {
     return value.split('').map((c) => specials.contains(c) ? '\\$c' : c).join();
   }
 
-  static bool matches(Map condition, Map<String, dynamic> values) {
+  static bool matches(Map condition, Map<String, dynamic> values) =>
+      _matches(condition, values, 0);
+
+  static bool _matches(Map condition, Map<String, dynamic> values, int depth) {
+    if (condition.containsKey('all')) {
+      final all = condition['all'];
+      if (depth >= 3 ||
+          all is! List ||
+          all.isEmpty ||
+          all.length > 8 ||
+          all.any((part) => part is! Map)) {
+        throw const BuilderFailure('Invalid group of action conditions.');
+      }
+      return all.every((part) => _matches(part as Map, values, depth + 1));
+    }
     var left = resolve(condition['left'] ?? '', values);
     var right = resolve(condition['right'] ?? '', values);
     if (left is num && right is String) right = num.tryParse(right) ?? right;

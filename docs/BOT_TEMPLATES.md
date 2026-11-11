@@ -36,10 +36,14 @@ Open the board with **/tasks**. Tap **Add task** and send a title, or use
 title. **Complete** moves it to Completed, where **Reopen** brings it back.
 Open **Details** to rename a task or confirm its deletion.
 
-The board updates in the same message when you tap a control. The list only shows
-navigation buttons for pages you can visit. If you deleted the board message or
-are looking at an older one, open a fresh board with **/tasks**. Existing bots
-created from the template keep their saved action definitions.
+The board uses a Telegram widget in private chats. It updates in the same
+message and shows navigation buttons only for pages you can visit. Send task
+titles in chat when the board asks for them.
+
+Send **/tasks_text** if your Telegram client cannot display the widget.
+Bottogram remembers that preference. Use **/tasks_widget** to switch back.
+If a board message was deleted, send **/tasks** to reopen it with your
+saved tasks. The widget is included when creating a new task-list bot.
 
 ## Setup and editing
 

@@ -33,6 +33,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   late bool _groupItemButtons =
       (widget.initial.config['richLayout'] as Map?)?['groupItemButtons'] ==
       true;
+  late bool _widgetQueries = widget.initial.config['widgetQueries'] == true;
   var _saving = false;
   String? _error;
   String get kind => widget.initial.kind;
@@ -95,6 +96,26 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
             content.isEmpty) {
           throw const BuilderFailure('A draft requires rich message content.');
         }
+        final data = value('widgetChatData').trim();
+        if (data.isNotEmpty) jsonDecode(data);
+        final html = value('widgetHtml');
+        if (kind == 'reply' &&
+            html.isNotEmpty &&
+            (utf8.encode(html).length > 32768 || html.codeUnits.contains(0))) {
+          throw const BuilderFailure(
+            'Widget HTML must fit in 32768 UTF-8 bytes.',
+          );
+        }
+        if (kind == 'reply' &&
+            html.trim().isNotEmpty &&
+            value('draftId').trim().isNotEmpty) {
+          throw const BuilderFailure(
+            'Choose either a widget or a rich message draft.',
+          );
+        }
+        if (kind == 'reply') {
+          config['widgetQueries'] = _widgetQueries;
+        }
       }
       if (kind == 'renderList') {
         final layout = Map<String, dynamic>.from(
@@ -111,6 +132,8 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         } else if (config['richLayout'] is Map) {
           config['richLayout'] = layout..remove('groupItemButtons');
         }
+        final itemData = value('itemData').trim();
+        if (itemData.isNotEmpty) jsonDecode(itemData);
         for (final key in ['buttons', 'footerButtons']) {
           if (jsonDecode(value(key).isEmpty ? '[]' : value(key)) is! List) {
             throw const BuilderFailure('List buttons must be JSON arrays.');
@@ -164,6 +187,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         'showAlert': _showAlert,
       });
       if (kind == 'condition' || _conditional) {
+        final original = config['when'];
         final condition = {
           'left': value('left'),
           'operator': _operator,
@@ -171,7 +195,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         };
         if (kind == 'condition') {
           config.addAll(condition);
-        } else {
+        } else if (original is! Map || original['all'] is! List) {
           config['when'] = condition;
         }
       } else {
@@ -287,6 +311,13 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                   fallback: '[]',
                   lines: 3,
                   help: 'Example: [[{"text":"Back","callback_data":"home"}]]',
+                ),
+                _input(
+                  'itemData',
+                  'Data for each item (optional JSON)',
+                  lines: 2,
+                  help:
+                      'Use bindings such as {{item.title}}. Read the array from this action’s items output.',
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
@@ -443,6 +474,45 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                           help:
                               'Private chat preview. Use {{event.updateId}}, then send the finished message in a later action.',
                         ),
+                    ],
+                  ),
+                if (kind == 'reply' || kind == 'editText')
+                  ExpansionTile(
+                    tilePadding: EdgeInsets.zero,
+                    title: const Text('Telegram widget'),
+                    initiallyExpanded:
+                        value('widgetHtml').isNotEmpty ||
+                        value('widgetChatData').isNotEmpty,
+                    children: [
+                      if (kind == 'reply') ...[
+                        _input(
+                          'widgetHtml',
+                          'Widget HTML',
+                          lines: 6,
+                          help:
+                              'Self-contained HTML for a private chat widget. Leave blank to send a normal message.',
+                        ),
+                        _input(
+                          'widgetCaption',
+                          'Widget caption',
+                          help:
+                              'Shown below the widget, including in clients that cannot display it.',
+                        ),
+                        SwitchListTile(
+                          contentPadding: EdgeInsets.zero,
+                          title: const Text('Allow widget requests'),
+                          value: _widgetQueries,
+                          onChanged: (value) =>
+                              setState(() => _widgetQueries = value),
+                        ),
+                      ],
+                      _input(
+                        'widgetChatData',
+                        'Widget chat data (JSON)',
+                        lines: 3,
+                        help:
+                            'Up to 1024 UTF-8 bytes. The widget reads it from TelegramWidget.chatData.',
+                      ),
                     ],
                   ),
                 if (kind == 'callbackAnswer') ...[

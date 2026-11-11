@@ -25,6 +25,7 @@ class _EventPageState extends State<EventPage> {
   late final ctrlInterval = TextEditingController(
     text: (widget.ev.config['intervalSeconds'] ?? 60).toString(),
   );
+  late bool _widgetQueries = widget.ev.config['widgetQueries'] == true;
   late final ctrlSeparator = TextEditingController(
     text: widget.ev.config['inputSeparator']?.toString() ?? '',
   );
@@ -199,6 +200,17 @@ class _EventPageState extends State<EventPage> {
                           ),
                         ),
                       ),
+                    if (widget.ev.type == VirtEventType.callbackQuery)
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: const Text('Accept widget requests'),
+                        subtitle: const Text(
+                          'Run these actions for matching widget buttons in private chats.',
+                        ),
+                        value: _widgetQueries,
+                        onChanged: (value) =>
+                            setState(() => _widgetQueries = value),
+                      ),
                     if (_match == 'prefix')
                       Padding(
                         padding: const EdgeInsets.only(bottom: 12),
@@ -256,6 +268,12 @@ class _EventPageState extends State<EventPage> {
                                   ctrlSeparator.text;
                             } else {
                               widget.ev.config.remove('inputSeparator');
+                            }
+                            if (_widgetQueries &&
+                                widget.ev.type == VirtEventType.callbackQuery) {
+                              widget.ev.config['widgetQueries'] = true;
+                            } else {
+                              widget.ev.config.remove('widgetQueries');
                             }
                             widget.ev.query = ctrlQuery.text;
                             try {

@@ -83,8 +83,10 @@ class VirtBot extends HiveObject {
     if (_active) await stop(); // stop before restart
     await bot.initialize().timeout(const Duration(seconds: 22));
     final generation = ++_runGeneration;
+    var acceptsWidgets = false;
     if (!pluginRuntime) {
       final session = _builder = BuilderSession(token, bot.api);
+      acceptsWidgets = session.registerWidgetQueries(bot, events);
       for (var ev in events) {
         ev.add(bot, execute: (context) => session.receive(ev, context));
       }
@@ -98,13 +100,24 @@ class VirtBot extends HiveObject {
     });
     // start() runs for the lifetime of polling; don't await that loop here.
     unawaited(
-      bot.start().then<void>(
-        (_) => _pollingEnded(generation),
-        onError: (Object error, StackTrace _) {
-          _pollingEnded(generation);
-          debugPrint('Bot could not start. Check its token and connection.');
-        },
-      ),
+      bot
+          .start(
+            acceptsWidgets
+                ? LongPollingFetcher(
+                    bot.api,
+                    config: const LongPollingConfig(allowedUpdates: []),
+                  )
+                : null,
+          )
+          .then<void>(
+            (_) => _pollingEnded(generation),
+            onError: (Object error, StackTrace _) {
+              _pollingEnded(generation);
+              debugPrint(
+                'Bot could not start. Check its token and connection.',
+              );
+            },
+          ),
     );
     _active = true;
     if (!pluginRuntime) _builder!.startPolling(events);

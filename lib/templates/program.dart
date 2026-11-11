@@ -93,8 +93,10 @@ VirtAct render(
   bool groupItemButtons = false,
   String? photoField,
   List<String> photoHosts = const [],
+  Object? itemData,
 }) => templateAction(VirtActType.renderList, row, name, {
   'items': items,
+  if (itemData != null) 'itemData': jsonEncode(itemData),
   'richLayout': {
     if (columns != null) 'columns': columns,
     if (rowBlocks != null) 'rowBlocks': rowBlocks,

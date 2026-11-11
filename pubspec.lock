@@ -783,10 +783,11 @@ packages:
   televerse:
     dependency: "direct main"
     description:
-      name: televerse
-      sha256: ac453a1ea8533797998613f83b952acc16cad5d3f9df462a7125c65a60e5ccfb
-      url: "https://pub.dev"
-    source: hosted
+      path: "."
+      ref: "09ea3ce96c99461007ba8d960ec09430c54e3358"
+      resolved-ref: "09ea3ce96c99461007ba8d960ec09430c54e3358"
+      url: "https://github.com/hayyaun/televerse.git"
+    source: git
     version: "3.7.0"
   term_glyph:
     dependency: transitive

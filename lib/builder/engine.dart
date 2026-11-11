@@ -302,6 +302,13 @@ class BuilderEngine {
     final event = values['event'] as BuilderJson;
     final richSource = config['richBlocks']?.toString().trim() ?? '';
     final draftId = field('draftId');
+    final widgetHtml = config['widgetHtml']?.toString().trim() ?? '';
+    final widgetData = config['widgetChatData']?.toString().trim() ?? '';
+    final widgetWhen = config['widgetWhen'];
+    final useWidget =
+        (step.kind == 'reply' && widgetHtml.isNotEmpty ||
+            step.kind == 'editText' && widgetData.isNotEmpty) &&
+        (widgetWhen is! Map || BuilderValues.matches(widgetWhen, values));
     final arguments = <String, dynamic>{
       if (richSource.isNotEmpty)
         'richBlocks': BuilderValues.json(richSource, values),
@@ -317,6 +324,17 @@ class BuilderEngine {
           ? event['inlineMessageId']
           : null,
       'callbackId': event['callbackId'],
+      'widgetQueryId': event['widgetQueryId'],
+      if (widgetHtml.isNotEmpty) 'widgetConfigured': true,
+      if (useWidget)
+        'widget': {
+          'html': widgetHtml,
+          'caption': field('widgetCaption'),
+          'chatData': widgetData.isEmpty
+              ? null
+              : BuilderValues.json(widgetData, values),
+          'allowQueries': config['widgetQueries'] == true,
+        },
       'inlineQueryId': event['inlineQueryId'],
       'media': field('media'),
       'title': field('title', 'Result'),

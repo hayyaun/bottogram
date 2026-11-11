@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:televerse/televerse.dart';
 import 'package:televerse/telegram.dart';
 import 'engine.dart';
@@ -10,6 +12,7 @@ class BuilderTelegramPort implements BuilderTelegram {
   final RawAPI api;
   final Set<String> _answeredCallbacks = {};
   bool takeCallbackAnswer(String id) => _answeredCallbacks.remove(id);
+  bool takeWidgetAnswer(String id) => _answeredCallbacks.remove('widget:$id');
   @override
   Future<BuilderJson> execute(String kind, BuilderJson arguments) async {
     String value(String key) => arguments[key]?.toString() ?? '';
@@ -88,6 +91,57 @@ class BuilderTelegramPort implements BuilderTelegram {
       return InputFile.fromFileId(source);
     }
 
+    final widget = arguments['widget'];
+    if (widget is Map) {
+      final target = int.tryParse(value('chatId'));
+      if (target == null || target < 1) {
+        throw const BuilderFailure('Widgets require a private chat.');
+      }
+      final data = widget['chatData'];
+      final chatData = data == null
+          ? null
+          : data is String
+          ? data
+          : jsonEncode(data);
+      if (chatData != null &&
+          (utf8.encode(chatData).length > 1024 ||
+              chatData.contains('\u0000'))) {
+        throw const BuilderFailure(
+          'Widget chat data must be at most 1024 UTF-8 bytes.',
+        );
+      }
+      if (kind == 'editText') {
+        return {
+          'ok': await api.editMessageWidgetData(
+            chatId: chat(),
+            messageId: message(),
+            chatData: chatData,
+          ),
+          'messageId': message(),
+          'widget': true,
+        };
+      }
+      final html = widget['html'] as String;
+      if (html.isEmpty ||
+          utf8.encode(html).length > 32768 ||
+          html.contains('\u0000')) {
+        throw const BuilderFailure('Widget HTML must be 1–32768 UTF-8 bytes.');
+      }
+      return {
+        ...sent(
+          await api.sendWidget(
+            chat(),
+            html,
+            chatData: chatData,
+            allowQueries: widget['allowQueries'] == true,
+            caption: widget['caption'] == ''
+                ? null
+                : widget['caption'] as String?,
+          ),
+        ),
+        'widget': true,
+      };
+    }
     final draftId = value('draftId');
     final richBlocks = arguments['richBlocks'];
     final rich = richBlocks == null
@@ -114,19 +168,18 @@ class BuilderTelegramPort implements BuilderTelegram {
     final text = value('text');
     switch (kind) {
       case 'reply':
-        if (rich != null) {
-          return sent(
-            await api.sendRichMessage(chat(), rich, replyMarkup: keyboard),
-          );
-        }
-        return sent(
-          await api.sendMessage(
-            chat(),
-            required('text'),
-            parseMode: parseMode,
-            replyMarkup: keyboard,
-          ),
-        );
+        final result = rich != null
+            ? await api.sendRichMessage(chat(), rich, replyMarkup: keyboard)
+            : await api.sendMessage(
+                chat(),
+                required('text'),
+                parseMode: parseMode,
+                replyMarkup: keyboard,
+              );
+        return {
+          ...sent(result),
+          if (arguments['widgetConfigured'] == true) 'widget': false,
+        };
       case 'dice':
         return sent(await api.sendDice(chat()));
       case 'editText':
@@ -169,6 +222,20 @@ class BuilderTelegramPort implements BuilderTelegram {
           ),
         );
       case 'callbackAnswer':
+        if (value('widgetQueryId').isNotEmpty) {
+          if (utf8.encode(text).length > 1024) {
+            throw const BuilderFailure(
+              'A widget answer is limited to 1024 UTF-8 bytes.',
+            );
+          }
+          final id = required('widgetQueryId');
+          final answered = await api.answerWidgetQuery(
+            id,
+            data: text.isEmpty ? null : text,
+          );
+          if (answered) _answeredCallbacks.add('widget:$id');
+          return {'ok': answered};
+        }
         if (text.length > 200) {
           throw const BuilderFailure(
             'A button notification is limited to 200 characters.',

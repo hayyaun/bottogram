@@ -62,8 +62,11 @@ Tap a bot card for its users and inbox; use its **Settings** gear for configurat
 
 Bots need a network connection and a running Bottogram process. Android's
 foreground service keeps bots running when the activity closes. Its ongoing
-notification shows active and total bots. After a device restart, force-stop,
-or process termination, reopen Bottogram to resume the bots you left enabled.
+notification shows active and total bots. Android 14 and later allow you to
+[dismiss this notification](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications).
+After a device restart, force-stop, or process termination, reopen Bottogram to
+resume the bots you left enabled. After upgrading from an earlier version, start
+each bot once to enable automatic resume. **Stop bots** clears that selection.
 Keep local data and exports private: they can contain bot tokens and conversations.
 
 ## Plugins

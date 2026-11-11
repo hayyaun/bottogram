@@ -153,7 +153,9 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
 
 On Android, the foreground notification shows active and total bots. Reopening
 Bottogram after a process kill or device restart resumes the bots left enabled.
-Use Stop bots to keep them stopped on the next launch.
+After upgrading, start each bot once to enable automatic resume. Use **Stop bots**
+to keep them stopped on the next launch. Android 14 and later let you
+[dismiss the ongoing notification](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications).
 
 Plugin bots can transfer their settings and credentials by QR code between
 devices with the exact plugin package installed. Treat the QR code as a

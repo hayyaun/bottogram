@@ -30,6 +30,9 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   final _form = GlobalKey<FormState>();
   late String _format, _method, _scope, _onError, _operator;
   late bool _showAlert, _conditional;
+  late bool _groupItemButtons =
+      (widget.initial.config['richLayout'] as Map?)?['groupItemButtons'] ==
+      true;
   var _saving = false;
   String? _error;
   String get kind => widget.initial.kind;
@@ -94,6 +97,20 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         }
       }
       if (kind == 'renderList') {
+        final layout = Map<String, dynamic>.from(
+          config['richLayout'] as Map? ?? {},
+        );
+        if (_groupItemButtons && layout['columns'] != null) {
+          throw const BuilderFailure(
+            'Buttons next to items require a list layout.',
+          );
+        }
+        if (_groupItemButtons) {
+          layout['groupItemButtons'] = true;
+          config['richLayout'] = layout;
+        } else if (config['richLayout'] is Map) {
+          config['richLayout'] = layout..remove('groupItemButtons');
+        }
         for (final key in ['buttons', 'footerButtons']) {
           if (jsonDecode(value(key).isEmpty ? '[]' : value(key)) is! List) {
             throw const BuilderFailure('List buttons must be JSON arrays.');
@@ -271,8 +288,18 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                   lines: 3,
                   help: 'Example: [[{"text":"Back","callback_data":"home"}]]',
                 ),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Place buttons next to each item'),
+                  subtitle: const Text(
+                    'Bind the rich output to the next message. Footer buttons stay below the message.',
+                  ),
+                  value: _groupItemButtons,
+                  onChanged: (value) =>
+                      setState(() => _groupItemButtons = value),
+                ),
                 const Text(
-                  'Outputs: text, keyboard and count. Send the text with plain formatting; bind keyboard to the next action’s keyboard output field.',
+                  'Bind text or rich content and the keyboard output to the next message action.',
                 ),
               ] else if (kind == 'sql') ...[
                 _input(

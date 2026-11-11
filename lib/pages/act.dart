@@ -46,6 +46,12 @@ class _ActPageState extends State<ActPage> {
   @override
   void initState() {
     super.initState();
+    if (widget.ev.type == VirtEventType.command) {
+      _references.add('event.argumentsText');
+    }
+    if (widget.ev.config['inputSeparator'] != null) {
+      _references.add('event.inputParts.0');
+    }
     for (final (index, act) in widget.ev.acts.indexed) {
       if (identical(act, widget.act)) break;
       final name = act.config['output'] ?? 'step${index + 1}';
@@ -62,6 +68,9 @@ class _ActPageState extends State<ActPage> {
       );
       if (act.type == VirtActType.renderList) {
         _references.add('steps.$name.keyboard');
+        if (act.config['richLayout'] is Map) {
+          _references.add('steps.$name.rich');
+        }
       }
     }
     _loadVariables();

@@ -65,6 +65,14 @@ abstract final class BuilderRichMessage {
       }
       return RichMessageButton(
         text: plain(value['text']),
+        style: switch (value['style']) {
+          null => null,
+          'primary' => StyleType.primary,
+          'success' => StyleType.success,
+          'danger' => StyleType.danger,
+          'link' when data != null => StyleType.link,
+          _ => throw const BuilderFailure('Invalid rich button style.'),
+        },
         url: link == null ? null : url(link).toString(),
         callbackData: data as String?,
       );

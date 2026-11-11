@@ -18,6 +18,18 @@ abstract final class BuilderListRenderer {
     final itemBlocks = <Map<String, dynamic>>[];
     final pictures = <String>[];
     final columns = layout is Map ? layout['columns'] as Map? : null;
+    final groupButtons = layout is Map && layout['groupItemButtons'] == true;
+    if (groupButtons && columns != null) {
+      throw const BuilderFailure(
+        'Buttons next to items require a list layout.',
+      );
+    }
+    final itemButtons = BuilderValues.decodeJson(
+      config['buttons']?.toString() ?? '[]',
+    );
+    final footerButtons = BuilderValues.decodeJson(
+      config['footerButtons']?.toString() ?? '[]',
+    );
     final cells = <List<dynamic>>[if (columns != null) columns.keys.toList()];
     for (final (index, item) in items.indexed) {
       final local = <String, dynamic>{
@@ -25,7 +37,8 @@ abstract final class BuilderListRenderer {
         'item': item,
         'index': index + 1,
       };
-      parts.add(BuilderValues.text(step.text, local));
+      final part = BuilderValues.text(step.text, local);
+      parts.add(part);
       if (columns != null) {
         cells.add([
           for (final source in columns.values)
@@ -38,6 +51,8 @@ abstract final class BuilderListRenderer {
           (BuilderValues.resolve(blocks, local) as List)
               .cast<Map<String, dynamic>>(),
         );
+      } else if (groupButtons) {
+        itemBlocks.add({'type': 'paragraph', 'text': part});
       }
       final hosts = layout is Map ? layout['photoHosts'] : null;
       if (layout is Map && item is Map && hosts is List) {
@@ -51,31 +66,24 @@ abstract final class BuilderListRenderer {
           pictures.add(uri.toString());
         }
       }
-      final buttons = BuilderValues.json(
-        config['buttons']?.toString() ?? '[]',
-        local,
-      );
-      if (buttons is! List || buttons.length > 8) {
-        throw const BuilderFailure(
-          'Each list item may have at most eight buttons.',
-        );
+      final buttons = _buttons(itemButtons, local);
+      if (buttons.isNotEmpty) {
+        if (groupButtons) {
+          itemBlocks.add({'type': 'buttons', 'buttons': buttons});
+        } else {
+          rows.add(buttons);
+        }
       }
-      if (buttons.isNotEmpty) rows.add(buttons.map(_button).toList());
     }
-    final footer = BuilderValues.json(
-      config['footerButtons']?.toString() ?? '[]',
-      values,
-    );
+    final footer = footerButtons is List
+        ? footerButtons
+        : BuilderValues.resolve(footerButtons, values);
     if (footer is! List || footer.length > 8) {
       throw const BuilderFailure('Use at most eight footer button rows.');
     }
     for (final row in footer) {
-      if (row is! List || row.isEmpty || row.length > 8) {
-        throw const BuilderFailure(
-          'Each footer row needs one to eight buttons.',
-        );
-      }
-      rows.add(row.map(_button).toList());
+      final buttons = _buttons(row, values, resolved: footerButtons is! List);
+      if (buttons.isNotEmpty) rows.add(buttons);
     }
     String text(String key, [String fallback = '']) =>
         BuilderValues.text(config[key]?.toString() ?? fallback, values);
@@ -83,7 +91,8 @@ abstract final class BuilderListRenderer {
         ? text('emptyText', 'No results yet.')
         : parts.join(text('separator', '\n'));
     final result = '${text('header')}$body${text('footer')}';
-    if (result.length > 4096 || utf8.encode(jsonEncode(rows)).length > 65536) {
+    if (result.length > 4096 ||
+        utf8.encode(jsonEncode([rows, itemBlocks])).length > 65536) {
       throw const BuilderFailure(
         'Rendered content is too large. Use a smaller page.',
       );
@@ -119,6 +128,39 @@ abstract final class BuilderListRenderer {
     };
   }
 
+  static List<Map<String, dynamic>> _buttons(
+    Object? source,
+    BuilderJson values, {
+    bool resolved = false,
+  }) {
+    final rawList = source is List || resolved
+        ? source
+        : BuilderValues.resolve(source, values);
+    if (rawList is! List || rawList.length > 8) {
+      throw const BuilderFailure(
+        'Each button row may contain up to eight buttons.',
+      );
+    }
+    final resolve = source is List && !resolved;
+    final buttons = <Map<String, dynamic>>[];
+    for (final raw in rawList) {
+      if (resolve && raw is Map && raw.containsKey('when')) {
+        final condition = raw['when'];
+        if (condition is! Map) {
+          throw const BuilderFailure('A button condition must be an object.');
+        }
+        if (!BuilderValues.matches(condition, values)) continue;
+        final button = Map.of(raw)..remove('when');
+        buttons.add(_button(BuilderValues.resolve(button, values)));
+      } else {
+        buttons.add(
+          _button(resolve ? BuilderValues.resolve(raw, values) : raw),
+        );
+      }
+    }
+    return buttons;
+  }
+
   static Map<String, dynamic> _button(dynamic input) {
     if (input is! Map ||
         input['text'] is! String ||
@@ -126,8 +168,16 @@ abstract final class BuilderListRenderer {
       throw const BuilderFailure('A rendered button needs a text label.');
     }
     final data = input['callback_data'], url = input['url'];
+    if (input.containsKey('style') &&
+        !{'primary', 'success', 'danger'}.contains(input['style'])) {
+      throw const BuilderFailure(
+        'Button style must be primary, success or danger.',
+      );
+    }
     if ((data == null) == (url == null) ||
-        input.keys.any((k) => !{'text', 'callback_data', 'url'}.contains(k))) {
+        input.keys.any(
+          (k) => !{'text', 'callback_data', 'url', 'style'}.contains(k),
+        )) {
       throw const BuilderFailure(
         'A rendered button needs either callback data or an HTTP(S) URL.',
       );

@@ -25,8 +25,13 @@ class _EventPageState extends State<EventPage> {
   late final ctrlInterval = TextEditingController(
     text: (widget.ev.config['intervalSeconds'] ?? 60).toString(),
   );
+  late final ctrlSeparator = TextEditingController(
+    text: widget.ev.config['inputSeparator']?.toString() ?? '',
+  );
+
   @override
   void dispose() {
+    ctrlSeparator.dispose();
     ctrlQuery.dispose();
     ctrlInterval.dispose();
     super.dispose();
@@ -194,6 +199,19 @@ class _EventPageState extends State<EventPage> {
                           ),
                         ),
                       ),
+                    if (_match == 'prefix')
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: TextField(
+                          controller: ctrlSeparator,
+                          maxLength: 8,
+                          decoration: const InputDecoration(
+                            labelText: 'Input separator (optional)',
+                            helperText:
+                                'Split the matching suffix into {{event.inputParts.0}}, .1, and so on.',
+                          ),
+                        ),
+                      ),
                     TextField(
                       controller: ctrlQuery,
                       decoration: InputDecoration(
@@ -231,6 +249,13 @@ class _EventPageState extends State<EventPage> {
                                 return;
                               }
                               widget.ev.config['intervalSeconds'] = seconds;
+                            }
+                            if (_match == 'prefix' &&
+                                ctrlSeparator.text.isNotEmpty) {
+                              widget.ev.config['inputSeparator'] =
+                                  ctrlSeparator.text;
+                            } else {
+                              widget.ev.config.remove('inputSeparator');
                             }
                             widget.ev.query = ctrlQuery.text;
                             try {

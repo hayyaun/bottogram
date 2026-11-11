@@ -38,7 +38,10 @@ An HTTP redirect is reported as a failure instead of following it.
 
 - `{{event.text}}`, `{{event.firstName}}`, `{{event.username}}`
 - `{{event.userId}}`, `{{event.chatId}}`, `{{event.messageId}}`
-- `{{event.arguments.0}}` for a command's first argument
+- `{{event.arguments.0}}` for a command's first argument and
+  `{{event.argumentsText}}` for the full text after the command
+- `{{event.inputParts.0}}` and `{{event.inputParts.1}}` for a matching suffix
+  split by the optional separator on a **Starts with** trigger
 - `{{event.callbackData}}` and `{{event.query}}`
 - `{{user.score}}` or `{{bot.total}}` for declared variables
 - `{{steps.lookup.body.items.0.price}}` for a JSON response field
@@ -109,6 +112,29 @@ For a temporary private chat preview, enter a **Draft ID** such as
 `{{event.updateId}}` and use a `thinking` block while waiting for real work.
 Repeated drafts with the same ID update the preview. A later Send action without
 a Draft ID posts the finished reply. Drafts expire and are not saved to the inbox.
+
+### Interactive lists
+
+In **Render list**, turn on **Place buttons next to each item** to show each
+item's controls next to its text in a rich message. Bind the renderer's
+`"{{steps.list.rich}}"` to **Rich blocks** and `{{steps.list.keyboard}}` to
+**Keyboard output reference** for the footer. Use **Edit message text** instead
+of sending another message when a callback should update the current view.
+
+Buttons in the per-item and footer arrays can include `style` with the value
+`primary`, `success` or `danger`, and a `when` condition with the same
+`left`, `operator` and `right` fields as an action condition. This example
+shows a Next button only when the page result has a next page.
+
+```json
+[[
+  {
+    "text": "Next",
+    "callback_data": "page:{{steps.page.rows.0.next}}",
+    "when": {"left": "{{steps.page.rows.0.hasNext}}", "operator": "equals", "right": 1}
+  }
+]]
+```
 
 ## Variables, conditions and SQL
 

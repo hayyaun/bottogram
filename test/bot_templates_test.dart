@@ -18,6 +18,7 @@ import 'plugins_test.dart' show MemoryVault;
 
 class TemplateTelegram implements BuilderTelegram {
   final calls = <BuilderJson>[];
+  bool failEdit = false;
   @override
   Future<BuilderJson> execute(String kind, BuilderJson args) async {
     expect((args['text'] as String).length, lessThanOrEqualTo(4096));
@@ -32,8 +33,12 @@ class TemplateTelegram implements BuilderTelegram {
         draft: args['draftId'] != null,
       );
     }
-    calls.add({'kind': kind, ...args});
-    return {'ok': true, 'messageId': calls.length, 'chatId': args['chatId']};
+    if (kind == 'editText' && failEdit) throw StateError('Board unavailable');
+    final messageId = kind == 'editText'
+        ? int.parse(args['messageId'].toString())
+        : calls.length + 1;
+    calls.add({'kind': kind, ...args, 'resultMessageId': messageId});
+    return {'ok': true, 'messageId': messageId, 'chatId': args['chatId']};
   }
 }
 
@@ -91,10 +96,44 @@ class TemplateHarness {
   final console = BuilderConsole();
   late final BuilderEngine engine;
   int tick = 0;
-  Future<void> command(String command, {int user = 1}) =>
-      send(VirtEventType.command, command, user: user);
-  Future<void> click(String data, {int user = 1}) =>
-      send(VirtEventType.callbackQuery, data, user: user);
+  Future<void> command(String command, {int user = 1, String arguments = ''}) =>
+      send(VirtEventType.command, command, user: user, arguments: arguments);
+  Future<void> click(String data, {int user = 1, int? messageId}) =>
+      send(VirtEventType.callbackQuery, data, user: user, messageId: messageId);
+
+  BuilderJson panel({int user = 1}) => telegram.calls.lastWhere(
+    (call) => call['richBlocks'] is List && call['chatId'] == user.toString(),
+  );
+
+  Iterable<Map> controls({int user = 1, String? task}) sync* {
+    final current = panel(user: user);
+    if (task == null) {
+      for (final row
+          in current['keyboard']?['inline_keyboard'] as List? ?? []) {
+        yield* (row as List).cast<Map>();
+      }
+      return;
+    }
+    final blocks = current['richBlocks'] as List;
+    for (var i = 0; i + 1 < blocks.length; i++) {
+      if (blocks[i]['type'] == 'paragraph' &&
+          blocks[i]['text'] == task &&
+          blocks[i + 1]['type'] == 'buttons') {
+        yield* (blocks[i + 1]['buttons'] as List).cast<Map>();
+      }
+    }
+  }
+
+  String control(String label, {int user = 1, String? task}) =>
+      controls(user: user, task: task).singleWhere(
+            (button) => button['text'].toString().contains(label),
+          )['callback_data']
+          as String;
+
+  Future<void> tap(String label, {int user = 1, String? task}) => click(
+    control(label, user: user, task: task),
+    user: user,
+  );
   Future<void> text(String text, {int user = 1}) =>
       send(VirtEventType.text, text, user: user);
   Future<void> send(
@@ -102,6 +141,8 @@ class TemplateHarness {
     String input, {
     int user = 1,
     int? chat,
+    int? messageId,
+    String arguments = '',
     bool allowErrors = false,
   }) async {
     final event = draft.events.firstWhere(
@@ -129,6 +170,16 @@ class TemplateHarness {
       'chatId': chat ?? user,
       'text': input,
       'input': remainder ?? '',
+      'inputParts': BuilderEventMatch.splitInput(
+        remainder ?? '',
+        event.config['inputSeparator'],
+      ),
+      'argumentsText': arguments,
+      'messageId':
+          messageId ??
+          (type == VirtEventType.callbackQuery && input.startsWith('task:')
+              ? panel(user: user)['resultMessageId']
+              : tick + 1000),
       'callbackData': input,
       'firstName': 'Person $user',
       'timestamp': DateTime.utc(
@@ -269,44 +320,125 @@ void main() {
       },
     );
     nativeFlowTest(
-      'task creation, paging, toggle and deletion never affect another user',
+      'task board edits in place, uses scoped controls and rejects stale taps',
       () async {
         final h = await create('tasks');
         await h.command('start');
-        for (var i = 0; i < 7; i++) {
-          await h.click('task:add');
-          await h.text('Task $i');
-        }
-        expect(h.telegram.calls.last['keyboard']['inline_keyboard'].length, 7);
-        await h.click('task:next');
-        expect(h.messages.last, contains('Task 0'));
-        expect(h.messages.last, isNot(contains('Task 6')));
-        await h.click('task:toggle:1', user: 2);
-        await h.click('task:delete:1', user: 2);
-        expect(
-          (await h.query('SELECT done FROM tasks WHERE id=1')).single['done'],
-          0,
-        );
-        await h.click('task:toggle:1');
-        expect(
-          (await h.query('SELECT done FROM tasks WHERE id=1')).single['done'],
-          1,
-        );
-        await h.click('task:toggle:1');
-        expect(
-          (await h.query('SELECT done FROM tasks WHERE id=1')).single['done'],
-          0,
-        );
-        await h.click('task:delete:1');
-        expect(await h.query('SELECT id FROM tasks WHERE id=1'), isEmpty);
-        await h.click('task:add');
+        final firstMessage = h.panel()['resultMessageId'];
+        expect(h.panel()['text'], contains('No open tasks'));
+        expect(h.controls().map((b) => b['text']), isNot(contains('Next ›')));
+        await h.tap('Add task');
+        expect(h.panel()['kind'], 'editText');
+        expect(h.panel()['resultMessageId'], firstMessage);
         await h.text('x' * 201);
         expect(h.messages.last, contains('1–200'));
-        await h.command('cancel');
-        await h.text('Do not save');
+        await h.text('  Buy milk  ');
+        expect(h.panel()['text'], contains('Buy milk'));
+        expect(h.panel()['resultMessageId'], firstMessage);
+        expect(h.controls(task: 'Buy milk').map((b) => b['text']), [
+          'Complete',
+          'Details',
+        ]);
+
+        final oldCompletion = h.control('Complete', task: 'Buy milk');
+        await h.command('start', user: 2);
+        await h.click(oldCompletion, user: 2, messageId: firstMessage);
+        expect((await h.query('SELECT done FROM tasks')).single['done'], 0);
+        await h.click(oldCompletion);
+        expect(h.panel()['text'], isNot(contains('Buy milk')));
+        final callCount = h.telegram.calls.length;
+        await h.click(oldCompletion);
+        expect(h.telegram.calls.length, callCount + 1);
+        expect(h.telegram.calls.last['kind'], 'callbackAnswer');
+        expect(h.messages.last, contains('This view has changed'));
+        expect((await h.query('SELECT done FROM tasks')).single['done'], 1);
+        await h.tap('Completed');
+        expect(h.panel()['text'], contains('Buy milk'));
+        await h.tap('Reopen', task: 'Buy milk');
+        await h.tap('Open');
+
+        await h.tap('Details', task: 'Buy milk');
+        await h.tap('Rename');
+        await h.text('Buy oat milk');
+        await h.tap('Details', task: 'Buy oat milk');
+        await h.tap('Delete…');
+        expect(h.panel()['text'], contains('Delete this task?'));
+        await h.tap('Cancel');
         expect(
-          (await h.query('SELECT count(*) AS n FROM tasks')).single['n'],
-          6,
+          (await h.query('SELECT title FROM tasks')).single['title'],
+          'Buy oat milk',
+        );
+        await h.tap('Delete…');
+        await h.tap('Delete task');
+        expect(await h.query('SELECT id FROM tasks'), isEmpty);
+        expect(h.panel()['resultMessageId'], firstMessage);
+        expect(
+          h.telegram.calls.where(
+            (call) =>
+                call['kind'] == 'reply' &&
+                call['richBlocks'] != null &&
+                call['chatId'] == '1',
+          ),
+          hasLength(1),
+        );
+      },
+    );
+    nativeFlowTest(
+      'task paging uses only valid destinations and quick add preserves titles',
+      () async {
+        final h = await create('tasks');
+        await h.command('add');
+        expect(h.panel()['text'], contains('Add a task'));
+        await h.tap('Cancel');
+        await h.text('Do not save');
+        expect(await h.query('SELECT id FROM tasks'), isEmpty);
+        await h.command('add', arguments: 'One important task');
+        expect(h.panel()['text'], contains('One important task'));
+        await h.query(
+          'INSERT INTO tasks(user_id,title) VALUES (1,?),(1,?),(1,?),(1,?),(1,?)',
+          ['Task 2', 'Task 3', 'Task 4', 'Task 5', 'Task 6'],
+        );
+        await h.command('tasks');
+        expect(h.panel()['text'], contains('Page 1 of 2'));
+        expect(h.panel()['text'], isNot(contains('One important task')));
+        expect(
+          h.controls().map((b) => b['text']),
+          isNot(contains('‹ Previous')),
+        );
+        final next = h.control('Next');
+        await h.click(next);
+        expect(h.panel()['text'], contains('Page 2 of 2'));
+        expect(h.panel()['text'], contains('One important task'));
+        expect(h.controls().map((b) => b['text']), isNot(contains('Next ›')));
+        await h.click(next);
+        expect(h.panel()['text'], contains('Page 2 of 2'));
+        await h.tap('Open');
+        expect(h.panel()['text'], contains('Page 2 of 2'));
+        await h.tap('Complete', task: 'One important task');
+        expect(h.panel()['text'], contains('Task 6'));
+        expect(
+          h.controls().map((b) => b['text']),
+          isNot(contains('‹ Previous')),
+        );
+
+        await h.tap('Add task');
+        h.telegram.failEdit = true;
+        await h.send(
+          VirtEventType.text,
+          'Saved while unavailable',
+          allowErrors: true,
+        );
+        expect(h.messages.last, contains('Open /tasks'));
+        h.console.clear(h.id);
+        h.telegram.failEdit = false;
+        await h.text('This is not another task');
+        await h.command('tasks');
+        expect(h.panel()['text'], contains('Saved while unavailable'));
+        expect(
+          await h.query(
+            "SELECT id FROM tasks WHERE title='This is not another task'",
+          ),
+          isEmpty,
         );
       },
     );

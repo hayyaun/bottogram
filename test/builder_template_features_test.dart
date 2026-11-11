@@ -63,6 +63,34 @@ void main() {
       );
     },
   );
+  test('grouped controls omit hidden buttons before resolving their bindings', () {
+    final result = BuilderListRenderer.render(
+      const BuilderStep('renderList', '{{item.title}}', {
+        'items': '{{items}}',
+        'richLayout': {'groupItemButtons': true},
+        'buttons':
+            '[{"text":"Open","callback_data":"open:{{item.id}}","style":"primary"}]',
+        'footerButtons':
+            '[[{"text":"Next","callback_data":"next:{{next}}","when":{"left":"{{hasNext}}","right":true}}],[{"text":"Home","callback_data":"home"}]]',
+      }),
+      {
+        'items': [
+          {'id': 7, 'title': 'Literal {{item.title}}'},
+        ],
+        'hasNext': false,
+      },
+    );
+    final blocks = result['rich'] as List;
+    expect(blocks[0]['text'], 'Literal {{item.title}}');
+    expect(blocks[1]['buttons'], [
+      {'text': 'Open', 'callback_data': 'open:7', 'style': 'primary'},
+    ]);
+    expect(result['keyboard']['inline_keyboard'], [
+      [
+        {'text': 'Home', 'callback_data': 'home'},
+      ],
+    ]);
+  });
   test(
     'list budgets reject excessive results, missing fields and oversized UTF-8 callbacks',
     () {

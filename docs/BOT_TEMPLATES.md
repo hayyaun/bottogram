@@ -11,8 +11,8 @@ The catalog order is:
    per-user, per-topic personal bests. Repeated answer clicks cannot add points.
 2. Crypto prices: on-demand CoinGecko prices for the five leading coins by market
    capitalization, quote currency selection, cooldown and friendly retry output.
-3. Personal task list: free-text entry, completion/reopening, deletion and pages
-   of five tasks, scoped to the requesting user.
+3. Personal task list with an editable board, Open and Completed views, quick
+   entry, rename and delete confirmation. Tasks are private to each user.
 4. Searchable library: categories, literal title/description search, resource and
    file links, details and per-user favorites.
 5. Feedback survey: rating/text questions, Back/Cancel, paginated review,
@@ -28,6 +28,18 @@ details and explanations. The crypto template shows a temporary progress
 preview while it fetches prices, then posts a table with a refresh button and
 coin images when the response supplies URLs from the provider's image hosts.
 Existing bots keep their saved actions.
+
+## Using the task board
+
+Open the board with **/tasks**. Tap **Add task** and send a title, or use
+**/add Buy groceries** to add it directly. The task controls sit beside each
+title. **Complete** moves it to Completed, where **Reopen** brings it back.
+Open **Details** to rename a task or confirm its deletion.
+
+The board updates in the same message when you tap a control. The list only shows
+navigation buttons for pages you can visit. If you deleted the board message or
+are looking at an older one, open a fresh board with **/tasks**. Existing bots
+created from the template keep their saved action definitions.
 
 ## Setup and editing
 

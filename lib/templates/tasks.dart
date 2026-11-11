@@ -1,11 +1,16 @@
 import 'program.dart';
 
+const _revision = '{{event.updateId}}';
+const _buttonValue = '{{event.inputParts.1}}';
+const _taskId = '{{steps.task.rows.0.id}}';
+const _taskTitle = '{{steps.task.rows.0.title}}';
+
 BotTemplateDraft buildTasks(
   Map<String, String> settings,
   List<Map<String, dynamic>> rows,
   String admin,
 ) {
-  final p = TemplateProgram(
+  final program = TemplateProgram(
     [
       sql(
         'setup_tasks',
@@ -16,103 +21,357 @@ BotTemplateDraft buildTasks(
         'CREATE INDEX IF NOT EXISTS tasks_user ON tasks(user_id,id)',
       ),
     ],
-    [variable('page', 0), variable('addingTask', false)],
+    [
+      variable('tab', 0),
+      variable('page', 0),
+      variable('panelMessage', 0),
+      variable('panelRevision', 0),
+      variable('inputMode', 'browse'),
+      variable('renameTask', 0),
+    ],
   );
-  Acts view() => [
-    sql(
-      'page',
-      'SELECT page,page+1 AS number,pages FROM (SELECT max(0,min(?,max(0,CAST((count(*)-1)/5 AS INTEGER)))) AS page,max(1,CAST((count(*)+4)/5 AS INTEGER)) AS pages FROM tasks WHERE user_id=?)',
-      ['{{user.page}}', '{{event.userId}}'],
+
+  Map<String, dynamic> control(
+    String text,
+    String action, {
+    String? value,
+    String? style,
+    Map<String, dynamic>? only,
+  }) => button(
+    text,
+    ['task', action, _revision, if (value != null) value].join(':'),
+    style: style,
+    only: only,
+  );
+
+  VirtAct answer(String name, String text, {Map<String, dynamic>? only}) =>
+      templateAction(VirtActType.callbackAnswer, text, name, {
+        'onError': 'continue',
+        if (only != null) 'when': only,
+      });
+
+  void click(String action, Acts actions) {
+    const message = '{{event.messageId}}';
+    const panelMessage = '{{user.panelMessage}}';
+    const revision = '{{event.inputParts.0}}';
+    const panelRevision = '{{user.panelRevision}}';
+    const stale = 'This view has changed. Use the latest task board or /tasks.';
+    program.click(
+      'task:$action:',
+      [
+        answer(
+          'old_message',
+          stale,
+          only: when(message, panelMessage, 'notEquals'),
+        ),
+        check('current_message', message, panelMessage),
+        answer(
+          'old_view',
+          stale,
+          only: when(revision, panelRevision, 'notEquals'),
+        ),
+        check('current_view', revision, panelRevision),
+        answer('acknowledge', ''),
+        ...actions,
+      ],
+      prefix: true,
+      inputSeparator: ':',
+    );
+  }
+
+  Acts publish(VirtAct message, {bool fresh = false, String mode = 'browse'}) {
+    final output = message.config['output'];
+    if (!fresh) {
+      message
+        ..type = VirtActType.editText
+        ..config['messageId'] = '{{user.panelMessage}}'
+        ..config['onError'] = 'continue';
+    }
+    return [
+      message,
+      if (!fresh) ...[
+        say(
+          'recover_board',
+          'The board could not refresh. Open /tasks to see your current list.',
+          only: when('{{steps.$output.ok}}', false),
+        ),
+        check('updated_board', '{{steps.$output.ok}}', true),
+      ],
+      if (fresh) setValue('panelMessage', '{{steps.$output.messageId}}'),
+      setValue('panelRevision', _revision),
+      setValue(
+        'inputMode',
+        mode,
+        only: when('{{user.inputMode}}', mode, 'notEquals'),
+      ),
+    ];
+  }
+
+  Acts card(
+    String title,
+    String body,
+    List<List<Map<String, dynamic>>> controls, {
+    bool fresh = false,
+    String mode = 'browse',
+    String? note,
+    String output = 'panel',
+  }) => publish(
+    say(
+      output,
+      '$title\n$body',
+      rich: [
+        heading(title),
+        paragraph(body),
+        if (note != null) paragraph(note),
+      ],
+      buttons: keyboard(controls),
     ),
-    setValue('page', '{{steps.page.rows.0.page}}'),
+    fresh: fresh,
+    mode: mode,
+  );
+
+  Acts board({bool fresh = false}) => [
+    sql(
+      'pages',
+      '''
+WITH counts AS (
+  SELECT count(*) FILTER (WHERE done=0) AS open_count,
+         count(*) FILTER (WHERE done=1) AS done_count
+  FROM tasks WHERE user_id=?
+), totals AS (
+  SELECT *, ? AS tab FROM counts
+), pages AS (
+  SELECT *, max(1, ((CASE WHEN tab=1 THEN done_count ELSE open_count END)+4)/5) AS pages
+  FROM totals
+), position AS (
+  SELECT *, max(0,min(?,pages-1)) AS page FROM pages
+)
+SELECT *, page-1 AS previous, page+1 AS next,
+       CASE WHEN tab=0 THEN '• Open' ELSE 'Open' END AS open_tab,
+       CASE WHEN tab=1 THEN '• Completed' ELSE 'Completed' END AS done_tab,
+       (CASE WHEN tab=1 THEN 'Completed tasks' ELSE 'Open tasks' END) ||
+       (CASE WHEN pages>1 THEN ' · Page ' || (page+1) || ' of ' || pages ELSE '' END) AS view_label,
+       CASE WHEN tab=1 THEN 'Completed tasks will appear here.'
+            ELSE 'No open tasks. Tap Add task or type /add followed by a task name.' END AS empty_text
+FROM position
+''',
+      ['{{event.userId}}', '{{user.tab}}', '{{user.page}}'],
+    ),
     sql(
       'tasks',
-      'SELECT id,title,CASE WHEN done=1 THEN \'Done\' ELSE \'Open\' END AS status,CASE WHEN done=1 THEN \'Reopen\' ELSE \'Complete\' END AS action FROM tasks WHERE user_id=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)',
-      ['{{event.userId}}', '{{user.page}}'],
+      '''
+SELECT id,title,CASE WHEN done=1 THEN 'Reopen' ELSE 'Complete' END AS action,
+       CASE WHEN done=1 THEN 'reopen' ELSE 'complete' END AS callback
+FROM tasks WHERE user_id=? AND done=? ORDER BY id DESC LIMIT 5 OFFSET (?*5)
+''',
+      ['{{event.userId}}', '{{user.tab}}', '{{steps.pages.rows.0.page}}'],
     ),
     render(
-      'view',
+      'board',
       '{{steps.tasks.rows}}',
-      '{{index}}. {{item.title}} · {{item.status}}',
-      header:
-          '${settings['title']!}\nPage {{steps.page.rows.0.number}} / {{steps.page.rows.0.pages}}\n\n',
-      empty: 'No tasks yet. Add your first task below.',
+      '{{item.title}}',
+      header: '${settings['title']!}\n{{steps.pages.rows.0.view_label}}\n\n',
+      empty: '{{steps.pages.rows.0.empty_text}}',
+      groupItemButtons: true,
       buttons: [
-        button('{{item.action}} #{{index}}', 'task:toggle:{{item.id}}'),
-        button('Delete #{{index}}', 'task:delete:{{item.id}}'),
+        control('{{item.action}}', '{{item.callback}}', value: '{{item.id}}'),
+        control('Details', 'details', value: '{{item.id}}'),
       ],
       footerButtons: [
-        [button('Previous', 'task:prev'), button('Next', 'task:next')],
-        [button('Add task', 'task:add')],
+        [
+          control(
+            '‹ Previous',
+            'page',
+            value: '{{steps.pages.rows.0.previous}}',
+            only: when('{{steps.pages.rows.0.page}}', 0, 'greater'),
+          ),
+          control(
+            'Next ›',
+            'page',
+            value: '{{steps.pages.rows.0.next}}',
+            only: when(
+              '{{steps.pages.rows.0.next}}',
+              '{{steps.pages.rows.0.pages}}',
+              'less',
+            ),
+          ),
+        ],
+        [
+          control(
+            '{{steps.pages.rows.0.open_tab}} · {{steps.pages.rows.0.open_count}}',
+            'open',
+          ),
+          control(
+            '{{steps.pages.rows.0.done_tab}} · {{steps.pages.rows.0.done_count}}',
+            'completed',
+          ),
+        ],
+        [control('+ Add task', 'add', style: 'primary')],
       ],
     ),
-    sendList('view'),
+    ...publish(sendList('board', output: 'panel'), fresh: fresh),
   ];
-  Acts home() => [
-    setValue('addingTask', false),
+
+  Acts openBoard() => [
+    setValue('tab', 0),
     setValue('page', 0),
-    ...view(),
+    ...board(fresh: true),
   ];
-  p.command('start', home());
-  p.command('tasks', home());
-  p.command('cancel', home());
-  p.click('task:home', home());
-  p.click('task:add', [
-    setValue('addingTask', true),
-    say(
-      'prompt',
-      'Send the task text (1–200 characters). Use /cancel to return.',
+
+  Acts addPrompt({bool fresh = false}) => card(
+    'Add a task',
+    'Send the task name as your next message.',
+    [
+      [control('Cancel', 'back')],
+    ],
+    fresh: fresh,
+    mode: 'add',
+    output: fresh ? 'add_prompt' : 'panel',
+  );
+
+  Acts findTask() => [
+    sql(
+      'task',
+      '''
+SELECT coalesce(t.id,0) AS id, t.title,
+       CASE WHEN t.done=1 THEN 'Completed' ELSE 'Open' END AS status
+FROM (SELECT 1) LEFT JOIN tasks t ON t.user_id=? AND t.id=?
+''',
+      ['{{event.userId}}', _buttonValue],
     ),
-  ]);
-  for (final direction in ['next', 'prev']) {
-    p.click('task:$direction', [
-      templateAction(
-        VirtActType.incrementVariable,
-        direction == 'next' ? '1' : '-1',
-        'move_page',
-        {'variable': 'page', 'scope': 'user'},
-      ),
-      ...view(),
-    ]);
-  }
-  for (final operation in ['toggle', 'delete']) {
-    p.click('task:$operation:', [
+    say(
+      'missing_task',
+      'This task is no longer available. Open /tasks to refresh.',
+      only: when(_taskId, 0),
+    ),
+    check('task_exists', _taskId, 0, 'greater'),
+  ];
+
+  Acts saveTitle(String input, {bool fresh = false}) {
+    final adding = fresh ? null : when('{{user.inputMode}}', 'add');
+    return [
       sql(
-        'changed',
-        operation == 'toggle'
-            ? 'UPDATE tasks SET done=1-done WHERE user_id=? AND id=?'
-            : 'DELETE FROM tasks WHERE user_id=? AND id=?',
-        ['{{event.userId}}', '{{event.input}}'],
+        'title',
+        'SELECT value, length(value) BETWEEN 1 AND 200 AS valid FROM (SELECT trim(?,char(9,10,11,12,13,32)) AS value)',
+        [input],
       ),
       say(
-        'missing',
-        'This task is no longer available.',
-        only: when('{{steps.changed.affectedRows}}', 0),
+        'invalid_title',
+        fresh
+            ? 'Use 1–200 characters for the task name. Try /add again.'
+            : 'Use 1–200 characters for the task name. Send another name or tap Cancel.',
+        only: when('{{steps.title.rows.0.valid}}', 0),
       ),
-      ...view(),
-    ], prefix: true);
+      check('valid_title', '{{steps.title.rows.0.valid}}', 1),
+      sql(
+        'insert_task',
+        'INSERT INTO tasks(user_id,title) VALUES(?,?)',
+        ['{{event.userId}}', '{{steps.title.rows.0.value}}'],
+        {if (adding != null) 'when': adding},
+      ),
+      if (!fresh)
+        sql(
+          'rename_task',
+          'UPDATE tasks SET title=? WHERE user_id=? AND id=?',
+          [
+            '{{steps.title.rows.0.value}}',
+            '{{event.userId}}',
+            '{{user.renameTask}}',
+          ],
+          {'when': when('{{user.inputMode}}', 'rename')},
+        ),
+      setValue('tab', 0, only: adding),
+      setValue('page', 0, only: adding),
+      setValue(
+        'inputMode',
+        'browse',
+        only: when('{{user.inputMode}}', 'browse', 'notEquals'),
+      ),
+      ...board(fresh: fresh),
+    ];
   }
-  p.text([
-    say(
-      'help',
-      'Use /tasks to view your list, then choose Add task.',
-      only: when('{{user.addingTask}}', false),
-    ),
-    check('adding', '{{user.addingTask}}', true),
-    sql(
-      'added',
-      'INSERT INTO tasks(user_id,title) SELECT ?,trim(?) WHERE length(trim(?)) BETWEEN 1 AND 200',
-      ['{{event.userId}}', '{{event.input}}', '{{event.input}}'],
-    ),
-    say(
-      'invalid',
-      'Use 1–200 characters for a task. Send a shorter task or /cancel.',
-      only: when('{{steps.added.affectedRows}}', 0),
-    ),
-    check('valid_task', '{{steps.added.affectedRows}}', 0, 'greater'),
-    setValue('addingTask', false),
-    setValue('page', 0),
-    ...view(),
+
+  program.command('start', openBoard());
+  program.command('tasks', openBoard());
+  program.command('cancel', openBoard());
+  program.command('add', [
+    for (final action in addPrompt(fresh: true))
+      action..config['when'] = when('{{event.argumentsText}}', ''),
+    check('has_title', '{{event.argumentsText}}', '', 'notEquals'),
+    ...saveTitle('{{event.argumentsText}}', fresh: true),
   ]);
-  return p.draft;
+
+  click('add', addPrompt());
+  click('back', board());
+  for (final (view, tab) in [('open', 0), ('completed', 1)]) {
+    click(view, [
+      check('different_tab', '{{user.tab}}', tab, 'notEquals'),
+      setValue('tab', tab),
+      setValue('page', 0),
+      ...board(),
+    ]);
+  }
+  click('page', [setValue('page', _buttonValue), ...board()]);
+  for (final (action, from, to) in [('complete', 0, 1), ('reopen', 1, 0)]) {
+    click(action, [
+      sql(
+        'set_status',
+        'UPDATE tasks SET done=? WHERE user_id=? AND id=? AND done=?',
+        [to, '{{event.userId}}', _buttonValue, from],
+      ),
+      ...board(),
+    ]);
+  }
+  click('details', [
+    ...findTask(),
+    ...card(_taskTitle, '{{steps.task.rows.0.status}}', [
+      [
+        control('Rename', 'rename', value: _taskId),
+        control('Delete…', 'confirm', value: _taskId),
+      ],
+      [control('Back to tasks', 'back')],
+    ]),
+  ]);
+  click('rename', [
+    ...findTask(),
+    ...card(
+      'Rename task',
+      _taskTitle,
+      [
+        [control('Cancel', 'details', value: _taskId)],
+      ],
+      mode: 'rename',
+      note: 'Send the new name as your next message.',
+    ),
+    setValue('renameTask', _taskId),
+  ]);
+  click('confirm', [
+    ...findTask(),
+    ...card('Delete this task?', _taskTitle, [
+      [
+        control('Delete task', 'delete', value: _taskId, style: 'danger'),
+        control('Cancel', 'details', value: _taskId),
+      ],
+    ]),
+  ]);
+  click('delete', [
+    sql('delete_task', 'DELETE FROM tasks WHERE user_id=? AND id=?', [
+      '{{event.userId}}',
+      _buttonValue,
+    ]),
+    ...board(),
+  ]);
+  program.click('task:', [
+    answer('old_button', 'Open /tasks to use the current task board.'),
+  ], prefix: true);
+  program.text([
+    say(
+      'task_hint',
+      'Tap Add task on the board or type /add followed by a task name.',
+      only: when('{{user.inputMode}}', 'browse'),
+    ),
+    check('entering_title', '{{user.inputMode}}', 'browse', 'notEquals'),
+    ...saveTitle('{{event.input}}'),
+  ]);
+  return program.draft;
 }

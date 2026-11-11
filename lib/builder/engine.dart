@@ -145,8 +145,7 @@ class BuilderEngine {
           final clock = Stopwatch()..start();
           try {
             final when = step.config['when'];
-            if (when is Map &&
-                !_condition(Map<String, dynamic>.from(when), values)) {
+            if (when is Map && !BuilderValues.matches(when, values)) {
               log(current, 'skipped', 'The action condition was false.');
               continue;
             }
@@ -205,39 +204,6 @@ class BuilderEngine {
     });
     _tail = result.whenComplete(() => _pending--);
     await _tail;
-  }
-
-  bool _condition(BuilderJson condition, BuilderJson values) {
-    var left = BuilderValues.resolve(condition['left'] ?? '', values);
-    var right = BuilderValues.resolve(condition['right'] ?? '', values);
-    if (left is num && right is String) right = num.tryParse(right) ?? right;
-    if (right is num && left is String) left = num.tryParse(left) ?? left;
-    if (left is bool && right is String && {'true', 'false'}.contains(right)) {
-      right = right == 'true';
-    }
-    if (right is bool && left is String && {'true', 'false'}.contains(left)) {
-      left = left == 'true';
-    }
-    return switch (condition['operator'] ?? 'equals') {
-      'equals' => left == right,
-      'notEquals' => left != right,
-      'contains' => BuilderValues.scalar(
-        left,
-      ).contains(BuilderValues.scalar(right)),
-      'greater' => _number(left) > _number(right),
-      'less' => _number(left) < _number(right),
-      _ => throw const BuilderFailure('Unknown condition operator.'),
-    };
-  }
-
-  num _number(dynamic value) {
-    final number = value is num ? value : num.tryParse(value.toString());
-    if (number == null || !number.isFinite) {
-      throw const BuilderFailure(
-        'A numeric operation requires a finite number.',
-      );
-    }
-    return number;
   }
 
   Future<BuilderJson> _execute(BuilderStep step, BuilderJson values) async {
@@ -310,17 +276,19 @@ class BuilderEngine {
         (values['event'] as BuilderJson)['userId']?.toString(),
         scope,
         name,
-        step.kind == 'incrementVariable' ? _number(value) : value,
+        step.kind == 'incrementVariable' ? BuilderValues.number(value) : value,
         increment: step.kind == 'incrementVariable',
       );
       (values[scope] as BuilderJson)[name] = result;
       return {'value': result};
     }
     if (step.kind == 'condition') {
-      return {'matched': _condition(config, values)};
+      return {'matched': BuilderValues.matches(config, values)};
     }
     if (step.kind == 'wait') {
-      final seconds = _number(BuilderValues.resolve(step.text, values));
+      final seconds = BuilderValues.number(
+        BuilderValues.resolve(step.text, values),
+      );
       if (seconds < 0 || seconds > 60) {
         throw const BuilderFailure('Wait must be between 0 and 60 seconds.');
       }

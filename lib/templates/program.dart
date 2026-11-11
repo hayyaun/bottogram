@@ -11,9 +11,16 @@ export 'model.dart';
 typedef Acts = List<VirtAct>;
 Map<String, dynamic> when(String left, dynamic right, [String op = 'equals']) =>
     {'left': left, 'operator': op, 'right': right};
-Map<String, dynamic> button(String text, String data) => {
+Map<String, dynamic> button(
+  String text,
+  String data, {
+  String? style,
+  Map<String, dynamic>? only,
+}) => {
   'text': text,
   'callback_data': data,
+  if (style != null) 'style': style,
+  if (only != null) 'when': only,
 };
 Map<String, dynamic> keyboard(List<List<Map<String, dynamic>>> rows) => {
   'inline_keyboard': rows,
@@ -83,6 +90,7 @@ VirtAct render(
   Map<String, String>? columns,
   List<Map<String, dynamic>>? rowBlocks,
   bool buttonsInMessage = false,
+  bool groupItemButtons = false,
   String? photoField,
   List<String> photoHosts = const [],
 }) => templateAction(VirtActType.renderList, row, name, {
@@ -91,6 +99,7 @@ VirtAct render(
     if (columns != null) 'columns': columns,
     if (rowBlocks != null) 'rowBlocks': rowBlocks,
     if (buttonsInMessage) 'buttonsInMessage': true,
+    if (groupItemButtons) 'groupItemButtons': true,
     if (photoField != null) 'photoField': photoField,
     if (photoHosts.isNotEmpty) 'photoHosts': photoHosts,
   },
@@ -134,9 +143,18 @@ class TemplateProgram {
   final Acts setup;
   final List<VariableDefinition> variables;
   final events = <VirtEvent>[];
-  void on(VirtEventType type, String query, Acts actions, {String? match}) {
+  void on(
+    VirtEventType type,
+    String query,
+    Acts actions, {
+    String? match,
+    String? inputSeparator,
+  }) {
     final event = VirtEvent(type: type, query: query)
-      ..config = {if (match != null) 'match': match};
+      ..config = {
+        if (match != null) 'match': match,
+        if (inputSeparator != null) 'inputSeparator': inputSeparator,
+      };
     event.acts = [
       say(
         'private_notice',
@@ -178,11 +196,17 @@ class TemplateProgram {
 
   void command(String name, Acts actions) =>
       on(VirtEventType.command, name, actions);
-  void click(String data, Acts actions, {bool prefix = false}) => on(
+  void click(
+    String data,
+    Acts actions, {
+    bool prefix = false,
+    String? inputSeparator,
+  }) => on(
     VirtEventType.callbackQuery,
     data,
     actions,
     match: prefix ? 'prefix' : 'exact',
+    inputSeparator: inputSeparator,
   );
   void text(Acts actions) =>
       on(VirtEventType.text, 'Text input', actions, match: 'any');

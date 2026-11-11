@@ -41,6 +41,18 @@ class BuilderSession {
     final commandText = text.startsWith('/')
         ? text.split(RegExp(r'\s+')).skip(1).toList()
         : <String>[];
+    final input = event.config.containsKey('match')
+        ? BuilderEventMatch.remainder(
+                event.type == VirtEventType.callbackQuery
+                    ? context.callbackQuery?.data ?? ''
+                    : event.type == VirtEventType.inlineQuery
+                    ? context.inlineQuery?.query ?? ''
+                    : text,
+                event.query,
+                event.config['match'].toString(),
+              ) ??
+              ''
+        : text;
     await engine.run('${event.type.name}:${event.query}', {
       'type': event.type.name,
       'updateId': context.update.updateId,
@@ -55,18 +67,14 @@ class BuilderSession {
       'messageId': message?.messageId,
       'callbackId': context.callbackQuery?.id,
       'callbackData': context.callbackQuery?.data,
-      'input': event.config.containsKey('match')
-          ? BuilderEventMatch.remainder(
-                  event.type == VirtEventType.callbackQuery
-                      ? context.callbackQuery?.data ?? ''
-                      : event.type == VirtEventType.inlineQuery
-                      ? context.inlineQuery?.query ?? ''
-                      : text,
-                  event.query,
-                  event.config['match'].toString(),
-                ) ??
-                ''
-          : text,
+      'input': input,
+      'inputParts': BuilderEventMatch.splitInput(
+        input,
+        event.config['inputSeparator'],
+      ),
+      'argumentsText': commandText.isEmpty
+          ? ''
+          : text.substring(text.indexOf(RegExp(r'\s+'))).trim(),
       'inlineMessageId': context.callbackQuery?.inlineMessageId,
       'inlineQueryId': context.inlineQuery?.id,
       'timestamp': DateTime.now().toUtc().toIso8601String(),

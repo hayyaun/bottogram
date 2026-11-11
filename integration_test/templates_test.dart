@@ -56,14 +56,19 @@ void main() {
       await quiz.click('quiz:C:3');
       expect(quiz.messages.last, contains('Personal best: 3'));
       final tasks = fixtures['tasks']!;
-      await tasks.click('task:add');
+      await tasks.tap('Add task');
       await tasks.text('A native task');
-      await tasks.click('task:delete:1', user: 2);
+      final complete = tasks.control('Complete', task: 'A native task');
+      await tasks.click(
+        complete,
+        user: 2,
+        messageId: tasks.panel()['resultMessageId'] as int,
+      );
       expect(
         (await tasks.query('SELECT count(*) AS n FROM tasks')).single['n'],
         1,
       );
-      await tasks.click('task:toggle:1');
+      await tasks.tap('Complete', task: 'A native task');
       expect((await tasks.query('SELECT done FROM tasks')).single['done'], 1);
       final library = fixtures['library']!;
       await library.click('lib:favorite:1');

@@ -117,9 +117,9 @@ abstract final class BotTemplates {
     BotTemplate(
       id: 'tasks',
       name: 'Personal task list',
-      summary: 'Add, complete, reopen and delete tasks with pagination.',
+      summary: 'Manage open and completed tasks from an interactive board.',
       description:
-          'Each person gets a private task list. Add a task with a message, browse five at a time, mark it done, reopen it or delete it.',
+          'Each person gets a private board that updates in place. Add tasks, switch between open and completed, and use Details to rename or delete a task. Use /add followed by a task name for quick entry.',
       fields: [TemplateField('title', 'List heading', 'Your tasks')],
       build: buildTasks,
     ),

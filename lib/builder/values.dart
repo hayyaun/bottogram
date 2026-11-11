@@ -120,18 +120,51 @@ abstract final class BuilderValues {
     bool code = false,
     bool link = false,
   }) {
-    final specials =
-        code
-            ? r'\`'
-            : link
-            ? r'\)'
-            : r'\_*[]()~`>#+-=|{}.!';
+    final specials = code
+        ? r'\`'
+        : link
+        ? r'\)'
+        : r'\_*[]()~`>#+-=|{}.!';
     return value.split('').map((c) => specials.contains(c) ? '\\$c' : c).join();
   }
 
-  static dynamic json(String source, Map<String, dynamic> values) {
+  static bool matches(Map condition, Map<String, dynamic> values) {
+    var left = resolve(condition['left'] ?? '', values);
+    var right = resolve(condition['right'] ?? '', values);
+    if (left is num && right is String) right = num.tryParse(right) ?? right;
+    if (right is num && left is String) left = num.tryParse(left) ?? left;
+    if (left is bool && right is String && {'true', 'false'}.contains(right)) {
+      right = right == 'true';
+    }
+    if (right is bool && left is String && {'true', 'false'}.contains(left)) {
+      left = left == 'true';
+    }
+    return switch (condition['operator'] ?? 'equals') {
+      'equals' => left == right,
+      'notEquals' => left != right,
+      'contains' => scalar(left).contains(scalar(right)),
+      'greater' => number(left) > number(right),
+      'less' => number(left) < number(right),
+      _ => throw const BuilderFailure('Unknown condition operator.'),
+    };
+  }
+
+  static num number(dynamic value) {
+    final number = value is num ? value : num.tryParse(value.toString());
+    if (number == null || !number.isFinite) {
+      throw const BuilderFailure(
+        'A numeric operation requires a finite number.',
+      );
+    }
+    return number;
+  }
+
+  static dynamic json(String source, Map<String, dynamic> values) =>
+      resolve(decodeJson(source), values);
+
+  static dynamic decodeJson(String source) {
     try {
-      return resolve(jsonDecode(source), values);
+      return jsonDecode(source);
     } on FormatException {
       throw const BuilderFailure(
         'Invalid JSON. Put variable references inside JSON strings.',

@@ -193,15 +193,21 @@ void main() {
           )..config = {'output': 'db', 'parameters': '["{{event.userId}}"]'},
           VirtAct(
             type: VirtActType.reply,
-            text: 'DB score: {{steps.db.rows.0.score}}',
+            text:
+                'DB score: {{steps.db.rows.0.score}} · {{event.argumentsText}}',
           )..config = {'output': 'databaseReply'},
         ]);
       command.add(bot, execute: (ctx) => session.receive(command, ctx));
-      final button = VirtEvent(type: VirtEventType.callbackQuery, query: 'next')
-        ..acts.add(
-          VirtAct(type: VirtActType.callbackAnswer, text: 'Done')
-            ..config = {'showAlert': true, 'output': 'ack'},
-        );
+      final button =
+          VirtEvent(type: VirtEventType.callbackQuery, query: 'next:')
+            ..config = {'match': 'prefix', 'inputSeparator': ':'}
+            ..acts.add(
+              VirtAct(
+                type: VirtActType.callbackAnswer,
+                text:
+                    'Page {{event.inputParts.1}} · view {{event.inputParts.0}}',
+              )..config = {'showAlert': true, 'output': 'ack'},
+            );
       button.add(bot, execute: (ctx) => session.receive(button, ctx));
       final inline = VirtEvent(type: VirtEventType.inlineQuery, query: 'hello')
         ..acts.add(
@@ -213,7 +219,9 @@ void main() {
       inline.add(bot, execute: (ctx) => session.receive(inline, ctx));
       try {
         await bot.initialize();
-        await bot.dispatch(Update.fromJson(update(1, 1, text: '/price')));
+        await bot.dispatch(
+          Update.fromJson(update(1, 1, text: '/price@fixture_bot two  words')),
+        );
         expect(
           calls.where((c) => c.$1 == 'sendMessage').first.$2['text'],
           '*Score*: 12',
@@ -224,7 +232,7 @@ void main() {
         );
         expect(
           calls.where((c) => c.$1 == 'sendMessage').last.$2['text'],
-          'DB score: 12',
+          'DB score: 12 · two  words',
         );
         expect(
           calls.where((c) => c.$1 == 'editMessageText').single.$2['message_id'],
@@ -242,11 +250,14 @@ void main() {
               'from': {'id': 1, 'is_bot': false, 'first_name': 'Alex'},
               'message': message(1, 1),
               'chat_instance': 'chat',
-              'data': 'next',
+              'data': 'next:42:2',
             },
           }),
         );
-        expect(calls.where((c) => c.$1 == 'answerCallbackQuery').length, 1);
+        final answer = calls
+            .singleWhere((call) => call.$1 == 'answerCallbackQuery')
+            .$2;
+        expect(answer['text'], 'Page 2 · view 42');
         expect(
           calls
               .where((c) => c.$1 == 'answerCallbackQuery')

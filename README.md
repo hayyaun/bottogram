@@ -11,7 +11,7 @@ Create commands, install plugins, and manage conversations on your device.
 ![Android 7.0+](https://img.shields.io/badge/Android-7.0%2B-3DDC84?logo=android&logoColor=white)
 ![Status: experimental](https://img.shields.io/badge/status-experimental-8B5CF6)
 
-**[Project website](https://hayyaun.github.io/bottogram/)** · **[Download latest release](https://github.com/hayyaun/bottogram/releases/latest)** · [Quick start](#quick-start) · [Plugin guide](docs/PLUGIN_AUTHORING.md)
+**[Project website](https://bottogram.hayyaun.ir/)** · **[Download latest release](https://github.com/hayyaun/bottogram/releases/latest)** · [Quick start](#quick-start) · [Plugin guide](docs/PLUGIN_AUTHORING.md)
 
 </div>
 

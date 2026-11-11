@@ -172,7 +172,7 @@ h3 { font-size: 22px; font-weight: 650; letter-spacing: -.04em; }
   position: relative;
   width: min(82%, 345px);
   min-height: 190px;
-  margin: -14px -14px 18px auto;
+  margin: -14px 14px 18px auto;
   border: 1px solid #4a686e;
   border-radius: 12px;
   overflow: hidden;

@@ -39,7 +39,11 @@ class BotService : Service() {
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == STOP) {
-            app.stopBots { success -> if (success) stopExplicitly() }
+            if (running) {
+                app.stopBots { success -> if (success) stopExplicitly() }
+            } else {
+                stopSelf(startId)
+            }
             return START_NOT_STICKY
         }
         active = intent?.getIntExtra(ACTIVE, 0) ?: 0

@@ -6,6 +6,7 @@ import 'package:bottogram/builder/values.dart';
 import 'package:bottogram/templates/model.dart';
 
 import 'package:bottogram/units/virt_bot.dart';
+import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/runtime/coordinator.dart';
@@ -128,6 +129,11 @@ class BotsCubit extends Cubit<List<VirtBot>> {
   Future<void> _initBox() async {
     _box = await Hive.openBox<VirtBot>(boxName);
     await ensureBuilderSnapshot(_box!);
+    try {
+      await BuilderStore.shared.ready;
+    } catch (_) {
+      // A local storage failure should not hide the bot list.
+    }
     final data = _box!.values.toList();
     debugPrint('✅ Bots: ${data.length}');
     final bots = data.cast<VirtBot>();
@@ -380,15 +386,27 @@ class BotsCubit extends Cubit<List<VirtBot>> {
         emit(List<VirtBot>.from(state));
         return null;
       }
+      final store = BuilderStore.shared;
+      if (items.any(
+        (i) => state[i].events.any(
+          (event) => event.acts.any((act) => act.libraryName != null),
+        ),
+      )) {
+        await store.ready;
+      }
+      final copies = [
+        for (final i in items)
+          VirtBot(state[i].name, state[i].token, addSamples: false)
+            ..events = [
+              for (final event in state[i].events)
+                VirtEvent(type: event.type, query: event.query)
+                  ..config = event.config
+                  ..acts = event.acts.map(store.resolveAction).toList(),
+            ],
+      ];
       final tempBox = await Hive.openBox<VirtBot>(exportBoxName);
       await tempBox.clear();
-      for (final i in items) {
-        final original = state[i];
-        await tempBox.add(
-          VirtBot(original.name, original.token, addSamples: false)
-            ..events = original.events,
-        );
-      }
+      await tempBox.addAll(copies);
       await tempBox.flush();
       final dir = await getApplicationDocumentsDirectory();
       final file = XFile('${dir.path}/$exportBoxName.hive');

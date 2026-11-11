@@ -2,7 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
+import 'package:bottogram/builder/store.dart';
+import 'package:bottogram/pages/act.dart';
 import 'package:bottogram/pages/create_bot.dart';
+import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/main.dart' show MyApp;
 import 'package:bottogram/pages/home.dart';
 import 'package:bottogram/pages/bot.dart';
@@ -155,6 +158,91 @@ void main() {
     repository.dispose();
     await Hive.close();
     await directory.delete(recursive: true);
+  });
+
+  testWidgets('an action can be saved and linked from another bot', (
+    tester,
+  ) async {
+    final original = VirtEvent(type: VirtEventType.command, query: 'start')
+      ..acts.add(
+        VirtAct(type: VirtActType.reply, text: 'Hello there!')
+          ..config = {'output': 'welcome'},
+      );
+    final other = VirtEvent(type: VirtEventType.command, query: 'hello')
+      ..acts.add(
+        VirtAct(type: VirtActType.dice, text: '1')
+          ..config = {'output': 'welcome'},
+      );
+    final first = VirtBot('First', '91:fixture', addSamples: false)
+      ..events.add(original);
+    final second = VirtBot('Second', '92:fixture', addSamples: false)
+      ..events.add(other);
+
+    await tester.runAsync(() async {
+      final added = bots.stream.firstWhere((state) => state.length == 2);
+      bots.add(first);
+      bots.add(second);
+      await added.timeout(const Duration(seconds: 5));
+    });
+
+    Future<void> submit(Finder button, bool Function() done) async {
+      await tester.runAsync(() async {
+        final saved = bots.stream.firstWhere((_) => done());
+        await tester.tap(button);
+        await saved.timeout(const Duration(seconds: 5));
+      });
+      await tester.pumpAndSettle();
+    }
+
+    Future<void> open(Widget page) async {
+      await tester.pumpWidget(
+        BlocProvider<BotsCubit>.value(
+          value: bots,
+          child: MaterialApp(home: page),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    await open(EventPage(ev: original, bot: first));
+    await tester.tap(find.text('Hello there!'));
+    await tester.pumpAndSettle();
+    expect(find.byType(ActPage), findsOneWidget);
+    await tester.runAsync(
+      () => tester.tap(find.byTooltip('Save to action library')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(
+      find.widgetWithText(TextFormField, 'Library name'),
+      'Welcome message',
+    );
+    await submit(
+      find.text('Save and link'),
+      () => original.acts.single.libraryName == 'Welcome message',
+    );
+    expect(original.acts.single.text, isEmpty);
+    expect(find.text('Welcome message'), findsOneWidget);
+    expect(
+      BuilderStore.shared.resolveAction(original.acts.single).text,
+      'Hello there!',
+    );
+
+    await open(EventPage(key: const ValueKey('other'), ev: other, bot: second));
+    await tester.runAsync(() => tester.tap(find.text('Add action')));
+    await tester.pumpAndSettle();
+    expect(find.text('Action library'), findsOneWidget);
+    await submit(
+      find.text('Welcome message'),
+      () => other.acts.length == 2,
+    );
+    expect(other.acts.last.libraryName, 'Welcome message');
+    expect(other.acts.last.config['output'], 'action1');
+    expect(
+      BuilderStore.shared.resolveAction(other.acts.last).text,
+      'Hello there!',
+    );
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
   });
 
   testWidgets(
@@ -812,7 +900,7 @@ void main() {
       });
       expect(
         bundled.installed.map((p) => p.version),
-        ['0.8.4'],
+        ['0.8.5'],
       );
       expect(bundled.installed.every((p) => p.executable), isTrue);
       final reopened = PluginRepository(vault: vault);
@@ -837,7 +925,7 @@ void main() {
       final local = package(
         (jsonDecode(
                 File(
-                  'examples/plugins/inshopa.storefront.0.8.4.bottogram-plugin.json',
+                  'examples/plugins/inshopa.storefront.0.8.5.bottogram-plugin.json',
                 ).readAsStringSync(),
               )
               as Map<String, dynamic>)

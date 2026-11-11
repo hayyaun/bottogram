@@ -448,13 +448,16 @@ class _BotPageState extends State<BotPage> {
                               padding: const EdgeInsets.only(bottom: 12),
                               child: BPanel(
                                 padding: EdgeInsets.zero,
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute<void>(
-                                    builder: (_) =>
-                                        EventPage(ev: event, bot: widget.bot),
-                                  ),
-                                ),
+                                onTap: () async {
+                                  await Navigator.push<void>(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          EventPage(ev: event, bot: widget.bot),
+                                    ),
+                                  );
+                                  if (mounted) setState(() {});
+                                },
                                 child: ListTile(
                                   leading: const Icon(Icons.bolt_outlined),
                                   title: Text(
@@ -529,10 +532,10 @@ class _BotPageState extends State<BotPage> {
     0,
     (count, event) =>
         count +
-        event.acts.fold<int>(
-          0,
-          (count, act) => count + (act.rmu?.callsEvent(target) ?? 0),
-        ),
+        event.acts.fold<int>(0, (count, act) {
+          final definition = BuilderStore.shared.libraryAction(act.libraryName);
+          return count + ((definition ?? act).rmu?.callsEvent(target) ?? 0);
+        }),
   );
 
   Widget _pluginSettings() {

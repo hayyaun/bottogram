@@ -3,6 +3,7 @@ import 'package:crypto/crypto.dart';
 import 'package:hive/hive.dart';
 import 'package:path/path.dart' as p;
 import '../plugins/secret_vault.dart';
+import '../units/virt_act.dart';
 import 'engine.dart';
 import 'values.dart';
 import 'database.dart';
@@ -74,6 +75,8 @@ class BuilderStore {
     : vault = vault ?? PlatformSecretVault(),
       _data = data;
   static final shared = BuilderStore();
+  // Bot definition keys are SHA-256 hashes.
+  static const _actionLibraryKey = 'action-library';
   final SecretVault vault;
   BotDatabases? _data;
   BotDatabases get data =>
@@ -110,6 +113,56 @@ class BuilderStore {
     _tail = result.then<void>((_) {}, onError: (Object _, StackTrace __) {});
     return result;
   }
+
+  Map get _savedActions => _definitions?.isOpen == true
+      ? _definitions!.get(_actionLibraryKey) as Map? ?? const {}
+      : const {};
+
+  Map<String, VirtAct> get actionLibrary =>
+      Map<String, VirtAct>.from(_savedActions);
+
+  VirtAct? libraryAction(String? name) => _savedActions[name] as VirtAct?;
+
+  VirtAct resolveAction(VirtAct placement) {
+    final name = placement.libraryName;
+    if (name == null) return placement;
+    final definition = libraryAction(name);
+    if (definition == null || definition.type != placement.type) {
+      throw BuilderFailure('The shared action "$name" could not be loaded.');
+    }
+    return VirtAct(type: definition.type, text: definition.text)
+      ..config = {...definition.config, 'output': placement.config['output']}
+      ..rmu = definition.rmu;
+  }
+
+  Future<void> saveLibraryAction(
+    String name,
+    VirtAct action, {
+    bool replace = false,
+  }) => _serialize(() async {
+    if (name.trim().isEmpty || name != name.trim() || name.length > 80) {
+      throw const BuilderFailure(
+        'Enter an action name of up to 80 characters.',
+      );
+    }
+    if (action.libraryName != null) {
+      throw const BuilderFailure('Save an action definition, not a link.');
+    }
+    final entries = actionLibrary;
+    if (replace) {
+      if (entries[name]?.type != action.type) {
+        throw const BuilderFailure('The shared action could not be loaded.');
+      }
+    } else if (entries.keys.any(
+      (key) => key.toLowerCase() == name.toLowerCase(),
+    )) {
+      throw const BuilderFailure('An action with that name already exists.');
+    }
+    entries[name] = VirtAct(type: action.type, text: action.text)
+      ..config = jsonDecode(jsonEncode(action.config)) as BuilderJson
+      ..rmu = action.rmu?.copy(action.rmu?.name ?? '');
+    await _definitions!.put(_actionLibraryKey, entries);
+  });
 
   Map<String, dynamic> _record(String bot) =>
       Map<String, dynamic>.from(_definitions!.get(bot) as Map? ?? {});

@@ -15,10 +15,16 @@ class BuilderStepEditor extends StatefulWidget {
     this.references = const [],
     this.keyboard,
     this.onDelete,
+    this.onAddToLibrary,
+    this.libraryName,
+    this.onRenameOutput,
   });
   final BuilderStep initial;
   final Future<void> Function(BuilderStep value) onSave;
   final VoidCallback? onDelete;
+  final Future<void> Function(BuilderStep value)? onAddToLibrary;
+  final String? libraryName;
+  final VoidCallback? onRenameOutput;
   final List<String> references;
   final Widget? keyboard;
   @override
@@ -77,7 +83,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
 
   String value(String name) =>
       _fields[name]?.text ?? widget.initial.config[name]?.toString() ?? '';
-  Future<void> save() async {
+  Future<void> save({Future<void> Function(BuilderStep)? commit}) async {
     if (!_form.currentState!.validate()) return;
     final config = <String, dynamic>{...widget.initial.config};
     try {
@@ -205,7 +211,9 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         _saving = true;
         _error = null;
       });
-      await widget.onSave(BuilderStep(kind, field('text').text, config));
+      await (commit ?? widget.onSave)(
+        BuilderStep(kind, field('text').text, config),
+      );
     } on FormatException {
       if (mounted) {
         setState(
@@ -231,9 +239,17 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
     appBar: AppBar(
       title: Text(BuilderCatalog.labels[kind] ?? kind),
       actions: [
+        if (widget.onAddToLibrary case final add?)
+          IconButton(
+            tooltip: 'Save to action library',
+            onPressed: _saving ? null : () => save(commit: add),
+            icon: const Icon(Icons.library_add_outlined),
+          ),
         if (widget.onDelete != null)
           IconButton(
-            tooltip: 'Delete action',
+            tooltip: widget.libraryName == null
+                ? 'Delete action'
+                : 'Remove from event',
             onPressed: _saving ? null : widget.onDelete,
             icon: const Icon(Icons.delete_outline),
           ),
@@ -248,26 +264,41 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _input(
-                'output',
-                'Output name',
-                required: true,
-                help:
-                    'Later actions can use {{steps.${value('output').isEmpty ? 'name' : value('output')}.${kind == 'http'
-                        ? 'body.field'
-                        : kind == 'sql'
-                        ? 'rows.0.field'
-                        : kind == 'renderList'
-                        ? 'text'
-                        : BuilderCatalog.variables.contains(kind)
-                        ? 'value'
-                        : kind == 'condition'
-                        ? 'matched'
-                        : 'messageId'}}}.',
-                validate: (v) => BuilderValues.name.hasMatch(v)
-                    ? null
-                    : 'Use letters, numbers and underscores; start with a letter or underscore.',
-              ),
+              if (widget.libraryName case final String name) ...[
+                BNotice(
+                  message:
+                      'Shared action: $name. Saving updates every event using it.',
+                ),
+                ListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: const Text('Output name in this event'),
+                  subtitle: Text(widget.initial.config['output'].toString()),
+                  trailing: TextButton(
+                    onPressed: _saving ? null : widget.onRenameOutput,
+                    child: const Text('Edit'),
+                  ),
+                ),
+              ] else
+                _input(
+                  'output',
+                  'Output name',
+                  required: true,
+                  help:
+                      'Later actions can use {{steps.${value('output').isEmpty ? 'name' : value('output')}.${kind == 'http'
+                          ? 'body.field'
+                          : kind == 'sql'
+                          ? 'rows.0.field'
+                          : kind == 'renderList'
+                          ? 'text'
+                          : BuilderCatalog.variables.contains(kind)
+                          ? 'value'
+                          : kind == 'condition'
+                          ? 'matched'
+                          : 'messageId'}}}.',
+                  validate: (v) => BuilderValues.name.hasMatch(v)
+                      ? null
+                      : 'Use letters, numbers and underscores; start with a letter or underscore.',
+                ),
               if (_error != null)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),

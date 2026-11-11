@@ -166,6 +166,7 @@ class PluginManifest {
       'setupFields',
       'settings',
       'automations',
+      'sharedActions',
       'errorMessages',
       'telegram',
     });
@@ -188,6 +189,7 @@ class PluginManifest {
     if (data['executionStatus'] != (live ? 'live' : 'setup-only') ||
         (!live &&
             (data.containsKey('automations') ||
+                data.containsKey('sharedActions') ||
                 data.containsKey('telegram')))) {
       reject(
         'This release supports setup-only plugins; live execution is not available yet.',
@@ -327,7 +329,10 @@ class PluginManifest {
       try {
         final registry = AutomationRegistry.standard;
         errorMessages = parseErrorMessages(data['errorMessages']);
-        automations = registry.parse(data['automations']);
+        automations = registry.parse(
+          data['automations'],
+          sharedActions: data['sharedActions'],
+        );
         if (data['telegram'] != null) {
           validateTelegramConfig(data['telegram']);
           telegram = data['telegram'] as Json;

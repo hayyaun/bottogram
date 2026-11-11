@@ -10,7 +10,7 @@ import 'event_match.dart';
 
 class BuilderSession {
   BuilderSession(String token, RawAPI api, {BuilderStore? store}) {
-    final repository = store ?? BuilderStore.shared;
+    repository = store ?? BuilderStore.shared;
     final id = builderBotId(token);
     telegram = BuilderTelegramPort(api);
     engine = BuilderEngine(
@@ -20,18 +20,21 @@ class BuilderSession {
       secret: (name) => repository.secret(id, name),
     );
   }
+  late final BuilderStore repository;
   late final BuilderEngine engine;
   late final BuilderTelegramPort telegram;
   final List<Timer> _timers = [];
   bool _closed = false;
-  static List<BuilderStep> steps(VirtEvent event) => event.acts
-      .map(
-        (act) => BuilderStep(act.type.name, act.text, {
-          ...act.config,
-          if (act.rmu != null) 'keyboard': act.rmu!.hydrate().toJson(),
-        }),
-      )
-      .toList();
+  static List<BuilderStep> steps(VirtEvent event, {BuilderStore? store}) =>
+      event.acts
+          .map((store ?? BuilderStore.shared).resolveAction)
+          .map(
+            (act) => BuilderStep(act.type.name, act.text, {
+              ...act.config,
+              if (act.rmu != null) 'keyboard': act.rmu!.hydrate().toJson(),
+            }),
+          )
+          .toList();
   Future<void> receive(VirtEvent event, Context context) async {
     final message = context.message ?? context.callbackQuery?.message;
     final widget = context.widgetQuery;
@@ -80,7 +83,7 @@ class BuilderSession {
       'inlineMessageId': context.callbackQuery?.inlineMessageId,
       'inlineQueryId': context.inlineQuery?.id,
       'timestamp': DateTime.now().toUtc().toIso8601String(),
-    }, steps(event));
+    }, steps(event, store: repository));
     final callback = context.callbackQuery;
     if (!_closed &&
         callback != null &&
@@ -155,7 +158,7 @@ class BuilderSession {
           await engine.run('polling:${event.query}', {
             'type': 'polling',
             'timestamp': DateTime.now().toUtc().toIso8601String(),
-          }, steps(event));
+          }, steps(event, store: repository));
         } finally {
           busy = false;
         }

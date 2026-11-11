@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:bottogram/builder/database.dart';
+import 'package:bottogram/builder/session.dart';
 import 'package:bottogram/builder/storage_snapshot.dart';
 import 'package:bottogram/builder/store.dart';
 import 'package:bottogram/builder/values.dart';
@@ -124,6 +125,69 @@ void main() {
     await Hive.close();
     await root.delete(recursive: true);
   });
+  test(
+    'library links reopen across bots and keep local output names',
+    () async {
+      const name = 'Welcome';
+      VirtAct definition(String text) =>
+          VirtAct(type: VirtActType.reply, text: text)
+            ..config = {'output': 'welcome'}
+            ..rmu = (VirtRMUInlineKeyboard()
+              ..items = [KeyValue('Open', 'open')]);
+      await store.saveLibraryAction(name, definition('Hello!'));
+
+      var box = await Hive.openBox<VirtBot>('library-bots');
+      for (final (index, output) in ['first_reply', 'second_reply'].indexed) {
+        await box.add(
+          VirtBot('Bot $index', '${index + 1}:fixture', addSamples: false)
+            ..events = [
+              VirtEvent(type: VirtEventType.command, query: 'start')
+                ..acts.add(
+                  VirtAct.libraryReference(
+                    type: VirtActType.reply,
+                    name: name,
+                    output: output,
+                  ),
+                ),
+            ],
+        );
+      }
+      await box.close();
+      await Hive.box<dynamic>('builder_definitions_v1').close();
+      await store.ready;
+      box = await Hive.openBox<VirtBot>('library-bots');
+      final events = box.values.map((bot) => bot.events.single).toList();
+
+      expect(events.map((event) => event.acts.single.text), ['', '']);
+      List<String> replies() => [
+        for (final event in events)
+          BuilderSession.steps(event, store: store).single.text,
+      ];
+      expect(replies(), ['Hello!', 'Hello!']);
+
+      await store.saveLibraryAction(
+        name,
+        definition('Welcome back!'),
+        replace: true,
+      );
+      expect(replies(), ['Welcome back!', 'Welcome back!']);
+      expect(
+        events.map(
+          (event) =>
+              BuilderSession.steps(event, store: store).single.config['output'],
+        ),
+        ['first_reply', 'second_reply'],
+      );
+      final exported = store.resolveAction(events.first.acts.single);
+      expect(exported.libraryName, isNull);
+      expect(exported.text, 'Welcome back!');
+      expect(
+        (exported.rmu as VirtRMUInlineKeyboard).items.single?.value,
+        'open',
+      );
+    },
+  );
+
   test(
     'old actions and events load unchanged; new settings round trip',
     () async {

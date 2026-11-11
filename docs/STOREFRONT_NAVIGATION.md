@@ -1,7 +1,7 @@
 # Storefront navigation
 
 This document describes the original Inshopa 0.6.0 navigation.
-The bundled [0.8.4 package](../examples/plugins/inshopa.storefront.0.8.4.bottogram-plugin.json)
+The bundled [0.8.5 package](../examples/plugins/inshopa.storefront.0.8.5.bottogram-plugin.json)
 adds HTML storefront widgets and product broadcasts. Its widget shows six
 products per page with 64 px thumbnails.
 There is no Inshopa source, API, page, authentication, database or configuration

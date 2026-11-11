@@ -34,6 +34,19 @@ credentials** and remain in platform secure storage. Credentials, arbitrary
 response bodies and parameter values are not written to the execution console.
 An HTTP redirect is reported as a failure instead of following it.
 
+## Reuse an action
+
+Open an action and choose **Save to action library** in the toolbar. Name it
+and choose **Save and link** to replace that event's action with a reference.
+In any manual bot, open an event, choose **Add action**, and select the entry
+under **Action library**.
+
+Editing a shared action changes its settings for all linked events. Each event
+keeps its own output name, and removing the action from an event removes that
+link. When the action uses earlier outputs, variables, credentials or callback
+events, configure those dependencies in each destination bot. A bot backup
+contains editable copies of its linked actions, independent of the library.
+
 ## References and types
 
 - `{{event.text}}`, `{{event.firstName}}`, `{{event.username}}`

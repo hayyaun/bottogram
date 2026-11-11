@@ -6,9 +6,7 @@ import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
-import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/ui/dialogs.dart';
-import 'package:bottogram/utils/valid.dart';
 import 'package:bottogram/widgets/rmu_editor.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,9 +26,16 @@ class ActPage extends StatefulWidget {
 }
 
 class _ActPageState extends State<ActPage> {
-  late final draft = VirtAct(type: widget.act.type, text: widget.act.text)
-    ..config = Map.of(widget.act.config)
-    ..rmu = widget.act.rmu?.copy(widget.act.rmu?.name ?? '');
+  final _store = BuilderStore.shared;
+  late final _name = widget.act.libraryName;
+  late final _source = _store.libraryAction(_name) ?? widget.act;
+  late final draft = VirtAct(type: _source.type, text: _source.text)
+    ..config = Map.of(_source.config)
+    ..rmu = _source.rmu?.copy(_source.rmu?.name ?? '');
+
+  String get _output =>
+      widget.act.config['output']?.toString() ??
+      'step${widget.ev.acts.indexOf(widget.act) + 1}';
   final _references = <String>[
     'event.text',
     'event.input',
@@ -52,9 +57,10 @@ class _ActPageState extends State<ActPage> {
     if (widget.ev.config['inputSeparator'] != null) {
       _references.add('event.inputParts.0');
     }
-    for (final (index, act) in widget.ev.acts.indexed) {
-      if (identical(act, widget.act)) break;
-      final name = act.config['output'] ?? 'step${index + 1}';
+    for (final (index, placement) in widget.ev.acts.indexed) {
+      if (identical(placement, widget.act)) break;
+      final act = _store.libraryAction(placement.libraryName) ?? placement;
+      final name = placement.config['output'] ?? 'step${index + 1}';
       _references.add(
         'steps.$name.${act.type == VirtActType.http
             ? 'body'
@@ -97,17 +103,63 @@ class _ActPageState extends State<ActPage> {
     }
   }
 
-  Future<void> _save(BuilderStep step) async {
+  String? _outputError(String name) {
+    if (!BuilderValues.name.hasMatch(name)) {
+      return 'Use letters, numbers and underscores; start with a letter or underscore.';
+    }
     if (widget.ev.acts.indexed.any(
       (entry) =>
           !identical(entry.$2, widget.act) &&
-          (entry.$2.config['output'] ?? 'step${entry.$1 + 1}') ==
-              step.config['output'],
+          (entry.$2.config['output'] ?? 'step${entry.$1 + 1}') == name,
     )) {
-      throw const BuilderFailure(
-        'Another action already uses this output name.',
+      return 'Another action already uses this output name.';
+    }
+    return null;
+  }
+
+  Future<void> _addToLibrary(BuilderStep step) async {
+    final entry = await showBEntryDialog<bool>(
+      context,
+      title: 'Save to action library',
+      fieldLabel: 'Library name',
+      initialType: true,
+      action: 'Save and link',
+      validate: (value) =>
+          value.trim().length > 80 ? 'Use up to 80 characters.' : null,
+    );
+    if (entry == null || !mounted) return;
+    await _save(step, libraryName: entry.text.trim());
+  }
+
+  Future<void> _renameOutput() async {
+    final entry = await showBEntryDialog<bool>(
+      context,
+      title: 'Edit output name',
+      fieldLabel: 'Output name',
+      initialType: true,
+      initialText: _output,
+      action: 'Save',
+      validate: _outputError,
+    );
+    if (entry == null || !mounted || entry.text == _output) return;
+    final previous = _output;
+    widget.act.config['output'] = entry.text;
+    try {
+      await context.read<BotsCubit>().saveBot(widget.bot);
+      if (mounted) setState(() {});
+    } catch (_) {
+      widget.act.config['output'] = previous;
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('The output name could not be saved.')),
       );
     }
+  }
+
+  Future<void> _save(BuilderStep step, {String? libraryName}) async {
+    final output = step.config['output'] as String;
+    final error = _outputError(output);
+    if (error != null) throw BuilderFailure(error);
     if (step.kind == 'callbackAnswer' &&
         widget.ev.type != VirtEventType.callbackQuery) {
       throw const BuilderFailure(
@@ -120,44 +172,50 @@ class _ActPageState extends State<ActPage> {
         'Inline answers require an inline-query event.',
       );
     }
+    final definition = VirtAct(type: draft.type, text: step.text)
+      ..config = step.config
+      ..rmu = draft.rmu;
+    if (_name case final String name) {
+      // The library's suggested output name is independent of this placement.
+      definition.config = {...step.config, 'output': _source.config['output']};
+      await _store.saveLibraryAction(name, definition, replace: true);
+      if (mounted) Navigator.pop(context, true);
+      return;
+    }
+
+    final bots = context.read<BotsCubit>();
+    if (libraryName != null) {
+      await _store.saveLibraryAction(libraryName, definition);
+      if (!mounted) return;
+    }
     final previousText = widget.act.text,
         previousConfig = widget.act.config,
         previousKeyboard = widget.act.rmu;
+    final placement = libraryName == null
+        ? definition
+        : VirtAct.libraryReference(
+            type: draft.type,
+            name: libraryName,
+            output: output,
+          );
     widget.act
-      ..text = step.text
-      ..config = step.config
-      ..rmu = draft.rmu;
-    final added = <VirtEvent>[];
-    void bind(VirtEventType type, String query) {
-      if (widget.bot.events.any((e) => e.type == type && e.query == query)) {
-        return;
-      }
-      final event = VirtEvent(type: type, query: query);
-      widget.bot.events.add(event);
-      added.add(event);
-    }
-
-    final rmu = draft.rmu;
-    if (rmu is VirtRMUKeyboard) {
-      for (final text in rmu.items.whereType<String>()) {
-        bind(VirtEventType.text, text);
-      }
-    }
-    if (rmu is VirtRMUInlineKeyboard) {
-      for (final item in rmu.items.whereType<KeyValue>()) {
-        if (!isValidUrl(item.value)) {
-          bind(VirtEventType.callbackQuery, item.value);
-        }
-      }
-    }
+      ..text = placement.text
+      ..config = placement.config
+      ..rmu = placement.rmu;
+    final added = widget.bot.bindKeyboardEvents(definition.rmu);
     try {
-      await context.read<BotsCubit>().saveBot(widget.bot);
+      await bots.saveBot(widget.bot);
     } catch (_) {
       widget.act
         ..text = previousText
         ..config = previousConfig
         ..rmu = previousKeyboard;
       widget.bot.events.removeWhere(added.contains);
+      if (libraryName != null) {
+        throw const BuilderFailure(
+          'The action is in the library, but its link could not be saved. Add it from the action picker.',
+        );
+      }
       rethrow;
     }
     if (mounted) Navigator.pop(context, true);
@@ -166,9 +224,9 @@ class _ActPageState extends State<ActPage> {
   Future<void> _remove() async {
     if (!await confirmRemoval(
           context,
-          title: 'Delete action?',
+          title: _name == null ? 'Delete action?' : 'Remove action from event?',
           message: 'Later actions referring to its output will need updating.',
-          action: 'Delete action',
+          action: _name == null ? 'Delete action' : 'Remove from event',
         ) ||
         !mounted) {
       return;
@@ -187,13 +245,14 @@ class _ActPageState extends State<ActPage> {
   Widget build(BuildContext context) => BuilderStepEditor(
     initial: BuilderStep(draft.type.name, draft.text, {
       ...draft.config,
-      'output':
-          draft.config['output'] ??
-          'step${widget.ev.acts.indexOf(widget.act) + 1}',
+      'output': _output,
     }),
     references: _references,
     keyboard: RMUEditor(act: draft),
     onSave: _save,
     onDelete: _remove,
+    onAddToLibrary: _name == null ? _addToLibrary : null,
+    libraryName: _name,
+    onRenameOutput: _name == null ? null : _renameOutput,
   );
 }

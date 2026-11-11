@@ -154,6 +154,63 @@ PluginManifest parse(Json value) =>
 
 void main() {
   test(
+    'shared plugin actions expand before manifest and trigger validation',
+    () {
+      Json withReferences() {
+        final manifest = productDefinition();
+        final automation = manifest['automations'][0];
+        final reply = automation['actions'][1] as Json;
+        manifest['sharedActions'] = [reply];
+        automation['actions'][1] = {'ref': 'reply'};
+        manifest['automations'].add({
+          'id': 'other',
+          'trigger': {
+            'type': 'telegram.command.v1',
+            'config': {'command': 'other'},
+          },
+          'actions': [
+            {'ref': 'reply', 'id': 'other-reply'},
+          ],
+        });
+        return jsonDecode(jsonEncode(manifest)) as Json;
+      }
+
+      final result = parse(withReferences());
+      final first = result.automations.first.actions.last;
+      final second = result.automations.last.actions.single;
+      expect(first.id, 'reply');
+      expect(second.id, 'other-reply');
+      expect(first.type, second.type);
+      expect(first.config, second.config);
+
+      for (final mutate in <void Function(Json)>[
+        (manifest) =>
+            manifest['automations'][0]['actions'][1]['ref'] = 'missing',
+        (manifest) =>
+            manifest['automations'][0]['actions'][1]['id'] = 'catalog',
+        (manifest) => manifest['automations'][0]['actions'][1]['config'] = {},
+        (manifest) =>
+            manifest['sharedActions'].add(manifest['sharedActions'][0]),
+        (manifest) =>
+            manifest['sharedActions'][0] = {'id': 'reply', 'ref': 'reply'},
+        (manifest) => manifest['automations'][1]['trigger'] = {
+          'type': 'telegram.interaction.v1',
+          'config': {
+            'routes': [
+              {'kind': 'command', 'name': 'other', 'argument': 'none'},
+            ],
+            'failureText': 'Try again.',
+          },
+        },
+      ]) {
+        final manifest = withReferences();
+        mutate(manifest);
+        expect(() => parse(manifest), throwsA(isA<PluginException>()));
+      }
+    },
+  );
+
+  test(
     'v2 validates schemas, credentials and unknown types while preserving v1',
     () {
       expect(parse(productDefinition()).executable, isTrue);

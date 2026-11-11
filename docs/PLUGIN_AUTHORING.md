@@ -310,6 +310,30 @@ that object at `event.results.<resultKey>` for later actions. Optional
 from the event's page number. For example, `resultKey: "events"` makes the
 response's `items` available as `results.events.items` in the message-list example.
 
+### Shared actions
+
+A live manifest can declare up to 64 actions in the top-level `sharedActions`
+array. Each uses the same `id`, `type`, `config` and optional `errorMap` as
+an inline action.
+
+```json
+{
+  "sharedActions": [
+    {
+      "id": "send-help",
+      "type": "telegram.reply.v1",
+      "config": {"text": "Send /help to see available commands."}
+    }
+  ]
+}
+```
+
+In an automation's `actions` list, use `{"ref": "send-help"}`. To give the
+occurrence a different ID, use `{"ref": "send-help", "id": "show-help"}`.
+Inline actions and references can appear in the same list. Each occurrence
+must have a unique ID within its automation and must meet that automation's
+trigger and configuration rules. References reuse the full definition.
+
 ### Scheduled API notifications
 
 Poll triggers use an interval from 30 to 86,400 seconds and explicitly choose
@@ -621,7 +645,7 @@ are checked when a command or button is used.
 - `telegram.status.v1` can report the current destination posting permissions and a
   boolean plugin setting from an admin-only interaction.
 
-See the [Inshopa 0.8.4 package](../examples/plugins/inshopa.storefront.0.8.4.bottogram-plugin.json)
+See the [Inshopa 0.8.5 package](../examples/plugins/inshopa.storefront.0.8.5.bottogram-plugin.json)
 for complete declarations, including a Telegram deep link generated from the
 bot's username and a same-origin Mini App button with a bound path segment.
 

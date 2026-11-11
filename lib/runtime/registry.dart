@@ -204,7 +204,71 @@ class AutomationRegistry {
     }),
   );
 
-  List<AutomationDefinition> parse(dynamic raw) {
+  ComponentDefinition _component(dynamic raw, {required bool trigger}) {
+    final c = object(raw);
+    keys(
+      c,
+      trigger
+          ? {'type', 'config', 'errorMap'}
+          : {'id', 'type', 'config', 'errorMap'},
+    );
+    final type = string(c['type'], 100);
+    final config = object(c['config']);
+    final registration = trigger ? triggers[type] : actions[type];
+    if (registration == null) {
+      throw FormatException(
+        'Unsupported ${trigger ? 'trigger' : 'action'} type: $type.',
+      );
+    }
+    if (!trigger) identifier(c['id']);
+    registration.validate(config);
+    return ComponentDefinition(
+      type,
+      config,
+      id: c['id'] as String?,
+      errorMap: validateErrorMap(c['errorMap']),
+    );
+  }
+
+  Map<String, ComponentDefinition> _sharedActions(dynamic raw) {
+    if (raw == null) return const {};
+    if (raw is! List || raw.length > 64) invalid();
+    final shared = <String, ComponentDefinition>{};
+    for (final value in raw) {
+      final action = _component(value, trigger: false);
+      if (shared.containsKey(action.id)) {
+        throw const FormatException('Shared action IDs must be unique.');
+      }
+      shared[action.id!] = action;
+    }
+    return shared;
+  }
+
+  ComponentDefinition _resolveAction(
+    dynamic raw,
+    Map<String, ComponentDefinition> shared,
+  ) {
+    final action = object(raw);
+    if (!action.containsKey('ref')) return _component(action, trigger: false);
+    keys(action, {'ref', 'id'});
+    identifier(action['ref']);
+    final reference = action['ref'] as String;
+    final definition = shared[reference];
+    if (definition == null) {
+      throw FormatException('Unknown shared action: $reference.');
+    }
+    final id = action.containsKey('id') ? action['id'] : reference;
+    identifier(id);
+    return ComponentDefinition(
+      definition.type,
+      definition.config,
+      id: id as String,
+      errorMap: definition.errorMap,
+    );
+  }
+
+  List<AutomationDefinition> parse(dynamic raw, {dynamic sharedActions}) {
+    final shared = _sharedActions(sharedActions);
     if (raw is! List || raw.isEmpty || raw.length > 16) invalid();
     final ids = <String>{};
     final commands = <String>{};
@@ -216,33 +280,7 @@ class AutomationRegistry {
         identifier(a['id']);
         if (!ids.add(a['id'])) invalid();
         if (a['enabledBySetting'] != null) identifier(a['enabledBySetting']);
-        ComponentDefinition component(dynamic raw, bool trigger) {
-          final c = object(raw);
-          keys(
-            c,
-            trigger
-                ? {'type', 'config', 'errorMap'}
-                : {'id', 'type', 'config', 'errorMap'},
-          );
-          final type = string(c['type'], 100);
-          final config = object(c['config']);
-          final registration = trigger ? triggers[type] : actions[type];
-          if (registration == null) {
-            throw FormatException(
-              'Unsupported ${trigger ? 'trigger' : 'action'} type: $type.',
-            );
-          }
-          if (!trigger) identifier(c['id']);
-          registration.validate(config);
-          return ComponentDefinition(
-            type,
-            config,
-            id: c['id'] as String?,
-            errorMap: validateErrorMap(c['errorMap']),
-          );
-        }
-
-        final t = component(a['trigger'], true);
+        final t = _component(a['trigger'], trigger: true);
         if (t.type == interactionTrigger) {
           for (final route in interactionRoutes(t.config)) {
             routes.add((route, t.config['audience'] as String?));
@@ -260,7 +298,9 @@ class AutomationRegistry {
         final list = a['actions'];
         if (list is! List || list.isEmpty || list.length > 16) invalid();
         final actionIds = <String>{};
-        final parsed = (list).map((v) => component(v, false)).toList();
+        final parsed = [
+          for (final value in list) _resolveAction(value, shared),
+        ];
         String? destinationField;
         for (final action in parsed) {
           if (action.type == presentationAction) {

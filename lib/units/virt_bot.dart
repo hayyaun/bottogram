@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:bottogram/builder/session.dart';
+import 'package:bottogram/builder/store.dart';
 
 import 'package:bottogram/inbox/repository.dart';
 import 'package:bottogram/inbox/transformer.dart';
@@ -8,6 +9,7 @@ import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
+import 'package:bottogram/utils/valid.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
 import 'package:televerse/televerse.dart';
@@ -83,6 +85,18 @@ class VirtBot extends HiveObject {
       );
     }
     if (_active) await stop(); // stop before restart
+    if (!pluginRuntime) {
+      final linked = events
+          .expand((event) => event.acts)
+          .where((action) => action.libraryName != null);
+      if (linked.isNotEmpty) {
+        final store = BuilderStore.shared;
+        await store.ready;
+        for (final action in linked) {
+          store.resolveAction(action);
+        }
+      }
+    }
     await bot.initialize().timeout(const Duration(seconds: 22));
     final generation = ++_runGeneration;
     var acceptsWidgets = pluginRuntime && pluginWidgetQueries;
@@ -157,6 +171,32 @@ class VirtBot extends HiveObject {
     } else {
       await start();
     }
+  }
+
+  List<VirtEvent> bindKeyboardEvents(VirtRMU? keyboard) {
+    final added = <VirtEvent>[];
+    void bind(VirtEventType type, String query) {
+      if (events.any((event) => event.type == type && event.query == query)) {
+        return;
+      }
+      final event = VirtEvent(type: type, query: query);
+      events.add(event);
+      added.add(event);
+    }
+
+    if (keyboard is VirtRMUKeyboard) {
+      for (final text in keyboard.items.whereType<String>()) {
+        bind(VirtEventType.text, text);
+      }
+    }
+    if (keyboard is VirtRMUInlineKeyboard) {
+      for (final item in keyboard.items.whereType<KeyValue>()) {
+        if (!isValidUrl(item.value)) {
+          bind(VirtEventType.callbackQuery, item.value);
+        }
+      }
+    }
+    return added;
   }
 
   void addEvent(VirtEvent ev) {

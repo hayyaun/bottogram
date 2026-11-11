@@ -12,6 +12,15 @@ class VirtAct {
 
   VirtAct({required this.type, required this.text});
 
+  VirtAct.libraryReference({
+    required this.type,
+    required String name,
+    required String output,
+  }) : text = '',
+       config = {'sharedAction': name, 'output': output};
+
+  String? get libraryName => config['sharedAction'] as String?;
+
   Future<void> run(Context ctx) async {
     switch (type) {
       case VirtActType.reply:

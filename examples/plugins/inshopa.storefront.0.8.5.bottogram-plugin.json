@@ -3,7 +3,7 @@
   "hostApiMajor": 2,
   "id": "bottogram-plugin-inshopa",
   "name": "این شاپا",
-  "version": "0.8.4",
+  "version": "0.8.5",
   "executionStatus": "live",
   "description": "ویترین فارسی فروشگاه در تلگرام با مرور محصولات، پیگیری خرید، اعلان سفارش برای مدیر و معرفی محصولات تازه در کانال‌ها و گروه‌های انتخابی فروشگاه.",
   "requiresBotFields": [
@@ -46,6 +46,63 @@
       "helpText": "در نخستین بررسی، سفارش های پرداخت شده قبلی اعلان نمی شوند. پس از آن، سفارش های تازه مشاهده شده با وضعیت پرداخت شده برای مدیر ارسال می شوند."
     }
   ],
+  "sharedActions": [
+    {
+      "id": "shop-profile",
+      "type": "http.get-json.v1",
+      "config": {
+        "request": {
+          "method": "GET",
+          "url": "https://api.inshopa.ir/v1/storefront",
+          "authentication": {
+            "type": "bearer",
+            "secretField": "apiKey"
+          },
+          "headers": {
+            "Origin": {
+              "field": "storefrontUrl",
+              "transform": "url.origin"
+            },
+            "X-Storefront-Host": {
+              "field": "storefrontUrl",
+              "transform": "url.authority"
+            }
+          }
+        },
+        "resultKey": "shop",
+        "useLastResponse": true
+      }
+    },
+    {
+      "id": "fetch-page",
+      "type": "http.get-json.v1",
+      "config": {
+        "request": {
+          "method": "GET",
+          "url": "https://api.inshopa.ir/v1/storefront/products",
+          "authentication": {
+            "type": "bearer",
+            "secretField": "apiKey"
+          },
+          "headers": {
+            "Origin": {
+              "field": "storefrontUrl",
+              "transform": "url.origin"
+            },
+            "X-Storefront-Host": {
+              "field": "storefrontUrl",
+              "transform": "url.authority"
+            }
+          }
+        },
+        "resultKey": "catalog",
+        "pagination": {
+          "pageSize": 6,
+          "itemsPath": "products"
+        }
+      }
+    }
+  ],
   "automations": [
     {
       "id": "buyer-welcome",
@@ -65,30 +122,7 @@
       },
       "actions": [
         {
-          "id": "shop-profile",
-          "type": "http.get-json.v1",
-          "config": {
-            "request": {
-              "method": "GET",
-              "url": "https://api.inshopa.ir/v1/storefront",
-              "authentication": {
-                "type": "bearer",
-                "secretField": "apiKey"
-              },
-              "headers": {
-                "Origin": {
-                  "field": "storefrontUrl",
-                  "transform": "url.origin"
-                },
-                "X-Storefront-Host": {
-                  "field": "storefrontUrl",
-                  "transform": "url.authority"
-                }
-              }
-            },
-            "resultKey": "shop",
-            "useLastResponse": true
-          }
+          "ref": "shop-profile"
         },
         {
           "id": "present",
@@ -180,30 +214,7 @@
       },
       "actions": [
         {
-          "id": "shop-profile",
-          "type": "http.get-json.v1",
-          "config": {
-            "request": {
-              "method": "GET",
-              "url": "https://api.inshopa.ir/v1/storefront",
-              "authentication": {
-                "type": "bearer",
-                "secretField": "apiKey"
-              },
-              "headers": {
-                "Origin": {
-                  "field": "storefrontUrl",
-                  "transform": "url.origin"
-                },
-                "X-Storefront-Host": {
-                  "field": "storefrontUrl",
-                  "transform": "url.authority"
-                }
-              }
-            },
-            "resultKey": "shop",
-            "useLastResponse": true
-          }
+          "ref": "shop-profile"
         },
         {
           "id": "present",
@@ -284,30 +295,7 @@
       },
       "actions": [
         {
-          "id": "shop-profile",
-          "type": "http.get-json.v1",
-          "config": {
-            "request": {
-              "method": "GET",
-              "url": "https://api.inshopa.ir/v1/storefront",
-              "authentication": {
-                "type": "bearer",
-                "secretField": "apiKey"
-              },
-              "headers": {
-                "Origin": {
-                  "field": "storefrontUrl",
-                  "transform": "url.origin"
-                },
-                "X-Storefront-Host": {
-                  "field": "storefrontUrl",
-                  "transform": "url.authority"
-                }
-              }
-            },
-            "resultKey": "shop",
-            "useLastResponse": true
-          }
+          "ref": "shop-profile"
         },
         {
           "id": "read-status",
@@ -488,33 +476,7 @@
       },
       "actions": [
         {
-          "id": "fetch-page",
-          "type": "http.get-json.v1",
-          "config": {
-            "request": {
-              "method": "GET",
-              "url": "https://api.inshopa.ir/v1/storefront/products",
-              "authentication": {
-                "type": "bearer",
-                "secretField": "apiKey"
-              },
-              "headers": {
-                "Origin": {
-                  "field": "storefrontUrl",
-                  "transform": "url.origin"
-                },
-                "X-Storefront-Host": {
-                  "field": "storefrontUrl",
-                  "transform": "url.authority"
-                }
-              }
-            },
-            "resultKey": "catalog",
-            "pagination": {
-              "pageSize": 6,
-              "itemsPath": "products"
-            }
-          }
+          "ref": "fetch-page"
         },
         {
           "id": "present",
@@ -663,33 +625,7 @@
       },
       "actions": [
         {
-          "id": "fetch-page",
-          "type": "http.get-json.v1",
-          "config": {
-            "request": {
-              "method": "GET",
-              "url": "https://api.inshopa.ir/v1/storefront/products",
-              "authentication": {
-                "type": "bearer",
-                "secretField": "apiKey"
-              },
-              "headers": {
-                "Origin": {
-                  "field": "storefrontUrl",
-                  "transform": "url.origin"
-                },
-                "X-Storefront-Host": {
-                  "field": "storefrontUrl",
-                  "transform": "url.authority"
-                }
-              }
-            },
-            "resultKey": "catalog",
-            "pagination": {
-              "pageSize": 6,
-              "itemsPath": "products"
-            }
-          }
+          "ref": "fetch-page"
         },
         {
           "id": "present",

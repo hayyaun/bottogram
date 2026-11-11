@@ -21,7 +21,7 @@ import 'plugins_test.dart' show MemoryVault;
 import 'storefront_presentation_test.dart' show PluginHarness, shipped;
 
 const package = 'inshopa.storefront.0.8.1';
-const thumbnailPackage = 'inshopa.storefront.0.8.4';
+const thumbnailPackage = 'inshopa.storefront.0.8.5';
 const productId = 'e6af6af3-a42d-4a71-87d5-aac75e232183';
 const nextId = '11111111-1111-1111-1111-111111111111';
 const otherId = '22222222-2222-2222-2222-222222222222';

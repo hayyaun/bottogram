@@ -1,5 +1,7 @@
 import 'package:bottogram/pages/act.dart';
 import 'package:bottogram/builder/catalog.dart';
+import 'package:bottogram/builder/store.dart';
+import 'package:bottogram/builder/values.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -38,9 +40,38 @@ class _EventPageState extends State<EventPage> {
     super.dispose();
   }
 
+  bool _supports(VirtActType type) =>
+      (type != VirtActType.callbackAnswer ||
+          widget.ev.type == VirtEventType.callbackQuery) &&
+      (type != VirtActType.inlineAnswer ||
+          widget.ev.type == VirtEventType.inlineQuery);
+
+  String _nextOutput([String? preferred]) {
+    final names = {
+      for (final (index, action) in widget.ev.acts.indexed)
+        action.config['output'] ?? 'step${index + 1}',
+    };
+    if (preferred != null &&
+        BuilderValues.name.hasMatch(preferred) &&
+        !names.contains(preferred)) {
+      return preferred;
+    }
+    var index = 1;
+    while (names.contains('action$index')) {
+      index++;
+    }
+    return 'action$index';
+  }
+
   Future<void> _addAction() async {
     if (widget.ev.acts.length >= 64) return;
-    final type = await showModalBottomSheet<VirtActType>(
+    final store = BuilderStore.shared;
+    final entries =
+        store.actionLibrary.entries
+            .where((entry) => _supports(entry.value.type))
+            .toList()
+          ..sort((a, b) => a.key.toLowerCase().compareTo(b.key.toLowerCase()));
+    final selected = await showModalBottomSheet<(VirtActType, String?)>(
       context: context,
       isScrollControlled: true,
       builder: (context) => SafeArea(
@@ -52,49 +83,82 @@ class _EventPageState extends State<EventPage> {
                 title: Text('Add action'),
                 subtitle: Text('Connect each action using its named output.'),
               ),
-              for (final type in VirtActType.values)
-                if ((type != VirtActType.callbackAnswer ||
-                        widget.ev.type == VirtEventType.callbackQuery) &&
-                    (type != VirtActType.inlineAnswer ||
-                        widget.ev.type == VirtEventType.inlineQuery))
+              if (entries.isNotEmpty) ...[
+                const ListTile(title: Text('Action library')),
+                for (final entry in entries)
                   ListTile(
-                    title: Text(BuilderCatalog.labels[type.name] ?? type.name),
-                    leading: Icon(
-                      type == VirtActType.http
-                          ? Icons.http
-                          : BuilderCatalog.variables.contains(type.name)
-                          ? Icons.data_object
-                          : Icons.bolt_outlined,
+                    title: Text(entry.key),
+                    subtitle: Text(
+                      BuilderCatalog.labels[entry.value.type.name] ??
+                          entry.value.type.name,
                     ),
-                    onTap: () => Navigator.pop(context, type),
+                    leading: const Icon(Icons.link),
+                    onTap: () =>
+                        Navigator.pop(context, (entry.value.type, entry.key)),
                   ),
+                const Divider(),
+                const ListTile(title: Text('New action')),
+              ],
+              for (final type in VirtActType.values.where(_supports))
+                ListTile(
+                  title: Text(BuilderCatalog.labels[type.name] ?? type.name),
+                  leading: Icon(
+                    type == VirtActType.http
+                        ? Icons.http
+                        : BuilderCatalog.variables.contains(type.name)
+                        ? Icons.data_object
+                        : Icons.bolt_outlined,
+                  ),
+                  onTap: () => Navigator.pop(context, (type, null)),
+                ),
             ],
           ),
         ),
       ),
     );
-    if (type == null || !mounted) return;
-    final names = {
-      for (final (i, a) in widget.ev.acts.indexed)
-        a.config['output'] ?? 'step${i + 1}',
-    };
-    var i = 1;
-    while (names.contains('action$i')) {
-      i++;
+    if (selected == null || !mounted || widget.ev.acts.length >= 64) return;
+    final (type, name) = selected;
+    if (name != null) {
+      final definition = store.libraryAction(name);
+      if (definition == null) return;
+      final act = VirtAct.libraryReference(
+        type: type,
+        name: name,
+        output: _nextOutput(definition.config['output'] as String?),
+      );
+      widget.ev.acts.add(act);
+      final added = widget.bot.bindKeyboardEvents(definition.rmu);
+      try {
+        await context.read<BotsCubit>().saveBot(widget.bot);
+      } catch (_) {
+        widget.ev.acts.remove(act);
+        widget.bot.events.removeWhere(added.contains);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('The shared action could not be added.'),
+            ),
+          );
+        }
+      }
+      if (mounted) setState(() {});
+      return;
     }
     final act = VirtAct(text: '', type: type)
-      ..config = {'output': 'action$i', 'format': 'MarkdownV2'};
+      ..config = {'output': _nextOutput(), 'format': 'MarkdownV2'};
     widget.ev.acts.add(act);
-    final saved = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => ActPage(act: act, ev: widget.ev, bot: widget.bot),
-      ),
-    );
+    final saved = await _openAction(act);
     // ActPage reports a successful save; cancelled drafts never become actions.
     if (saved != true) widget.ev.acts.remove(act);
     if (mounted) setState(() {});
   }
+
+  Future<bool?> _openAction(VirtAct action) => Navigator.push<bool>(
+    context,
+    MaterialPageRoute(
+      builder: (_) => ActPage(act: action, ev: widget.ev, bot: widget.bot),
+    ),
+  );
 
   Future<void> _remove() async {
     final accepted = await confirmRemoval(
@@ -328,16 +392,10 @@ class _EventPageState extends State<EventPage> {
                           padding: const EdgeInsets.only(bottom: 12),
                           child: BPanel(
                             padding: EdgeInsets.zero,
-                            onTap: () => Navigator.push(
-                              context,
-                              MaterialPageRoute<bool>(
-                                builder: (_) => ActPage(
-                                  act: act,
-                                  ev: widget.ev,
-                                  bot: widget.bot,
-                                ),
-                              ),
-                            ),
+                            onTap: () async {
+                              await _openAction(act);
+                              if (mounted) setState(() {});
+                            },
                             child: ListTile(
                               leading: Container(
                                 width: 36,
@@ -350,19 +408,21 @@ class _EventPageState extends State<EventPage> {
                                 child: Text('${index + 1}'),
                               ),
                               title: Text(
-                                act.text.isEmpty
-                                    ? act.config['url']?.toString() ??
-                                          act.config['variable']?.toString() ??
-                                          BuilderCatalog.labels[act
-                                              .type
-                                              .name] ??
-                                          act.type.name
-                                    : act.text,
+                                act.libraryName ??
+                                    (act.text.isEmpty
+                                        ? act.config['url']?.toString() ??
+                                              act.config['variable']
+                                                  ?.toString() ??
+                                              BuilderCatalog.labels[act
+                                                  .type
+                                                  .name] ??
+                                              act.type.name
+                                        : act.text),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Text(
-                                '${BuilderCatalog.labels[act.type.name] ?? act.type.name} · ${act.config['output'] ?? 'step${index + 1}'}',
+                                '${act.libraryName == null ? '' : 'Shared · '}${BuilderCatalog.labels[act.type.name] ?? act.type.name} · ${act.config['output'] ?? 'step${index + 1}'}',
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,

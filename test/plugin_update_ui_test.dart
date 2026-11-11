@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bottogram/pages/bot.dart';
 import 'package:bottogram/plugins/capability_review.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
@@ -7,6 +8,7 @@ import 'package:bottogram/plugins/update_section.dart';
 import 'package:bottogram/runtime/progress_store.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/widgets/bot_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -86,6 +88,7 @@ class UpdateUiFixture {
   static Future<UpdateUiFixture> create({
     bool active = false,
     String origin = 'https://events.example.test',
+    bool installTarget = true,
   }) async {
     final directory = await Directory.systemTemp.createTemp(
       'bottogram-plugin-update-ui-',
@@ -100,7 +103,7 @@ class UpdateUiFixture {
     final old = manifest(definition());
     final target = manifest(eventUpdate());
     await repository.install(old);
-    await repository.install(target);
+    if (installTarget) await repository.install(target);
     final runtime = QueueRuntime(repository, HiveProgressStore());
     final bots = BotsCubit(
       TestContext(),
@@ -130,7 +133,7 @@ class UpdateUiFixture {
     );
   }
 
-  Widget app() => MultiProvider(
+  Widget app({bool card = false}) => MultiProvider(
     providers: [
       ChangeNotifierProvider<PluginRepository>.value(value: repository),
       BlocProvider<BotsCubit>.value(value: bots),
@@ -138,9 +141,17 @@ class UpdateUiFixture {
     child: MaterialApp(
       theme: BottogramDesign.theme,
       home: Scaffold(
-        body: SingleChildScrollView(
-          child: PluginUpdateSection(bot: bot, plugin: old),
-        ),
+        body: card
+            ? Center(
+                child: SizedBox(
+                  width: 316,
+                  height: 248,
+                  child: BotCard(bot: bot),
+                ),
+              )
+            : SingleChildScrollView(
+                child: PluginUpdateSection(bot: bot, plugin: old),
+              ),
       ),
     ),
   );
@@ -277,6 +288,62 @@ void main() {
         expect(fixture.runtime.starts, 0);
         expect(fixture.bot.setup!.instanceId, identity);
         expect(fixture.bots.pendingUpgradeFor(fixture.bot), isNull);
+        expect(tester.takeException(), isNull);
+      } finally {
+        await tester.pumpWidget(const SizedBox());
+        await tester.runAsync(fixture.close);
+      }
+    },
+  );
+
+  testWidgets(
+    'the bot card reacts to a compatible install and leads to the reviewed update',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(390, 610);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      addTearDown(tester.view.resetPhysicalSize);
+      final fixture = (await tester.runAsync(
+        () => UpdateUiFixture.create(installTarget: false),
+      ))!;
+      try {
+        final incompatible = eventUpdate();
+        incompatible['version'] = '1.2.0';
+        (incompatible['setupFields'] as List).add({
+          'key': 'newField',
+          'label': 'New required field',
+          'type': 'text',
+          'required': true,
+        });
+        await tester.runAsync(
+          () => fixture.repository.install(manifest(incompatible)),
+        );
+        await tester.pumpWidget(fixture.app(card: true));
+        expect(find.text('Update available'), findsNothing);
+
+        await tester.runAsync(() => fixture.repository.install(fixture.target));
+        await tester.pumpAndSettle();
+        expect(find.text('Update available'), findsOneWidget);
+        await tester.tap(find.text('Update available'));
+        await tester.pumpAndSettle();
+        expect(find.byType(BotPage), findsOneWidget);
+        expect(find.text('Review update').hitTestable(), findsOneWidget);
+        await tapAndWaitForIo(
+          tester,
+          find.text('Review update'),
+          () => find.byType(AlertDialog).evaluate().isNotEmpty,
+        );
+        expect(find.text('Version 1.0.0 → 1.1.0'), findsOneWidget);
+        final id = fixture.bot.setup!.instanceId;
+        await tapAndWaitForIo(
+          tester,
+          find.text('Apply update'),
+          () => fixture.bot.setup!.pluginDigest == fixture.target.digest,
+        );
+        expect(fixture.bot.setup!.instanceId, id);
+        await tester.pageBack();
+        await tester.pumpAndSettle();
+        expect(find.text('Update available'), findsNothing);
         expect(tester.takeException(), isNull);
       } finally {
         await tester.pumpWidget(const SizedBox());

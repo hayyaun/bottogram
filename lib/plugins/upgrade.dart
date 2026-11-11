@@ -24,6 +24,23 @@ class PluginUpgradePlan {
   final List<String> removedAutomationIds;
   final List<String> replacedAutomationIds;
 
+  /// Catalog candidates are already sorted from newest to oldest.
+  static PluginManifest? firstCompatibleTarget(
+    PluginManifest current,
+    BotSetup setup,
+    Iterable<PluginManifest> candidates,
+  ) {
+    for (final target in candidates) {
+      try {
+        review(current, target, setup);
+        return target;
+      } on PluginException {
+        // The review screen can still explain why an installed version is blocked.
+      }
+    }
+    return null;
+  }
+
   static PluginUpgradePlan review(
     PluginManifest current,
     PluginManifest target,

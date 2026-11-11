@@ -2,6 +2,7 @@ import 'package:bottogram/pages/bot.dart';
 import 'package:bottogram/inbox/users_page.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
+import 'package:bottogram/plugins/upgrade.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -22,12 +23,17 @@ class _BotCardState extends State<BotCard> {
     context,
     MaterialPageRoute<void>(builder: (_) => InboxUsersPage(bot: widget.bot)),
   );
-  void _settings({bool focusError = false}) => Navigator.push(
-    context,
-    MaterialPageRoute<void>(
-      builder: (_) => BotPage(bot: widget.bot, focusError: focusError),
-    ),
-  );
+  void _settings({bool focusError = false, bool focusPluginUpdate = false}) =>
+      Navigator.push(
+        context,
+        MaterialPageRoute<void>(
+          builder: (_) => BotPage(
+            bot: widget.bot,
+            focusError: focusError,
+            focusPluginUpdate: focusPluginUpdate,
+          ),
+        ),
+      );
   Future<void> _toggle() async {
     if (_busy) return;
     final store = context.read<BotsCubit>();
@@ -51,11 +57,23 @@ class _BotCardState extends State<BotCard> {
   @override
   Widget build(BuildContext context) {
     final bot = widget.bot;
-    final plugin = bot.setup?.usesPlugin ?? false;
-    final setupOnly =
-        plugin &&
-        context.read<PluginRepository>().manifestFor(bot.setup)?.executable !=
-            true;
+    final setup = bot.setup;
+    final plugin = setup?.usesPlugin ?? false;
+    final repository = context.watch<PluginRepository>();
+    final manifest = repository.manifestFor(setup);
+    final setupOnly = plugin && manifest?.executable != true;
+    final queued = plugin
+        ? context.watch<BotsCubit>().pendingUpgradeFor(bot)
+        : null;
+    final available =
+        manifest?.executable == true && bot.setupError == null && queued == null
+        ? PluginUpgradePlan.firstCompatibleTarget(
+            manifest!,
+            setup!,
+            repository.newerLiveVersions(manifest),
+          )
+        : null;
+    final update = queued ?? available;
     final error = bot.runtimeError;
     final actions = bot.events.fold<int>(
       0,
@@ -143,17 +161,40 @@ class _BotCardState extends State<BotCard> {
                           ? bot.setup!.pluginName ?? 'Plugin bot'
                           : 'Manual bot',
                       style: Theme.of(context).textTheme.bodySmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 4),
-                    Text(
-                      plugin
-                          ? 'Open users and inbox'
-                          : '${bot.events.length} ${bot.events.length == 1 ? 'event' : 'events'} · $actions ${actions == 1 ? 'action' : 'actions'}',
-                      style: BottogramDesign.text(
-                        13,
-                        color: BColors.of(context).muted,
+                    if (update != null)
+                      Tooltip(
+                        message: queued == null
+                            ? 'Review version ${update.version}'
+                            : 'Version ${update.version} applies on the next Start',
+                        child: TextButton(
+                          onPressed: () => _settings(focusPluginUpdate: true),
+                          style: TextButton.styleFrom(
+                            minimumSize: const Size(0, 44),
+                            padding: EdgeInsets.zero,
+                            alignment: Alignment.centerLeft,
+                          ),
+                          child: Text(
+                            queued == null
+                                ? 'Update available'
+                                : 'Update queued',
+                          ),
+                        ),
+                      )
+                    else ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        plugin
+                            ? 'Open users and inbox'
+                            : '${bot.events.length} ${bot.events.length == 1 ? 'event' : 'events'} · $actions ${actions == 1 ? 'action' : 'actions'}',
+                        style: BottogramDesign.text(
+                          13,
+                          color: BColors.of(context).muted,
+                        ),
                       ),
-                    ),
+                    ],
                   ],
                 ),
               ),

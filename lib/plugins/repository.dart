@@ -77,6 +77,17 @@ class PluginRepository extends ChangeNotifier {
         .firstOrNull;
   }
 
+  List<PluginManifest> newerLiveVersions(PluginManifest current) =>
+      installed
+          .where(
+            (target) =>
+                target.id == current.id &&
+                target.executable &&
+                comparePluginVersions(target.version, current.version) > 0,
+          )
+          .toList()
+        ..sort((a, b) => comparePluginVersions(b.version, a.version));
+
   Future<void> install(PluginManifest manifest) => _serialize(() async {
     final old = _packages!.get(manifest.storageKey);
     if (old != null) {

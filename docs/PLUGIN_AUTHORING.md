@@ -525,7 +525,8 @@ actual guarantees and give distinct events distinct stable IDs.
 
 Installed versions are immutable and bots pin the package's source digest.
 Increase `version` whenever you distribute changed bytes under the same ID.
-Installing the new version does not automatically update existing bots.
+After installing a compatible release, choose **Update available** on the
+existing bot, then review and approve the version change.
 
 The reviewed updater can preserve compatible configuration and unchanged
 background execution definitions, including progress and receipts. Error

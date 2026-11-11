@@ -24,9 +24,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class BotPage extends StatefulWidget {
-  const BotPage({super.key, required this.bot, this.focusError = false});
+  const BotPage({
+    super.key,
+    required this.bot,
+    this.focusError = false,
+    this.focusPluginUpdate = false,
+  });
   final VirtBot bot;
   final bool focusError;
+  final bool focusPluginUpdate;
   @override
   State<BotPage> createState() => _BotPageState();
 }
@@ -34,14 +40,20 @@ class BotPage extends StatefulWidget {
 class _BotPageState extends State<BotPage> {
   late final ctrlName = TextEditingController(text: widget.bot.name);
   final _errorAnchor = GlobalKey();
+  late final _pluginUpdateAnchor = GlobalKey();
 
   @override
   void initState() {
     super.initState();
-    if (widget.focusError) {
+    final anchor = widget.focusError
+        ? _errorAnchor
+        : widget.focusPluginUpdate
+        ? _pluginUpdateAnchor
+        : null;
+    if (anchor != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        final target = _errorAnchor.currentContext;
+        final target = anchor.currentContext;
         if (target == null) return;
         unawaited(
           Scrollable.ensureVisible(
@@ -140,7 +152,7 @@ class _BotPageState extends State<BotPage> {
     context.watch<BotsCubit>();
     final setup = widget.bot.setup;
     final plugin = setup?.usesPlugin ?? false;
-    final manifest = context.read<PluginRepository>().manifestFor(setup);
+    final manifest = context.watch<PluginRepository>().manifestFor(setup);
     final live = manifest?.executable == true;
     final failure = widget.bot.runtimeError == null
         ? null
@@ -361,7 +373,11 @@ class _BotPageState extends State<BotPage> {
                 ],
                 BPanel(child: _pluginSettings()),
                 if (manifest != null)
-                  PluginUpdateSection(bot: widget.bot, plugin: manifest),
+                  PluginUpdateSection(
+                    key: _pluginUpdateAnchor,
+                    bot: widget.bot,
+                    plugin: manifest,
+                  ),
               ] else ...[
                 BPanel(
                   child: BSection(

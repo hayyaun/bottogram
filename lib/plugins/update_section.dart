@@ -119,23 +119,22 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
   Widget build(BuildContext context) {
     final bots = context.watch<BotsCubit>();
     final pending = bots.pendingUpgradeFor(widget.bot);
-    final candidates =
-        context
-            .watch<PluginRepository>()
-            .installed
-            .where(
-              (p) =>
-                  p.id == widget.plugin.id &&
-                  p.executable &&
-                  comparePluginVersions(p.version, widget.plugin.version) > 0,
-            )
-            .toList()
-          ..sort((a, b) => comparePluginVersions(b.version, a.version));
+    final candidates = context.watch<PluginRepository>().newerLiveVersions(
+      widget.plugin,
+    );
     if (candidates.isEmpty && pending == null && _error == null) {
       return const SizedBox.shrink();
     }
     final selected =
         candidates.where((p) => p.storageKey == _selectedKey).firstOrNull ??
+        candidates
+            .where((p) => p.storageKey == pending?.storageKey)
+            .firstOrNull ??
+        PluginUpgradePlan.firstCompatibleTarget(
+          widget.plugin,
+          widget.bot.setup!,
+          candidates,
+        ) ??
         candidates.firstOrNull;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -174,7 +173,11 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                     for (final p in candidates)
                       DropdownMenuItem(
                         value: p.storageKey,
-                      child: Text('Version ${p.version}', maxLines: 1, overflow: TextOverflow.ellipsis),
+                        child: Text(
+                          'Version ${p.version}',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                   ],
                   onChanged: _busy

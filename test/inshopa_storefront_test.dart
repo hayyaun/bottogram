@@ -6,7 +6,6 @@ import 'dart:typed_data';
 import 'package:bottogram/plugins/bot_setup.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
-import 'package:bottogram/plugins/upgrade.dart';
 import 'package:bottogram/runtime/automation_runner.dart';
 import 'package:bottogram/runtime/ports.dart';
 import 'package:bottogram/runtime/progress_store.dart';
@@ -19,30 +18,10 @@ import 'automation_runtime_test.dart'
 import 'plugins_test.dart' show MemoryVault;
 import 'storefront_presentation_test.dart' show PluginHarness, shipped;
 
-const package = 'inshopa.storefront.0.8.0';
+const package = 'inshopa.storefront.0.8.1';
 const productId = 'e6af6af3-a42d-4a71-87d5-aac75e232183';
 const nextId = '11111111-1111-1111-1111-111111111111';
 const otherId = '22222222-2222-2222-2222-222222222222';
-
-PluginManifest previousProductionPackage() {
-  final source = jsonDecode(shipped('inshopa.storefront').source) as Json;
-  source['version'] = '0.7.0';
-  (source['setupFields'] as List).add({
-    'key': 'apiOrigin',
-    'type': 'text',
-    'required': true,
-    'label': 'Registered origin',
-  });
-  final polling = (source['automations'] as List).cast<Json>().singleWhere(
-    (a) => a['id'] == 'paid-orders',
-  )['trigger']['config'];
-  for (final request in [polling['request'], polling['lookup']['request']]) {
-    for (final binding in (request['headers'] as Json).values) {
-      binding['field'] = 'apiOrigin';
-    }
-  }
-  return PluginManifest.parse(utf8.encode(jsonEncode(source)));
-}
 
 class TransientHttp extends FakeHttp {
   bool failNext = false;
@@ -421,8 +400,9 @@ void main() {
         await Hive.close();
         await directory.delete(recursive: true);
       });
-      final previous = previousProductionPackage();
       final next = shipped(package);
+      final older = jsonDecode(next.source) as Json..['version'] = '0.8.0';
+      final previous = PluginManifest.parse(utf8.encode(jsonEncode(older)));
       await repository.install(previous);
       await repository.install(next);
       const token = '99:fixture';
@@ -432,7 +412,6 @@ void main() {
         plugin: previous,
         parameters: {
           'storefrontUrl': 'https://shop.example.test',
-          'apiOrigin': 'shop.example.test',
           'apiKey': 'fixture',
         },
       );
@@ -446,18 +425,7 @@ void main() {
       await progress.write(from, {'initialized': true, 'pageCursor': '100'});
       await progress.write('$from:delivered:sample', {'complete': true});
       final plan = await repository.reviewUpgrade(1, token, next);
-      expect(plan.preservedAutomationIds, ['paid-orders']);
-      expect(plan.removedFields.map((field) => field.key), ['apiOrigin']);
-      expect(
-        () => PluginUpgradePlan.review(
-          previous,
-          next,
-          setup.copyWith(
-            values: {...setup.values, 'apiOrigin': 'http://shop.example.test'},
-          ),
-        ),
-        throwsA(isA<PluginException>()),
-      );
+      expect(plan.preservedAutomationIds, contains('paid-orders'));
       final updated = await repository.upgrade(
         1,
         token,
@@ -473,7 +441,6 @@ void main() {
       expect(channel.instanceId, setup.instanceId);
       expect(channel.secretKey('apiKey'), setup.secretKey('apiKey'));
       expect(channel.values['telegramChannelId'], '-100123');
-      expect(channel.values.containsKey('apiOrigin'), false);
       expect(channel.values['storefrontUrl'], 'https://shop.example.test');
       expect(channel.pluginDigest, updated.pluginDigest);
       expect(channel.settings['notifyNewSuccessfulPurchases'], false);
@@ -554,7 +521,7 @@ void main() {
     'selected channels and groups receive separate deliveries despite denied destinations',
     () async {
       final h = await PluginHarness.create(
-        package: 'inshopa.storefront.0.8.1',
+        package: package,
         transport: FanOutHttp(),
       );
       addTearDown(h.close);
@@ -610,35 +577,10 @@ void main() {
     },
   );
 
-  test(
-    'a saved single destination is valid in the widened field and keeps its automation',
-    () {
-      final current = shipped(package);
-      final target = shipped('inshopa.storefront.0.8.1');
-      final setup = BotSetup(
-        instanceId: 'fixture',
-        tokenFingerprint: 'fixture',
-        adminTelegramUserId: '123',
-        pluginKey: current.storageKey,
-        pluginDigest: current.digest,
-        values: {
-          'storefrontUrl': 'https://shop.example.test',
-          'telegramChannelId': '-1001',
-        },
-        secretFields: ['apiKey'],
-      );
-      final plan = PluginUpgradePlan.review(current, target, setup);
-      expect(
-        plan.preservedAutomationIds,
-        containsAll(['paid-orders', 'new-published-products']),
-      );
-    },
-  );
-
   test('manifest rejects a destination with unrestricted field semantics', () {
     final source = shipped(package).source;
     final json = jsonDecode(source) as Json;
-    (json['setupFields'] as List).last['min'] = null;
+    (json['setupFields'] as List).last['chatTypes'] = ['private'];
     expect(
       () => PluginManifest.parse(utf8.encode(jsonEncode(json))),
       throwsA(isA<PluginException>()),

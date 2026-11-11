@@ -106,8 +106,6 @@ flutter:
     - examples/plugins/inshopa.catalog.bottogram-plugin.json
     - examples/plugins/inshopa.sales.bottogram-plugin.json
     - examples/plugins/inshopa.sales.local.bottogram-plugin.json
-    - examples/plugins/inshopa.storefront.bottogram-plugin.json
-    - examples/plugins/inshopa.storefront.0.8.0.bottogram-plugin.json
     - examples/plugins/inshopa.storefront.0.8.1.bottogram-plugin.json
     - examples/plugins/inshopa.storefront.local.bottogram-plugin.json
     - assets/icon/foreground.png

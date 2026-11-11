@@ -66,12 +66,6 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                   const Text(
                     'The updated plugin reuses this bot’s identity, secure keys and saved preferences.',
                   ),
-                  if (plan.removedFields.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Text(
-                      'Duplicate URL fields removed: ${plan.removedFields.map((field) => field.label).join(', ')}. The saved origins produce the same request headers.',
-                    ),
-                  ],
                   if (plan.preservedAutomationIds.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(

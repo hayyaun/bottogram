@@ -14,8 +14,6 @@ class PluginRepository extends ChangeNotifier {
   PluginRepository({
     SecretVault? vault,
     this.bundledAssets = const [
-      'examples/plugins/inshopa.storefront.bottogram-plugin.json',
-      'examples/plugins/inshopa.storefront.0.8.0.bottogram-plugin.json',
       'examples/plugins/inshopa.storefront.0.8.1.bottogram-plugin.json',
     ],
     AssetBundle? bundle,
@@ -289,7 +287,6 @@ class PluginRepository extends ChangeNotifier {
         '${current.instanceId}:${target.digest}:$id',
       );
     }
-    final removed = plan.removedFields.map((field) => field.key).toSet();
     final updated = BotSetup(
       instanceId: current.instanceId,
       tokenFingerprint: current.tokenFingerprint,
@@ -297,10 +294,7 @@ class PluginRepository extends ChangeNotifier {
       pluginKey: target.storageKey,
       pluginDigest: target.digest,
       pluginName: target.name,
-      values: {
-        for (final entry in current.values.entries)
-          if (!removed.contains(entry.key)) entry.key: entry.value,
-      },
+      values: current.values,
       secretFields: current.secretFields,
       settings: current.settings,
     );

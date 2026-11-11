@@ -1,8 +1,8 @@
 # Storefront navigation
 
-Inshopa 0.6.0 declares storefront navigation in
-[`inshopa.storefront.bottogram-plugin.json`](../examples/plugins/inshopa.storefront.bottogram-plugin.json).
-Bottogram supplies generic Telegram capabilities to execute that declaration.
+This document describes the original Inshopa 0.6.0 navigation.
+The bundled [0.8.1 package](../examples/plugins/inshopa.storefront.0.8.1.bottogram-plugin.json)
+adds HTML storefront widgets and product broadcasts.
 There is no Inshopa source, API, page, authentication, database or configuration
 change.
 

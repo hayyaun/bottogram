@@ -624,8 +624,3 @@ are checked when a command or button is used.
 See the [Inshopa 0.8.1 package](../examples/plugins/inshopa.storefront.0.8.1.bottogram-plugin.json)
 for complete declarations, including a Telegram deep link generated from the
 bot's username and a same-origin Mini App button with a bound path segment.
-
-Reviewed updates can merge duplicate URL fields when the saved origins resolve
-to identical header values and the polling definitions otherwise match. The
-review lists the removed fields before applying the update and carries over the
-existing polling progress.

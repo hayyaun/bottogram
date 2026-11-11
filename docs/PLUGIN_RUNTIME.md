@@ -216,16 +216,16 @@ The common form still asks for name, Telegram bot token and numeric admin ID. Th
 
 ## Inshopa storefront navigation
 
-The [Inshopa 0.6.0 package](../examples/plugins/inshopa.storefront.bottogram-plugin.json)
+The original Inshopa 0.6.0 package
 declares `/start`, `/shop`, `/orders`, `/help`, and a `/products` compatibility
 alias to open the existing HTTPS storefront and `/orders` directly as Telegram
 Mini Apps. Its JSON uses generic `telegram.command.v2`, `telegram.reply.v2`, and
 the optional `telegram.menuButton` configuration. It does not request a catalog
 for these commands. Website authentication and sessions remain in Telegram's
 browser and Inshopa; no buyer scope, buyer account API or Inshopa change is added.
-Other packages execute their own declarations. Existing pinned bots retain their
-version until a compatible reviewed update is selected. Details and outstanding
-client checks are in [Storefront navigation](STOREFRONT_NAVIGATION.md).
+The bundled [Inshopa 0.8.1 package](../examples/plugins/inshopa.storefront.0.8.1.bottogram-plugin.json)
+adds HTML widgets and product broadcasts. See [Storefront navigation](STOREFRONT_NAVIGATION.md)
+for client verification.
 
 ### Catalog example declaration
 

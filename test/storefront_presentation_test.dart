@@ -17,7 +17,9 @@ import 'plugins_test.dart' show MemoryCatalog;
 import 'runtime_lifecycle_test.dart' show TestLease;
 
 PluginManifest shipped(String filename) => PluginManifest.parse(
-  File('examples/plugins/$filename.bottogram-plugin.json').readAsBytesSync(),
+  File(
+    '${filename == 'inshopa.storefront' ? 'test/fixtures' : 'examples/plugins'}/$filename.bottogram-plugin.json',
+  ).readAsBytesSync(),
 );
 
 class TelegramFixture {

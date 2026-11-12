@@ -520,6 +520,22 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         )
+                      else if (compact)
+                        SliverPadding(
+                          padding: const EdgeInsets.only(bottom: 24),
+                          sliver: SliverList.separated(
+                            itemCount: bots.length,
+                            separatorBuilder: (_, _) => const SizedBox(height: 8),
+                            itemBuilder: (_, index) {
+                              final bot = bots[index];
+                              return BotCard(
+                                key: ObjectKey(bot),
+                                bot: bot,
+                                compact: true,
+                              );
+                            },
+                          ),
+                        )
                       else
                         SliverPadding(
                           padding: const EdgeInsets.only(bottom: 24),

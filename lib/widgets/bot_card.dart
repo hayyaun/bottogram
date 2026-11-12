@@ -11,8 +11,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
 class BotCard extends StatefulWidget {
-  const BotCard({super.key, required this.bot});
+  const BotCard({super.key, required this.bot, this.compact = false});
   final VirtBot bot;
+  final bool compact;
   @override
   State<BotCard> createState() => _BotCardState();
 }
@@ -105,6 +106,138 @@ class _BotCardState extends State<BotCard> {
             background: BColors.of(context).successWash,
           )
         : const BStatus(label: 'Stopped');
+    final compact = widget.compact;
+    final theme = Theme.of(context).textTheme;
+    final colors = BColors.of(context);
+    final icon = Container(
+      width: compact ? 36 : 44,
+      height: compact ? 36 : 44,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: colors.subtle,
+        borderRadius: BorderRadius.all(Radius.circular(compact ? 10 : 12)),
+      ),
+      child: Icon(
+        plugin ? Icons.extension_outlined : Icons.smart_toy_outlined,
+        size: compact ? 20 : 24,
+        color: colors.ink,
+      ),
+    );
+    final title = Tooltip(
+      message: bot.name,
+      excludeFromSemantics: true,
+      child: Text(
+        bot.name,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: compact ? theme.titleSmall : theme.headlineSmall,
+      ),
+    );
+    final kind = plugin ? setup!.pluginName ?? 'Plugin bot' : 'Manual bot';
+    final summary =
+        '${bot.events.length} ${bot.events.length == 1 ? 'event' : 'events'} · $actions ${actions == 1 ? 'action' : 'actions'}';
+    final updateButton = update == null
+        ? null
+        : Tooltip(
+            message: 'Review version ${update.version}',
+            child: TextButton(
+              onPressed: () => _settings(focusPluginUpdate: true),
+              style: TextButton.styleFrom(
+                minimumSize: const Size(0, 44),
+                padding: EdgeInsets.zero,
+                alignment: AlignmentDirectional.centerStart,
+              ),
+              child: const Text('Update available'),
+            ),
+          );
+    final controls = [
+      IconButton(
+        tooltip: 'Bot settings',
+        onPressed: _settings,
+        icon: Icon(Icons.settings_outlined, size: compact ? 20 : 24),
+      ),
+      IconButton.outlined(
+        tooltip: setupOnly
+            ? 'Configure plugin'
+            : bot.active
+            ? 'Stop bot'
+            : bot.resumeOnLaunch
+            ? 'Turn off auto-start'
+            : 'Start bot',
+        onPressed: _busy
+            ? null
+            : setupOnly
+            ? _settings
+            : _toggle,
+        icon: _busy
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : Icon(
+                setupOnly
+                    ? Icons.tune_rounded
+                    : bot.active
+                    ? Icons.pause_rounded
+                    : bot.resumeOnLaunch
+                    ? Icons.stop_circle_outlined
+                    : Icons.play_arrow_rounded,
+                size: compact ? 20 : 24,
+              ),
+      ),
+    ];
+
+    if (compact) {
+      return BPanel(
+        onTap: _open,
+        padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                icon,
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      title,
+                      const SizedBox(height: 3),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 2,
+                        crossAxisAlignment: WrapCrossAlignment.center,
+                        children: [
+                          status,
+                          Text(
+                            plugin ? kind : summary,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: BottogramDesign.text(
+                              13,
+                              color: colors.muted,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                ...controls,
+              ],
+            ),
+            if (updateButton != null)
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 46),
+                child: updateButton,
+              ),
+          ],
+        ),
+      );
+    }
+
     return BPanel(
       onTap: _open,
       child: Column(
@@ -112,38 +245,14 @@ class _BotCardState extends State<BotCard> {
         children: [
           Row(
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: BColors.of(context).subtle,
-                  borderRadius: BorderRadius.all(Radius.circular(12)),
-                ),
-                child: Icon(
-                  plugin ? Icons.extension_outlined : Icons.smart_toy_outlined,
-                  size: 24,
-                  color: BColors.of(context).ink,
-                ),
-              ),
+              icon,
               Expanded(
                 child: Align(alignment: Alignment.centerRight, child: status),
               ),
             ],
           ),
           const SizedBox(height: 20),
-          Expanded(
-            child: Tooltip(
-              message: bot.name,
-              excludeFromSemantics: true,
-              child: Text(
-                bot.name,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-            ),
-          ),
+          Expanded(child: title),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -152,75 +261,24 @@ class _BotCardState extends State<BotCard> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      plugin
-                          ? bot.setup!.pluginName ?? 'Plugin bot'
-                          : 'Manual bot',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      kind,
+                      style: theme.bodySmall,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (update != null)
-                      Tooltip(
-                        message: 'Review version ${update.version}',
-                        child: TextButton(
-                          onPressed: () => _settings(focusPluginUpdate: true),
-                          style: TextButton.styleFrom(
-                            minimumSize: const Size(0, 44),
-                            padding: EdgeInsets.zero,
-                            alignment: Alignment.centerLeft,
-                          ),
-                          child: const Text('Update available'),
-                        ),
-                      )
+                    if (updateButton != null)
+                      updateButton
                     else ...[
                       const SizedBox(height: 4),
                       Text(
-                        plugin
-                            ? 'Open users and inbox'
-                            : '${bot.events.length} ${bot.events.length == 1 ? 'event' : 'events'} · $actions ${actions == 1 ? 'action' : 'actions'}',
-                        style: BottogramDesign.text(
-                          13,
-                          color: BColors.of(context).muted,
-                        ),
+                        plugin ? 'Open users and inbox' : summary,
+                        style: BottogramDesign.text(13, color: colors.muted),
                       ),
                     ],
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: 'Bot settings',
-                onPressed: _settings,
-                icon: const Icon(Icons.settings_outlined),
-              ),
-              IconButton.outlined(
-                tooltip: setupOnly
-                    ? 'Configure plugin'
-                    : bot.active
-                    ? 'Stop bot'
-                    : bot.resumeOnLaunch
-                    ? 'Turn off auto-start'
-                    : 'Start bot',
-                onPressed: _busy
-                    ? null
-                    : setupOnly
-                    ? _settings
-                    : _toggle,
-                icon: _busy
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Icon(
-                        setupOnly
-                            ? Icons.tune_rounded
-                            : bot.active
-                            ? Icons.pause_rounded
-                            : bot.resumeOnLaunch
-                            ? Icons.stop_circle_outlined
-                            : Icons.play_arrow_rounded,
-                      ),
-              ),
+              ...controls,
             ],
           ),
         ],

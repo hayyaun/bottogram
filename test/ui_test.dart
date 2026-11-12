@@ -331,7 +331,7 @@ void main() {
       });
       await loadFonts(tester);
       bots.state.addAll([
-        for (var i = 0; i < 4; i++)
+        for (var i = 0; i < 12; i++)
           VirtBot('Preview bot $i', '$i:fixture_only', addSamples: false),
       ]);
       catalog.entries.addAll([
@@ -676,6 +676,17 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      final cards = find.byType(BotCard);
+      expect(cards, findsNWidgets(2));
+      for (var index = 0; index < 2; index++) {
+        final card = cards.at(index);
+        expect(tester.getSize(card).height, lessThan(112));
+        final settings = find.descendant(
+          of: card,
+          matching: find.byTooltip('Bot settings'),
+        );
+        expect(tester.getSize(settings).shortestSide, greaterThanOrEqualTo(48));
+      }
       await capture(tester, 'bots-phone');
       await pumpPage(
         tester,

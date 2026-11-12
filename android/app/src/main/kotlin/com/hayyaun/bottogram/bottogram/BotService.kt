@@ -93,7 +93,6 @@ class BotService : Service() {
             .setSmallIcon(R.drawable.ic_bot_service)
             .setContentTitle("Telegram bots")
             .setContentText("$active of $total ${if (total == 1) "bot" else "bots"} active")
-            .setProgress(total, active, false)
             .setColor(0xFF006F68.toInt())
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)

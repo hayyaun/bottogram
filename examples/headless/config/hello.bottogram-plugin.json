@@ -1,0 +1,18 @@
+{
+  "manifestVersion": 2,
+  "hostApiMajor": 2,
+  "id": "bottogram.hello",
+  "name": "Hello",
+  "version": "1.0.0",
+  "executionStatus": "live",
+  "setupFields": [],
+  "automations": [
+    {
+      "id": "hello",
+      "trigger": {"type": "telegram.command.v1", "config": {"command": "start"}},
+      "actions": [
+        {"id": "reply", "type": "telegram.reply.v1", "config": {"text": "Hello from Bottogram!"}}
+      ]
+    }
+  ]
+}

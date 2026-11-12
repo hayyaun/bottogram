@@ -48,6 +48,8 @@ See [build requirements](docs/BUILD_ARTIFACTS.md),
 [macOS signing and Keychain](docs/MACOS_BUILD.md) before replacing an installation;
 uninstalling removes local data.
 
+For Linux servers, see [run a plugin bot with Docker Compose](docs/HEADLESS.md).
+
 ## Quick start
 
 1. Create a bot with [@BotFather](https://t.me/BotFather) and keep its token private.

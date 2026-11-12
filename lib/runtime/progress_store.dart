@@ -12,6 +12,11 @@ class HiveProgressStore implements NamespaceProgressStore {
   Future<Box<String>>? _box;
   Future<Box<String>> get _ready =>
       _box ??= Hive.openBox<String>('automation_progress_v1');
+
+  Future<void> open() async {
+    await _ready;
+  }
+
   @override
   Future<Json> read(String key) async {
     final raw = (await _ready).get(key);

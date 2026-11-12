@@ -4,13 +4,11 @@ import 'package:flutter/foundation.dart';
 import '../plugins/repository.dart';
 import '../plugins/manifest.dart';
 import '../units/virt_bot.dart';
-import 'automation_runner.dart';
+import 'plugin_execution.dart';
 import 'http_transport.dart';
 import 'ports.dart';
 import 'progress_store.dart';
 import 'telegram_port.dart';
-import 'telegram_interaction.dart';
-import 'telegram_destinations.dart';
 import 'failure_presentation.dart';
 
 /// Lifecycle operations serialize; long-running automations never occupy this
@@ -27,9 +25,7 @@ class BotRuntime extends ChangeNotifier {
   final ProgressStore progress;
   final JsonTransport Function()? httpClientFactory;
   final Set<VirtBot> _bots = {};
-  final Map<VirtBot, List<AutomationRunner>> _runners = {};
-  final Map<VirtBot, JsonTransport> _clients = {};
-  final Map<VirtBot, Future<void>> _commandSync = {};
+  final _pluginExecutions = <VirtBot, PluginExecution>{};
   final Map<VirtBot, Map<String, String>> _errors = {};
   final Map<VirtBot, Map<String, FailurePresentation>> _failureDetails = {};
   Future<void> _tail = Future.value();
@@ -112,103 +108,41 @@ class BotRuntime extends ChangeNotifier {
         );
       }
     };
-    BotTelegramPort? telegram;
-    var acceptsWidgets = false;
+    PluginExecution? execution;
     try {
       await bot.bot.initialize().timeout(const Duration(seconds: 22));
       if (manifest != null && setup != null) {
-        final http = _clients[bot] =
-            httpClientFactory?.call() ?? BoundedJsonTransport();
-        telegram = BotTelegramPort(bot.bot);
-        final settings = manifest.settingValues(setup.settings);
-        final context = RuntimeContext(
-          http: http,
-          telegram: telegram,
+        execution = _pluginExecutions[bot] = PluginExecution(
+          manifest: manifest,
+          setup: setup,
+          telegram: BotTelegramPort(bot.bot),
+          http: httpClientFactory?.call() ?? BoundedJsonTransport(),
+          progress: progress,
           secret: (field) => plugins.vault.read(setup.secretKey(field)),
-          fields: setup.values,
-          adminIds: setup.adminIds,
-          settings: settings,
-          destinationChatTypes: {
-            for (final field in manifest.fields)
-              if (field.chatTypes.isNotEmpty) field.key: field.chatTypes,
+          onFailure: (key, failure) {
+            if (_closed || !_bots.contains(bot)) return;
+            if (failure == null) {
+              _failureDetails[bot]?.remove(key);
+            } else {
+              _failureDetails.putIfAbsent(bot, () => {})[key] = failure;
+            }
+            notifyListeners();
+          },
+          onStatus: (key, error) {
+            if (_closed || !_bots.contains(bot)) return;
+            if (error == null) {
+              _errors[bot]?.remove(key);
+            } else {
+              _errors[bot]?[key] = error;
+            }
+            bot.runtimeError = errorFor(bot);
+            notifyListeners();
           },
         );
-        final runners = _runners[bot] = [];
-        for (final definition in manifest.automations) {
-          if (definition.enabledBySetting != null &&
-              settings[definition.enabledBySetting] != true) {
-            continue;
-          }
-          final field = definition.destinationField;
-          final destinations = field == null
-              ? const <String?>[null]
-              : parseTelegramDestinations(setup.values[field] ?? '') ??
-                    const [];
-          final trigger = definition.trigger;
-          if (trigger.type == interactionTrigger &&
-              interactionRoutes(
-                trigger.config,
-              ).any((route) => route['kind'] == 'widget')) {
-            acceptsWidgets = true;
-          }
-          final namespace =
-              '${setup.instanceId}:${manifest.digest}:${definition.id}';
-          for (final destination in destinations) {
-            final key = destination == null
-                ? definition.id
-                : '${definition.id}:$destination';
-            final runner = AutomationRunner(
-              definition: definition,
-              context: context,
-              store: progress,
-              key: destination == null
-                  ? namespace
-                  : '$namespace:channel:$destination',
-              channelId: destination,
-              errorMessages: manifest.errorMessages,
-              onFailure: (failure) {
-                if (_closed || !_bots.contains(bot)) return;
-                if (failure == null) {
-                  _failureDetails[bot]?.remove(key);
-                } else {
-                  _failureDetails.putIfAbsent(bot, () => {})[key] = failure;
-                }
-                notifyListeners();
-              },
-              onStatus: (error) {
-                if (_closed || !_bots.contains(bot)) return;
-                if (error == null) {
-                  _errors[bot]?.remove(key);
-                } else {
-                  _errors[bot]?[key] = error;
-                }
-                bot.runtimeError = errorFor(bot);
-                notifyListeners();
-              },
-            );
-            runners.add(runner);
-            // Registers command handlers synchronously before Telegram polling.
-            unawaited(runner.start());
-          }
-        }
       }
-      bot.pluginWidgetQueries = acceptsWidgets;
+      bot.pluginWidgetQueries = execution?.start() ?? false;
       await bot.start(pluginRuntime: manifest?.executable == true);
-      if (manifest?.telegram != null && setup != null && telegram != null) {
-        final declaration = manifest!.telegram!;
-        if (declaration['menuButton'] != null) {
-          unawaited(_synchronizeMenu(bot, telegram, declaration, setup.values));
-        }
-        if (declaration['commands'] != null) {
-          _commandSync[bot] = _synchronizeCommands(
-            bot,
-            telegram,
-            declaration,
-            setup.tokenFingerprint,
-            setup.adminIds,
-          );
-        }
-      }
+      execution?.synchronizeTelegram();
     } catch (_) {
       await _stop(bot);
       rethrow;
@@ -218,90 +152,11 @@ class BotRuntime extends ChangeNotifier {
     }
   });
 
-  Future<void> _synchronizeMenu(
-    VirtBot bot,
-    BotTelegramPort telegram,
-    Json declaration,
-    Map<String, String> fields,
-  ) async {
-    final success = await telegram.synchronizeMenu(declaration, fields);
-    if (_closed || !_bots.contains(bot) || bot.bot != telegram.bot) return;
-    const key = '@telegram.menu';
-    if (success) {
-      _errors[bot]?.remove(key);
-    } else {
-      _errors[bot]?[key] =
-          'The Telegram menu could not be updated. Command replies and other automations remain available.';
-    }
-    bot.runtimeError = errorFor(bot);
-    notifyListeners();
-  }
-
-  Future<void> _synchronizeCommands(
-    VirtBot bot,
-    BotTelegramPort telegram,
-    Json declaration,
-    String botFingerprint,
-    List<String> adminIds,
-  ) async {
-    final scopeKey = '@telegram:$botFingerprint:commands';
-    final targets = declaration['adminCommands'] == null
-        ? const <String>{}
-        : adminIds.toSet();
-    var success = false;
-    try {
-      final state = await progress.read(scopeKey);
-      final managed = (state['admins'] as List? ?? const [])
-          .cast<String>()
-          .toSet();
-      if (!managed.containsAll(targets)) {
-        managed.addAll(targets);
-        // Track the attempted scope before calling Telegram so a lost reply
-        // still permits cleanup when the admin changes.
-        await progress.write(scopeKey, {'admins': managed.toList()});
-      }
-      final obsolete = managed.where((id) => !targets.contains(id)).toList();
-      final published = await telegram.synchronizeCommands(
-        declaration,
-        adminIds: targets,
-      );
-      for (final id in obsolete) {
-        if (await telegram.clearAdminCommands(id)) managed.remove(id);
-      }
-      if (obsolete.isNotEmpty) {
-        await progress.write(scopeKey, {'admins': managed.toList()});
-      }
-      success = published && managed.every(targets.contains);
-    } catch (_) {
-      // Report safe status without exposing authenticated URLs or storage data.
-    }
-    if (_closed || !_bots.contains(bot) || bot.bot != telegram.bot) return;
-    const key = '@telegram.commands';
-    if (success) {
-      _errors[bot]?.remove(key);
-    } else {
-      _errors[bot]?[key] =
-          'The Telegram command list could not be updated. Command replies and other automations remain available.';
-    }
-    bot.runtimeError = errorFor(bot);
-    notifyListeners();
-  }
-
   Future<void> _stop(VirtBot bot) async {
     bot.onRunningChanged = null;
-    _clients.remove(bot)?.close();
-    // Stop cancels requests; pending action acknowledgements are drained before
-    // a bot can be restarted or deleted.
-    final runners = _runners.remove(bot) ?? [];
-    final drained = Future.wait(runners.map((runner) => runner.stop()));
-    try {
-      // Close the Telegram session before waiting
-      // for actions so a stalled Telegram send cannot hold the Stop operation.
-      await bot.stop();
-    } finally {
-      await drained;
-      await _commandSync.remove(bot);
-    }
+    final drained = _pluginExecutions.remove(bot)?.stop();
+    // Close Telegram before waiting for actions so a stalled send cannot hold Stop.
+    await Future.wait<void>([bot.stop(), if (drained != null) drained]);
     _bots.remove(bot);
     _errors.remove(bot);
     _failureDetails.remove(bot);

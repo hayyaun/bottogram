@@ -1,0 +1,5 @@
+/secrets/
+/compose.override.yaml
+/config/*
+!/config/bot.json
+!/config/hello.bottogram-plugin.json

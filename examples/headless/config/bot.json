@@ -1,0 +1,4 @@
+{
+  "plugin": "hello.bottogram-plugin.json",
+  "tokenFile": "/run/secrets/bot_token"
+}

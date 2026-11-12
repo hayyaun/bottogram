@@ -1,0 +1,14 @@
+**
+!pubspec.yaml
+!pubspec.lock
+!l10n.yaml
+!lib/
+!lib/**
+lib/l10n/generated/
+!bin/
+!bin/**
+!hook/
+!hook/**
+!native/
+!native/sqlite/
+!native/sqlite/**

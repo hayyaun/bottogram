@@ -1,0 +1,21 @@
+services:
+  bottogram:
+    build:
+      context: ../..
+      dockerfile: server/Dockerfile
+    command: [run, --config, /config/bot.json, --data-dir, /data]
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    volumes:
+      - ./config:/config:ro
+      - progress:/data
+    secrets:
+      - bot_token
+
+volumes:
+  progress:
+
+secrets:
+  bot_token:
+    file: ./secrets/bot_token

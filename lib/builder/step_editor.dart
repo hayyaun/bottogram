@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import '../ui/design.dart';
 import '../units/virt_act.dart';
@@ -95,7 +97,11 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   Future<void> _chooseList() async {
     final store = BuilderStore.shared;
     final entries = store.parts.lists;
-    final id = await pickBuilderPart(context, 'List library', entries);
+    final id = await pickBuilderPart(
+      context,
+      context.strings.listLibrary,
+      entries,
+    );
     if (id == null || !mounted) return;
     final list = entries[id]!;
     final config = list['config'] as Map;
@@ -113,7 +119,10 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   }
 
   Future<void> _nameList() async {
-    final name = await nameBuilderPart(context, 'Save list to library');
+    final name = await nameBuilderPart(
+      context,
+      context.strings.saveListToLibrary,
+    );
     if (name == null || !mounted) return;
     setState(() {
       _sharedList = BuilderParts.newId();
@@ -181,15 +190,15 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         if (content.isNotEmpty) {
           final decoded = jsonDecode(content);
           if (decoded is! List && decoded is! String) {
-            throw const BuilderFailure(
-              'Enter rich blocks as an array or a quoted output reference.',
-            );
+            throw BuilderFailure(context.strings.enterRichBlocksAsAnArray);
           }
         }
         if (kind == 'reply' &&
             value('draftId').trim().isNotEmpty &&
             content.isEmpty) {
-          throw const BuilderFailure('A draft requires rich message content.');
+          throw BuilderFailure(
+            context.strings.aDraftRequiresRichMessageContent,
+          );
         }
         final data = value('widgetChatData').trim();
         if (data.isNotEmpty) jsonDecode(data);
@@ -197,16 +206,12 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         if (kind == 'reply' &&
             html.isNotEmpty &&
             (utf8.encode(html).length > 32768 || html.codeUnits.contains(0))) {
-          throw const BuilderFailure(
-            'Widget HTML must fit in 32768 UTF-8 bytes.',
-          );
+          throw BuilderFailure(context.strings.widgetHTMLMustFitIn32768);
         }
         if (kind == 'reply' &&
             html.trim().isNotEmpty &&
             value('draftId').trim().isNotEmpty) {
-          throw const BuilderFailure(
-            'Choose either a widget or a rich message draft.',
-          );
+          throw BuilderFailure(context.strings.chooseEitherAWidgetOrA);
         }
         if (kind == 'reply') {
           config['widgetQueries'] = _widgetQueries;
@@ -220,9 +225,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
       if (kind == 'renderList') {
         final layout = Map.of(_layout);
         if (_groupItemButtons && layout['columns'] != null) {
-          throw const BuilderFailure(
-            'Buttons next to items require a list layout.',
-          );
+          throw BuilderFailure(context.strings.buttonsNextToItemsRequireA);
         }
         if (_groupItemButtons) {
           layout['groupItemButtons'] = true;
@@ -243,9 +246,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
         if (item is! List && !_rowRef(item) ||
             footer is! List ||
             footer.any((row) => row is! List && !_rowRef(row))) {
-          throw const BuilderFailure(
-            'Enter button arrays or choose saved rows.',
-          );
+          throw BuilderFailure(context.strings.enterButtonArraysOrChooseSaved);
         }
       }
       if (kind == 'sql') {
@@ -253,7 +254,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
           value('parameters').isEmpty ? '[]' : value('parameters'),
         );
         if (parsed is! List) {
-          throw const BuilderFailure('SQL parameters must be a JSON array.');
+          throw BuilderFailure(context.strings.sqlParametersMustBeAJSON);
         }
       }
       if (kind == 'http') {
@@ -265,9 +266,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
           value('headers').trim().isEmpty ? '{}' : value('headers'),
         );
         if (headers is! Map || headers.values.any((v) => v is! String)) {
-          throw const BuilderFailure(
-            'Headers must be a JSON object of strings.',
-          );
+          throw BuilderFailure(context.strings.headersMustBeAJSONObject);
         }
         final url = Uri.tryParse(
           value('url').replaceAll(BuilderValues.reference, 'binding'),
@@ -277,9 +276,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
             url.host.isEmpty ||
             url.userInfo.isNotEmpty ||
             url.hasFragment) {
-          throw const BuilderFailure(
-            'Enter an HTTP(S) URL without embedded credentials or a fragment.',
-          );
+          throw BuilderFailure(context.strings.enterAnHTTPSURLWithout);
         }
         config.addAll({'method': _method});
       }
@@ -319,7 +316,7 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
           final previous = store.parts.lists[id];
           final label = _newListLabel ?? previous?['label'] as String?;
           if (label == null) {
-            throw const BuilderFailure('Choose a list from the library.');
+            throw BuilderFailure(context.strings.chooseAListFromTheLibrary);
           }
           final definition = BuilderParts.list(
             label,
@@ -346,17 +343,14 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
       );
     } on FormatException {
       if (mounted) {
-        setState(
-          () => _error =
-              'Invalid JSON. Put references such as {{steps.lookup.body.id}} inside JSON strings.',
-        );
+        setState(() => _error = context.strings.invalidJSONPutReferencesSuchAs);
       }
     } catch (error) {
       if (mounted) {
         setState(
           () => _error = error is BuilderFailure
               ? error.message
-              : 'The action could not be saved.',
+              : context.strings.theActionCouldNotBeSaved,
         );
       }
     } finally {
@@ -367,19 +361,19 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text(BuilderCatalog.labels[kind] ?? kind),
+      title: Text(BuilderCatalog.label(context, kind)),
       actions: [
         if (widget.onAddToLibrary case final add?)
           IconButton(
-            tooltip: 'Save to action library',
+            tooltip: context.strings.saveToActionLibrary,
             onPressed: _saving ? null : () => save(commit: add),
             icon: const Icon(Icons.library_add_outlined),
           ),
         if (widget.onDelete != null)
           IconButton(
             tooltip: widget.libraryName == null
-                ? 'Delete action'
-                : 'Remove from event',
+                ? context.strings.deleteAction
+                : context.strings.removeFromEvent,
             onPressed: _saving ? null : widget.onDelete,
             icon: const Icon(Icons.delete_outline),
           ),
@@ -395,26 +389,24 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (widget.libraryName case final String name) ...[
-                BNotice(
-                  message:
-                      'Shared action: $name. Saving updates every event using it.',
-                ),
+                BNotice(message: context.strings.sharedActionNotice(name)),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Output name in this event'),
+                  title: Text(context.strings.outputNameInThisEvent),
                   subtitle: Text(widget.initial.config['output'].toString()),
                   trailing: TextButton(
                     onPressed: _saving ? null : widget.onRenameOutput,
-                    child: const Text('Edit'),
+                    child: Text(context.strings.edit),
                   ),
                 ),
               ] else
                 _input(
                   'output',
-                  'Output name',
+                  context.strings.outputName,
                   required: true,
-                  help:
-                      'Later actions can use {{steps.${value('output').isEmpty ? 'name' : value('output')}.${kind == 'http'
+                  help: context.strings.actionOutputReferenceHint(
+                    context.leftToRightText(
+                      '{{steps.${value('output').isEmpty ? 'name' : value('output')}.${kind == 'http'
                           ? 'body.field'
                           : kind == 'sql'
                           ? 'rows.0.field'
@@ -424,10 +416,12 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                           ? 'value'
                           : kind == 'condition'
                           ? 'matched'
-                          : 'messageId'}}}.',
+                          : 'messageId'}}}',
+                    ),
+                  ),
                   validate: (v) => BuilderValues.name.hasMatch(v)
                       ? null
-                      : 'Use letters, numbers and underscores; start with a letter or underscore.',
+                      : context.strings.useLettersNumbersAndUnderscoresStart,
                 ),
               if (_error != null)
                 Padding(
@@ -444,17 +438,17 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                       _newListLabel ??
                           BuilderStore.shared.parts.lists[id]?['label']
                               as String? ??
-                          'Unavailable list',
+                          context.strings.unavailableList,
                     ),
-                    subtitle: const Text(
-                      'Layout edits apply to every linked list.',
+                    subtitle: Text(
+                      context.strings.layoutEditsApplyToEveryLinked,
                     ),
                     trailing: TextButton(
                       onPressed: () => setState(() {
                         _sharedList = null;
                         _newListLabel = null;
                       }),
-                      child: const Text('Make local copy'),
+                      child: Text(context.strings.makeLocalCopy),
                     ),
                   ),
                 Wrap(
@@ -462,96 +456,89 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                   children: [
                     TextButton(
                       onPressed: _chooseList,
-                      child: const Text('Choose saved list'),
+                      child: Text(context.strings.chooseSavedList),
                     ),
                     if (_sharedList == null)
                       TextButton(
                         onPressed: _nameList,
-                        child: const Text('Save list to library'),
+                        child: Text(context.strings.saveListToLibrary),
                       ),
                   ],
                 ),
                 _input(
                   'items',
-                  'Items reference',
+                  context.strings.itemsReference,
                   required: true,
-                  help:
-                      'Example: {{steps.query.rows}} or {{steps.lookup.body}}. At most 50 items.',
+                  help: context.strings.exampleStepsQueryRowsOrSteps,
                 ),
                 _input(
                   'text',
-                  'Text for each item',
+                  context.strings.textForEachItem,
                   lines: 3,
-                  help:
-                      'Use {{item.title}}, {{item.price}} and {{index}} (starting at 1).',
+                  help: context.strings.useItemTitleItemPriceAnd,
                 ),
-                _input('header', 'Heading', lines: 2),
-                _input('separator', 'Separator', fallback: '\n', lines: 2),
+                _input('header', context.strings.heading, lines: 2),
+                _input(
+                  'separator',
+                  context.strings.separator,
+                  fallback: '\n',
+                  lines: 2,
+                ),
                 _input(
                   'emptyText',
-                  'When the list is empty',
+                  context.strings.whenTheListIsEmpty,
                   fallback: 'No results yet.',
                 ),
-                _input('footer', 'Footer', lines: 2),
+                _input('footer', context.strings.footer, lines: 2),
                 _input(
                   'buttons',
-                  'Buttons for each item (JSON array)',
+                  context.strings.buttonsForEachItemJSONArray,
                   fallback: '[]',
                   lines: 3,
-                  help:
-                      'Example: [{"text":"{{item.title}}","callback_data":"open:{{item.id}}"}]',
+                  help: context.strings.exampleTextItemTitleCallbackData,
                 ),
                 _listRows('buttons', footer: false),
                 _input(
                   'footerButtons',
-                  'Footer button rows (JSON array)',
+                  context.strings.footerButtonRowsJSONArray,
                   fallback: '[]',
                   lines: 3,
-                  help: 'Example: [[{"text":"Back","callback_data":"home"}]]',
+                  help: context.strings.exampleTextBackCallbackDataHome,
                 ),
                 _listRows('footerButtons', footer: true),
                 _input(
                   'itemData',
-                  'Data for each item (optional JSON)',
+                  context.strings.dataForEachItemOptionalJSON,
                   lines: 2,
-                  help:
-                      'Use bindings such as {{item.title}}. Read the array from this action’s items output.',
+                  help: context.strings.useBindingsSuchAsItemTitle,
                 ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
-                  title: const Text('Place buttons next to each item'),
-                  subtitle: const Text(
-                    'Bind the rich output to the next message. Footer buttons stay below the message.',
-                  ),
+                  title: Text(context.strings.placeButtonsNextToEachItem),
+                  subtitle: Text(context.strings.bindTheRichOutputToThe),
                   value: _groupItemButtons,
                   onChanged: (value) =>
                       setState(() => _groupItemButtons = value),
                 ),
-                const Text(
-                  'Bind text or rich content and the keyboard output to the next message action.',
-                ),
+                Text(context.strings.bindTextOrRichContentAnd),
               ] else if (kind == 'sql') ...[
                 _input(
                   'text',
-                  'SQL statement',
+                  context.strings.sqlStatement,
                   required: true,
                   lines: 6,
-                  help:
-                      'One statement on this bot’s database. Use ? for values; bind them below.',
+                  help: context.strings.oneStatementOnThisBotS,
                 ),
                 _input(
                   'parameters',
-                  'Parameters (JSON array)',
+                  context.strings.parametersJSONArray,
                   fallback: '[]',
                   lines: 3,
-                  help:
-                      'Example: ["{{event.userId}}", "{{user.score}}"]. Values are bound, never inserted into SQL text.',
+                  help: context.strings.exampleEventUserIdUserScoreValues,
                 ),
-                const Text(
-                  'Create and query your own tables. File access, attachments, extensions and Bottogram’s reserved table are blocked. Limit results to 500 rows; each statement has a 2-second budget.',
-                ),
+                Text(context.strings.createAndQueryYourOwnTables),
               ] else if (kind == 'http') ...[
-                _select('Method', _method, const [
+                _select(context.strings.method, _method, const [
                   'GET',
                   'POST',
                   'PUT',
@@ -560,86 +547,80 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                 ], (v) => setState(() => _method = v)),
                 _input(
                   'url',
-                  'API URL',
+                  context.strings.apiURL,
                   required: true,
-                  help:
-                      'Fixed host; bind values in the path or query, e.g. /users/{{event.userId}}.',
+                  help: context.strings.fixedHostBindValuesInThe,
                 ),
                 _input(
                   'credential',
-                  'Saved bearer credential',
-                  help:
-                      'Credential name from this bot’s credentials. Leave blank for no bearer token.',
+                  context.strings.savedBearerCredential,
+                  help: context.strings.credentialNameFromThisBotS,
                 ),
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
-                  title: const Text('Headers and JSON body'),
+                  title: Text(context.strings.headersAndJSONBody),
                   initiallyExpanded:
                       value('body').isNotEmpty || value('headers').isNotEmpty,
                   children: [
                     _input(
                       'headers',
-                      'Headers (JSON)',
+                      context.strings.headersJSON,
                       fallback: '{}',
                       lines: 3,
-                      help:
-                          'Do not paste API keys here. Use a saved credential for bearer authentication.',
+                      help: context.strings.doNotPasteAPIKeysHere,
                     ),
                     if (_method != 'GET')
                       _input(
                         'body',
-                        'Body (JSON)',
+                        context.strings.bodyJSON,
                         lines: 5,
-                        help:
-                            'Example: {"id":"{{event.userId}}","amount":"{{steps.lookup.body.price}}"}',
+                        help: context.strings.exampleIdEventUserIdAmountSteps,
                       ),
                   ],
                 ),
-                const Padding(
+                Padding(
                   padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'Calls run on this device. 22 s timeout · 1 MiB response limit · no automatic write retries.',
-                  ),
+                  child: Text(context.strings.callsRunOnThisDevice22),
                 ),
               ] else if (BuilderCatalog.variables.contains(kind)) ...[
-                _select('Variable scope', _scope, const [
+                _select(context.strings.variableScope, _scope, const [
                   'user',
                   'bot',
                 ], (v) => setState(() => _scope = v)),
                 _input(
                   'variable',
-                  'Variable name',
+                  context.strings.variableName,
                   required: true,
-                  help:
-                      'Create the variable in this bot’s Variables page first.',
+                  help: context.strings.createTheVariableInThisBot,
                 ),
                 _input(
                   'text',
-                  kind == 'incrementVariable' ? 'Amount to add' : 'New value',
+                  kind == 'incrementVariable'
+                      ? context.strings.amountToAdd
+                      : context.strings.newValue,
                   required: true,
-                  help:
-                      'A literal value or reference such as {{steps.lookup.body.points}}.',
+                  help: context.strings.aLiteralValueOrReferenceSuch,
                 ),
               ] else if (kind == 'condition')
                 ..._conditionFields()
               else if (kind == 'wait')
-                _input('text', 'Seconds (0–60)', required: true)
+                _input('text', context.strings.seconds060, required: true)
               else ...[
                 if (BuilderCatalog.media.contains(kind))
                   _input(
                     'media',
-                    'Media HTTP(S) URL or Telegram file ID',
+                    context.strings.mediaHTTPSURLOrTelegram,
                     required: true,
                   ),
                 if (kind == 'inlineAnswer')
                   _input(
                     'title',
-                    'Result title',
+                    context.strings.resultTitle,
                     required: true,
                     fallback: 'Result',
                   ),
                 if (BuilderCatalog.messages.contains(kind)) ...[
-                  _select('Text format', _format, const [
+                  _select(context.strings.textFormat, _format, const [
                     'plain',
                     'MarkdownV2',
                   ], (v) => setState(() => _format = v)),
@@ -648,46 +629,44 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                     references: widget.references,
                     markdown: _format == 'MarkdownV2',
                     label: BuilderCatalog.media.contains(kind)
-                        ? 'Caption'
-                        : 'Message',
+                        ? context.strings.caption
+                        : context.strings.message,
                   ),
                 ],
                 if (kind == 'reply')
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Send to all admins'),
-                    subtitle: const Text(
-                      'Use the admin list in bot settings as the destination.',
-                    ),
+                    title: Text(context.strings.sendToAllAdmins),
+                    subtitle: Text(context.strings.useTheAdminListInBot),
                     value: _sendToAdmins,
                     onChanged: (value) => setState(() => _sendToAdmins = value),
                   ),
                 if (kind == 'reply' || kind == 'editText')
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
-                    title: const Text('Rich message'),
+                    title: Text(context.strings.richMessage),
                     initiallyExpanded: value('richBlocks').isNotEmpty,
                     children: [
                       _input(
                         'richBlocks',
-                        'Rich blocks (JSON)',
+                        context.strings.richBlocksJSON,
                         lines: 5,
-                        help:
-                            'Use a block array or a quoted reference such as "{{steps.list.rich}}". Leave blank to send the text above.',
+                        help: context.strings.useABlockArrayOrA,
                       ),
                       if (kind == 'reply')
                         _input(
                           'draftId',
-                          'Draft ID',
-                          help:
-                              'Private chat preview. Use {{event.updateId}}, then send the finished message in a later action.',
+                          context.strings.draftID,
+                          help: context
+                              .strings
+                              .privateChatPreviewUseEventUpdateId,
                         ),
                     ],
                   ),
                 if (kind == 'reply' || kind == 'editText')
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
-                    title: const Text('Telegram widget'),
+                    title: Text(context.strings.telegramWidget),
                     initiallyExpanded:
                         value('widgetHtml').isNotEmpty ||
                         value('widgetChatData').isNotEmpty,
@@ -695,20 +674,18 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                       if (kind == 'reply') ...[
                         _input(
                           'widgetHtml',
-                          'Widget HTML',
+                          context.strings.widgetHTML,
                           lines: 6,
-                          help:
-                              'Self-contained HTML for a private chat widget. Leave blank to send a normal message.',
+                          help: context.strings.selfContainedHTMLForAPrivate,
                         ),
                         _input(
                           'widgetCaption',
-                          'Widget caption',
-                          help:
-                              'Shown below the widget, including in clients that cannot display it.',
+                          context.strings.widgetCaption,
+                          help: context.strings.shownBelowTheWidgetIncludingIn,
                         ),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text('Allow widget requests'),
+                          title: Text(context.strings.allowWidgetRequests),
                           value: _widgetQueries,
                           onChanged: (value) =>
                               setState(() => _widgetQueries = value),
@@ -716,23 +693,21 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                       ],
                       _input(
                         'widgetChatData',
-                        'Widget chat data (JSON)',
+                        context.strings.widgetChatDataJSON,
                         lines: 3,
-                        help:
-                            'Up to 1024 UTF-8 bytes. The widget reads it from TelegramWidget.chatData.',
+                        help: context.strings.upTo1024UTF8Bytes,
                       ),
                     ],
                   ),
                 if (kind == 'callbackAnswer') ...[
                   _input(
                     'text',
-                    'Notification text',
-                    help:
-                        'Up to 200 characters. Leave blank to acknowledge the click.',
+                    context.strings.notificationText,
+                    help: context.strings.upTo200CharactersLeaveBlank,
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
-                    title: const Text('Show as alert'),
+                    title: Text(context.strings.showAsAlert),
                     value: _showAlert,
                     onChanged: (v) => setState(() => _showAlert = v),
                   ),
@@ -748,50 +723,47 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
                     kind == 'editKeyboard')
                   _input(
                     'keyboardOutput',
-                    'Keyboard output reference',
-                    help:
-                        'Example: {{steps.list.keyboard}}. When set, replaces the static keyboard.',
+                    context.strings.keyboardOutputReference,
+                    help: context.strings.exampleStepsListKeyboardWhenSet,
                   ),
                 if (BuilderCatalog.hasChat(kind))
                   ExpansionTile(
                     tilePadding: EdgeInsets.zero,
-                    title: const Text('Target'),
-                    subtitle: const Text(
-                      'Defaults to the conversation and triggering message',
+                    title: Text(context.strings.target),
+                    subtitle: Text(
+                      context.strings.defaultsToTheConversationAndTriggering,
                     ),
                     initiallyExpanded: BuilderCatalog.targets.contains(kind),
                     children: [
                       _input(
                         'chatId',
-                        'Chat ID or channel username',
-                        help:
-                            'Blank uses the current chat. A reference can use an earlier step’s chatId.',
+                        context.strings.chatIDOrChannelUsername,
+                        help: context.strings.blankUsesTheCurrentChatA,
                       ),
                       if (BuilderCatalog.targets.contains(kind))
                         _input(
                           'messageId',
-                          'Message ID',
-                          help:
-                              'Blank uses the triggering message. Example: {{steps.sent.messageId}}.',
+                          context.strings.messageID,
+                          help: context
+                              .strings
+                              .blankUsesTheTriggeringMessageExample,
                         ),
                     ],
                   ),
               ],
               ExpansionTile(
                 tilePadding: EdgeInsets.zero,
-                title: const Text('Execution'),
+                title: Text(context.strings.execution),
                 children: [
-                  _select('On failure', _onError, const [
+                  _select(context.strings.onFailure, _onError, const [
                     'stop',
                     'continue',
                   ], (v) => setState(() => _onError = v)),
-                  const Text(
-                    'Continue exposes steps.<name>.ok = false and steps.<name>.error to later actions.',
-                  ),
+                  Text(context.strings.continueExposesStepsNameOkFalse),
                   if (kind != 'condition') ...[
                     SwitchListTile(
                       contentPadding: EdgeInsets.zero,
-                      title: const Text('Run only when a condition matches'),
+                      title: Text(context.strings.runOnlyWhenAConditionMatches),
                       value: _conditional,
                       onChanged: (v) => setState(() => _conditional = v),
                     ),
@@ -803,7 +775,9 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
               FilledButton.icon(
                 onPressed: _saving ? null : save,
                 icon: const Icon(Icons.check),
-                label: Text(_saving ? 'Saving…' : 'Save action'),
+                label: Text(
+                  _saving ? context.strings.saving : context.strings.saveAction,
+                ),
               ),
               const SizedBox(height: 24),
             ],
@@ -815,17 +789,17 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
   List<Widget> _conditionFields() => [
     _input(
       'left',
-      'Left value',
-      help: 'Literal text or a reference such as {{user.score}}.',
+      context.strings.leftValue,
+      help: context.strings.literalTextOrAReferenceSuch,
     ),
-    _select('Comparison', _operator, const [
+    _select(context.strings.comparison, _operator, const [
       'equals',
       'notEquals',
       'contains',
       'greater',
       'less',
     ], (v) => setState(() => _operator = v)),
-    _input('right', 'Right value'),
+    _input('right', context.strings.rightValue),
   ];
   Widget _select(
     String label,
@@ -839,7 +813,23 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
       isExpanded: true,
       decoration: InputDecoration(labelText: label),
       items: [
-        for (final v in options) DropdownMenuItem(value: v, child: Text(v)),
+        for (final v in options)
+          DropdownMenuItem(
+            value: v,
+            child: Text(switch (v) {
+              'user' => context.strings.perUser,
+              'bot' => context.strings.wholeBot,
+              'plain' => context.strings.plainTextFormat,
+              'stop' => context.strings.stopOnFailure,
+              'continue' => context.strings.continueOnFailure,
+              'equals' => context.strings.equals,
+              'notEquals' => context.strings.notEqualsOperator,
+              'contains' => context.strings.contains,
+              'greater' => context.strings.greaterThanOperator,
+              'less' => context.strings.lessThanOperator,
+              _ => v,
+            }),
+          ),
       ],
       onChanged: (v) {
         if (v != null) change(v);
@@ -858,6 +848,29 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
     padding: const EdgeInsets.only(bottom: 12),
     child: TextFormField(
       controller: field(key, fallback),
+      textDirection: switch (key) {
+        'text' when widget.initial.kind == 'sql' => TextDirection.ltr,
+        'output' ||
+        'items' ||
+        'buttons' ||
+        'footerButtons' ||
+        'itemData' ||
+        'parameters' ||
+        'url' ||
+        'credential' ||
+        'headers' ||
+        'body' ||
+        'variable' ||
+        'media' ||
+        'richBlocks' ||
+        'draftId' ||
+        'widgetHtml' ||
+        'widgetChatData' ||
+        'keyboardOutput' ||
+        'chatId' ||
+        'messageId' => TextDirection.ltr,
+        _ => null,
+      },
       onChanged: {'buttons', 'footerButtons'}.contains(key)
           ? (_) => setState(() {})
           : null,
@@ -871,8 +884,10 @@ class _BuilderStepEditorState extends State<BuilderStepEditor> {
       ),
       validator: (v) {
         final text = v ?? '';
-        if (required && text.trim().isEmpty) return 'This field is required.';
-        if (text.length > 65536) return 'This field exceeds 64 KiB.';
+        if (required && text.trim().isEmpty) {
+          return context.strings.thisFieldIsRequired;
+        }
+        if (text.length > 65536) return context.strings.thisFieldExceeds64KiB;
         return validate?.call(text);
       },
     ),

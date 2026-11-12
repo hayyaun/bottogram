@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/builder/engine.dart';
 import 'package:bottogram/builder/step_editor.dart';
 import 'package:bottogram/builder/store.dart';
@@ -113,14 +114,14 @@ class _ActPageState extends State<ActPage> {
 
   String? _outputError(String name) {
     if (!BuilderValues.name.hasMatch(name)) {
-      return 'Use letters, numbers and underscores; start with a letter or underscore.';
+      return context.strings.useLettersNumbersAndUnderscoresStart;
     }
     if (widget.ev.acts.indexed.any(
       (entry) =>
           !identical(entry.$2, widget.act) &&
           (entry.$2.config['output'] ?? 'step${entry.$1 + 1}') == name,
     )) {
-      return 'Another action already uses this output name.';
+      return context.strings.anotherActionAlreadyUsesThisOutput;
     }
     return null;
   }
@@ -128,12 +129,12 @@ class _ActPageState extends State<ActPage> {
   Future<void> _addToLibrary(BuilderStep step) async {
     final entry = await showBEntryDialog<bool>(
       context,
-      title: 'Save to action library',
-      fieldLabel: 'Library name',
+      title: context.strings.saveToActionLibrary,
+      fieldLabel: context.strings.libraryName,
       initialType: true,
-      action: 'Save and link',
+      action: context.strings.saveAndLink,
       validate: (value) =>
-          value.trim().length > 80 ? 'Use up to 80 characters.' : null,
+          value.trim().length > 80 ? context.strings.useUpTo80Characters : null,
     );
     if (entry == null || !mounted) return;
     await _save(step, libraryName: entry.text.trim());
@@ -142,11 +143,11 @@ class _ActPageState extends State<ActPage> {
   Future<void> _renameOutput() async {
     final entry = await showBEntryDialog<bool>(
       context,
-      title: 'Edit output name',
-      fieldLabel: 'Output name',
+      title: context.strings.editOutputName,
+      fieldLabel: context.strings.outputName,
       initialType: true,
       initialText: _output,
-      action: 'Save',
+      action: context.strings.save,
       validate: _outputError,
     );
     if (entry == null || !mounted || entry.text == _output) return;
@@ -159,7 +160,7 @@ class _ActPageState extends State<ActPage> {
       widget.act.config['output'] = previous;
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('The output name could not be saved.')),
+        SnackBar(content: Text(context.strings.theOutputNameCouldNotBe)),
       );
     }
   }
@@ -170,15 +171,11 @@ class _ActPageState extends State<ActPage> {
     if (error != null) throw BuilderFailure(error);
     if (step.kind == 'callbackAnswer' &&
         widget.ev.type != VirtEventType.callbackQuery) {
-      throw const BuilderFailure(
-        'Button answers require a callback-query event.',
-      );
+      throw BuilderFailure(context.strings.buttonAnswersRequireACallbackQuery);
     }
     if (step.kind == 'inlineAnswer' &&
         widget.ev.type != VirtEventType.inlineQuery) {
-      throw const BuilderFailure(
-        'Inline answers require an inline-query event.',
-      );
+      throw BuilderFailure(context.strings.inlineAnswersRequireAnInlineQuery);
     }
     final definition = VirtAct(type: draft.type, text: step.text)
       ..config = {...step.config}
@@ -222,6 +219,7 @@ class _ActPageState extends State<ActPage> {
           ? resolved.config['keyboard'] as Map
           : null,
     );
+    final strings = context.strings;
     try {
       await bots.saveBot(widget.bot);
     } catch (_) {
@@ -231,9 +229,7 @@ class _ActPageState extends State<ActPage> {
         ..rmu = previousKeyboard;
       widget.bot.events.removeWhere(added.contains);
       if (libraryName != null) {
-        throw const BuilderFailure(
-          'The action is in the library, but its link could not be saved. Add it from the action picker.',
-        );
+        throw BuilderFailure(strings.theActionIsInTheLibrary);
       }
       rethrow;
     }
@@ -243,9 +239,13 @@ class _ActPageState extends State<ActPage> {
   Future<void> _remove() async {
     if (!await confirmRemoval(
           context,
-          title: _name == null ? 'Delete action?' : 'Remove action from event?',
-          message: 'Later actions referring to its output will need updating.',
-          action: _name == null ? 'Delete action' : 'Remove from event',
+          title: _name == null
+              ? context.strings.deleteActionAction
+              : context.strings.removeActionFromEvent,
+          message: context.strings.laterActionsReferringToItsOutput,
+          action: _name == null
+              ? context.strings.deleteAction
+              : context.strings.removeFromEvent,
         ) ||
         !mounted) {
       return;

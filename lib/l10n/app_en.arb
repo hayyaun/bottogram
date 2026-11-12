@@ -1,0 +1,1199 @@
+{
+  "@@locale": "en",
+  "backgroundNotChecked": "Not checked",
+  "backgroundReady": "Ready",
+  "backgroundNeedsSetup": "Needs setup",
+  "keepBotsRunning": "Keep bots running",
+  "allowBackgroundActivity": "Allow background activity",
+  "startedBotsNeedAConnectionEven": "Started bots need a connection even when this screen is closed.",
+  "bottogramKeepsRunningBotsInA": "Bottogram keeps running bots in a foreground service when you leave the app. The notification shows how many bots are active and includes Stop bots. Running bots use battery and data.",
+  "batteryOptimizationStatus": "Battery optimization · {status}",
+  "@batteryOptimizationStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "inAndroidBatterySettingsShowAll": "In Android battery settings, show all apps, select Bottogram, and choose Don’t optimize. On devices with additional app battery controls, allow background activity or choose Unrestricted.",
+  "openBatterySettings": "Open battery settings",
+  "backgroundRestrictionsStatus": "Background restrictions · {status}",
+  "@backgroundRestrictionsStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "openBottogramSAppSettingsAnd": "Open Bottogram’s app settings and check Battery or Background activity. Android settings differ by device.",
+  "openAppSettings": "Open app settings",
+  "notificationsStatus": "Notifications · {status}",
+  "@notificationsStatus": {
+    "placeholders": {
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "allowNotificationsSoYouCanSee": "Allow notifications so you can see running bots and stop them. If a permission prompt no longer appears, enable notifications in app settings.",
+  "allowNotifications": "Allow notifications",
+  "backgroundSetupIsReadyStartA": "Background setup is ready. Start a bot to run it. This does not check its API key or network connection.",
+  "ifAndroidEndsBottogramOrYour": "If Android ends Bottogram or your device restarts, reopen Bottogram to resume the bots you left enabled. Stop bots in Bottogram or its notification to keep them off.",
+  "checkAgain": "Check again",
+  "done": "Done",
+  "skipForThisOpening": "Skip for this opening",
+  "renderList": "Render list",
+  "runSQL": "Run SQL",
+  "sendText": "Send text",
+  "sendDice": "Send dice",
+  "editMessageText": "Edit message text",
+  "editMessageButtons": "Edit message buttons",
+  "answerButtonClick": "Answer button click",
+  "answerInlineQuery": "Answer inline query",
+  "sendPhoto": "Send photo",
+  "sendVideo": "Send video",
+  "sendDocument": "Send document",
+  "sendAudio": "Send audio",
+  "sendVoice": "Send voice",
+  "sendAnimation": "Send animation",
+  "sendSticker": "Send sticker",
+  "deleteMessage": "Delete message",
+  "pinMessage": "Pin message",
+  "callExternalAPI": "Call external API",
+  "setVariable": "Set variable",
+  "incrementVariable": "Increment variable",
+  "checkCondition": "Check condition",
+  "wait": "Wait",
+  "botConsoleTitle": "{botName} · Console",
+  "@botConsoleTitle": {
+    "placeholders": {
+      "botName": {
+        "type": "String"
+      }
+    }
+  },
+  "clearConsole": "Clear console",
+  "thisSessionLatest200EntriesRequest": "This session · latest 200 entries · request bodies and values are not logged",
+  "errors": "Errors",
+  "runTheBotToSeeIts": "Run the bot to see its event and action activity.",
+  "consoleElapsed": " · {milliseconds} ms",
+  "@consoleElapsed": {
+    "placeholders": {
+      "milliseconds": {
+        "type": "String"
+      }
+    }
+  },
+  "botDatabaseTitle": "{botName} · Database",
+  "@botDatabaseTitle": {
+    "placeholders": {
+      "botName": {
+        "type": "String"
+      }
+    }
+  },
+  "refreshTables": "Refresh tables",
+  "findATable": "Find a table",
+  "openingDatabase": "Opening database…",
+  "noTablesYetTablesWillAppear": "No tables yet. Tables will appear when this bot stores data.",
+  "noTablesMatchThisName": "No tables match this name.",
+  "internalTableSuffix": " · Internal table",
+  "countUnavailableWithSuffix": "Count unavailable{suffix}",
+  "@countUnavailableWithSuffix": {
+    "placeholders": {
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "countingRowsWithSuffix": "Counting rows…{suffix}",
+  "@countingRowsWithSuffix": {
+    "placeholders": {
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "countUnavailable": "Count unavailable",
+  "tableStructureTitle": "{tableName} · Structure",
+  "@tableStructureTitle": {
+    "placeholders": {
+      "tableName": {
+        "type": "String"
+      }
+    }
+  },
+  "column": "Column",
+  "typeLabel": "Type",
+  "requiredLabel": "Required",
+  "primaryKey": "Primary key",
+  "defaultLabel": "Default",
+  "any": "Any",
+  "yes": "Yes",
+  "no": "No",
+  "indexes": "Indexes",
+  "noIndexes": "No indexes",
+  "uniqueIndexPrefix": "Unique · ",
+  "expressionIndex": "Expression index",
+  "close": "Close",
+  "tableStructure": "Table structure",
+  "refreshData": "Refresh data",
+  "countingRows": "Counting rows…",
+  "totalRows": "{count} total rows",
+  "@totalRows": {
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "filter": "Filter",
+  "filtered": "Filtered",
+  "clearFilter": "Clear filter",
+  "loadingRows": "Loading rows…",
+  "dataIsUnavailableRefreshToTry": "Data is unavailable. Refresh to try again.",
+  "noRowsToDisplay": "No rows to display.",
+  "rows": "Rows",
+  "label0Shown": "0 shown",
+  "previousPage": "Previous page",
+  "nextPage": "Next page",
+  "copy": "Copy",
+  "equals": "equals",
+  "contains": "contains",
+  "isNULL": "is NULL",
+  "isNotNULL": "is not NULL",
+  "readOnly": "Read only",
+  "tryAgain": "Try again",
+  "filterRows": "Filter rows",
+  "comparison": "Comparison",
+  "value": "Value",
+  "textIsMatchedLiterally": "Text is matched literally.",
+  "cancel": "Cancel",
+  "apply": "Apply",
+  "localBotSettingsCouldNotBe": "Local bot settings could not be opened.",
+  "deleteCredential": "Delete credential?",
+  "deleteVariable": "Delete variable?",
+  "actionsUsingThisCredentialWillFail": "Actions using this credential will fail until it is replaced.",
+  "removeThisVariableAndItsSaved": "Remove this variable and its saved values for every user of this bot?",
+  "delete": "Delete",
+  "theItemCouldNotBeRemoved": "The item could not be removed.",
+  "variablesAndCredentials": "Variables and credentials",
+  "variables": "Variables",
+  "userValuesBelongToOneTelegram": "User values belong to one Telegram user. Bot values are shared by the whole bot. Defaults do not create a record for every user.",
+  "add": "Add",
+  "noVariablesYet": "No variables yet",
+  "createAVariableThenUseSet": "Create a variable, then use Set variable or Increment variable in an event.",
+  "variableSummary": "{scopeAndType} · default: {defaultValue}",
+  "@variableSummary": {
+    "placeholders": {
+      "scopeAndType": {
+        "type": "String"
+      },
+      "defaultValue": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteVariable2": "Delete variable",
+  "apiCredentials": "API credentials",
+  "keysAreSavedInSecureStorage": "Keys are saved in secure storage on this device. Actions refer to a credential by name.",
+  "noSavedCredentials": "No saved credentials",
+  "valueHidden": "Value hidden",
+  "deleteCredential2": "Delete credential",
+  "theValueCouldNotBeSaved": "The value could not be saved.",
+  "saveAPICredential": "Save API credential",
+  "createVariable": "Create variable",
+  "name": "Name",
+  "lettersNumbersAndUnderscoresStartWith": "Letters, numbers and underscores; start with a letter.",
+  "scope": "Scope",
+  "perUser": "Per user",
+  "wholeBot": "Whole bot",
+  "apiKey": "API key",
+  "defaultValue": "Default value",
+  "trueOrFalse": "true or false",
+  "save": "Save",
+  "listLibrary": "List library",
+  "saveListToLibrary": "Save list to library",
+  "enterRichBlocksAsAnArray": "Enter rich blocks as an array or a quoted output reference.",
+  "aDraftRequiresRichMessageContent": "A draft requires rich message content.",
+  "widgetHTMLMustFitIn32768": "Widget HTML must fit in 32768 UTF-8 bytes.",
+  "chooseEitherAWidgetOrA": "Choose either a widget or a rich message draft.",
+  "buttonsNextToItemsRequireA": "Buttons next to items require a list layout.",
+  "enterButtonArraysOrChooseSaved": "Enter button arrays or choose saved rows.",
+  "sqlParametersMustBeAJSON": "SQL parameters must be a JSON array.",
+  "headersMustBeAJSONObject": "Headers must be a JSON object of strings.",
+  "enterAnHTTPSURLWithout": "Enter an HTTP(S) URL without embedded credentials or a fragment.",
+  "chooseAListFromTheLibrary": "Choose a list from the library.",
+  "invalidJSONPutReferencesSuchAs": "Invalid JSON. Put references such as '{{steps.lookup.body.id}}' inside JSON strings.",
+  "theActionCouldNotBeSaved": "The action could not be saved.",
+  "saveToActionLibrary": "Save to action library",
+  "deleteAction": "Delete action",
+  "removeFromEvent": "Remove from event",
+  "sharedActionNotice": "Shared action: {name}. Saving updates every event using it.",
+  "@sharedActionNotice": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "outputNameInThisEvent": "Output name in this event",
+  "edit": "Edit",
+  "outputName": "Output name",
+  "actionOutputReferenceHint": "Later actions can use {reference}.",
+  "@actionOutputReferenceHint": {
+    "placeholders": {
+      "reference": {
+        "type": "String"
+      }
+    }
+  },
+  "useLettersNumbersAndUnderscoresStart": "Use letters, numbers and underscores; start with a letter or underscore.",
+  "unavailableList": "Unavailable list",
+  "layoutEditsApplyToEveryLinked": "Layout edits apply to every linked list.",
+  "makeLocalCopy": "Make local copy",
+  "chooseSavedList": "Choose saved list",
+  "itemsReference": "Items reference",
+  "exampleStepsQueryRowsOrSteps": "Example: '{{steps.query.rows}} or {{steps.lookup.body}}'. At most 50 items.",
+  "textForEachItem": "Text for each item",
+  "useItemTitleItemPriceAnd": "Use '{{item.title}}, {{item.price}} and {{index}}' (starting at 1).",
+  "heading": "Heading",
+  "separator": "Separator",
+  "whenTheListIsEmpty": "When the list is empty",
+  "footer": "Footer",
+  "buttonsForEachItemJSONArray": "Buttons for each item (JSON array)",
+  "exampleTextItemTitleCallbackData": "Example: ['{\"text\":\"{{item.title}}\",\"callback_data\":\"open:{{item.id}}\"}']",
+  "footerButtonRowsJSONArray": "Footer button rows (JSON array)",
+  "exampleTextBackCallbackDataHome": "Example: [['{\"text\":\"Back\",\"callback_data\":\"home\"}']]",
+  "dataForEachItemOptionalJSON": "Data for each item (optional JSON)",
+  "useBindingsSuchAsItemTitle": "Use bindings such as '{{item.title}}'. Read the array from this action’s items output.",
+  "placeButtonsNextToEachItem": "Place buttons next to each item",
+  "bindTheRichOutputToThe": "Bind the rich output to the next message. Footer buttons stay below the message.",
+  "bindTextOrRichContentAnd": "Bind text or rich content and the keyboard output to the next message action.",
+  "sqlStatement": "SQL statement",
+  "oneStatementOnThisBotS": "One statement on this bot’s database. Use ? for values; bind them below.",
+  "parametersJSONArray": "Parameters (JSON array)",
+  "exampleEventUserIdUserScoreValues": "Example: [\"'{{event.userId}}\", \"{{user.score}}'\"]. Values are bound, never inserted into SQL text.",
+  "createAndQueryYourOwnTables": "Create and query your own tables. File access, attachments, extensions and Bottogram’s reserved table are blocked. Limit results to 500 rows; each statement has a 2-second budget.",
+  "method": "Method",
+  "apiURL": "API URL",
+  "fixedHostBindValuesInThe": "Fixed host; bind values in the path or query, e.g. /users/'{{event.userId}}'.",
+  "savedBearerCredential": "Saved bearer credential",
+  "credentialNameFromThisBotS": "Credential name from this bot’s credentials. Leave blank for no bearer token.",
+  "headersAndJSONBody": "Headers and JSON body",
+  "headersJSON": "Headers (JSON)",
+  "doNotPasteAPIKeysHere": "Do not paste API keys here. Use a saved credential for bearer authentication.",
+  "bodyJSON": "Body (JSON)",
+  "exampleIdEventUserIdAmountSteps": "Example: '{\"id\":\"{{event.userId}}\",\"amount\":\"{{steps.lookup.body.price}}\"}'",
+  "callsRunOnThisDevice22": "Calls run on this device. 22 s timeout · 1 MiB response limit · no automatic write retries.",
+  "variableScope": "Variable scope",
+  "variableName": "Variable name",
+  "createTheVariableInThisBot": "Create the variable in this bot’s Variables page first.",
+  "amountToAdd": "Amount to add",
+  "newValue": "New value",
+  "aLiteralValueOrReferenceSuch": "A literal value or reference such as '{{steps.lookup.body.points}}'.",
+  "seconds060": "Seconds (0–60)",
+  "mediaHTTPSURLOrTelegram": "Media HTTP(S) URL or Telegram file ID",
+  "resultTitle": "Result title",
+  "textFormat": "Text format",
+  "caption": "Caption",
+  "message": "Message",
+  "sendToAllAdmins": "Send to all admins",
+  "useTheAdminListInBot": "Use the admin list in bot settings as the destination.",
+  "richMessage": "Rich message",
+  "richBlocksJSON": "Rich blocks (JSON)",
+  "useABlockArrayOrA": "Use a block array or a quoted reference such as \"'{{steps.list.rich}}'\". Leave blank to send the text above.",
+  "draftID": "Draft ID",
+  "privateChatPreviewUseEventUpdateId": "Private chat preview. Use '{{event.updateId}}', then send the finished message in a later action.",
+  "telegramWidget": "Telegram widget",
+  "widgetHTML": "Widget HTML",
+  "selfContainedHTMLForAPrivate": "Self-contained HTML for a private chat widget. Leave blank to send a normal message.",
+  "widgetCaption": "Widget caption",
+  "shownBelowTheWidgetIncludingIn": "Shown below the widget, including in clients that cannot display it.",
+  "allowWidgetRequests": "Allow widget requests",
+  "widgetChatDataJSON": "Widget chat data (JSON)",
+  "upTo1024UTF8Bytes": "Up to 1024 UTF-8 bytes. The widget reads it from TelegramWidget.chatData.",
+  "notificationText": "Notification text",
+  "upTo200CharactersLeaveBlank": "Up to 200 characters. Leave blank to acknowledge the click.",
+  "showAsAlert": "Show as alert",
+  "keyboardOutputReference": "Keyboard output reference",
+  "exampleStepsListKeyboardWhenSet": "Example: '{{steps.list.keyboard}}'. When set, replaces the static keyboard.",
+  "target": "Target",
+  "defaultsToTheConversationAndTriggering": "Defaults to the conversation and triggering message",
+  "chatIDOrChannelUsername": "Chat ID or channel username",
+  "blankUsesTheCurrentChatA": "Blank uses the current chat. A reference can use an earlier step’s chatId.",
+  "messageID": "Message ID",
+  "blankUsesTheTriggeringMessageExample": "Blank uses the triggering message. Example: '{{steps.sent.messageId}}'.",
+  "execution": "Execution",
+  "onFailure": "On failure",
+  "continueExposesStepsNameOkFalse": "Continue exposes steps.<name>.ok = false and steps.<name>.error to later actions.",
+  "runOnlyWhenAConditionMatches": "Run only when a condition matches",
+  "saving": "Saving…",
+  "saveAction": "Save action",
+  "leftValue": "Left value",
+  "literalTextOrAReferenceSuch": "Literal text or a reference such as '{{user.score}}'.",
+  "rightValue": "Right value",
+  "thisFieldIsRequired": "This field is required.",
+  "thisFieldExceeds64KiB": "This field exceeds 64 KiB.",
+  "insertValue": "Insert value",
+  "valuePath": "Value path",
+  "useAFieldFromAnEarlier": "Use a field from an earlier step or a saved variable.",
+  "insert": "Insert",
+  "bold": "Bold",
+  "italic": "Italic",
+  "underline": "Underline",
+  "strikethrough": "Strikethrough",
+  "spoiler": "Spoiler",
+  "inlineCode": "Inline code",
+  "codeBlock": "Code block",
+  "moreFormatting": "More formatting",
+  "link": "Link",
+  "mentionByUserID": "Mention by user ID",
+  "blockQuote": "Block quote",
+  "expandableQuote": "Expandable quote",
+  "codeBlockWithLanguage": "Code block with language",
+  "customEmojiRequiresEligibility": "Custom emoji (requires eligibility)",
+  "escapeSelectedPlainText": "Escape selected plain text",
+  "insertVariableOrStepOutput": "Insert variable or step output",
+  "telegramMarkdownV2EscapePunctuationInLiteral": "Telegram MarkdownV2 · Escape punctuation in literal text. Inserted values are escaped automatically.",
+  "plainTextInsertValuesFromThe": "Plain text · Insert values from the event, variables or earlier steps.",
+  "theBotsCouldNotBeShared": "The bots could not be shared. Try again.",
+  "shareBots": "Share bots",
+  "sharedFilesIncludeTelegramBotTokens": "Shared files include Telegram bot tokens. Choose who you share them with.",
+  "createABotBeforeSharing": "Create a bot before sharing.",
+  "shareThisPluginBotAsA": "Share this plugin bot as a QR code from its settings.",
+  "completeThisBotSSetupBefore": "Complete this bot’s setup before exporting.",
+  "selectAll": "Select all",
+  "sharing": "Sharing…",
+  "shareSelected": "Share selected",
+  "couldNotReadThisConversationTry": "Could not read this conversation. Try again.",
+  "noViewerCouldOpenThisAttachment": "No viewer could open this attachment. Install a compatible player or viewer and try again.",
+  "couldNotOpenThisAttachmentTry": "Could not open this attachment. Try again.",
+  "inboxSettings": "Inbox settings",
+  "latest20RetainedMessagesClearedOr": "Latest 20 retained messages. Cleared or evicted history cannot be restored.",
+  "noRetainedMessages": "No retained messages",
+  "historyMayHaveBeenClearedOr": "History may have been cleared or evicted. You can still send a reply.",
+  "bot": "Bot",
+  "inboxEditedSuffix": " · edited",
+  "replyAsBot": "Reply as bot",
+  "writeAMessage": "Write a message…",
+  "sendReply": "Send reply",
+  "attachment": "Attachment",
+  "thisAttachmentWasRemovedFromThe": "This attachment was removed from the cache.",
+  "couldNotDisplayThisImage": "Could not display this image.",
+  "couldNotReadCacheUsageCheck": "Could not read cache usage. Check free space and try again.",
+  "cacheStorageCouldNotBeUpdated": "Cache storage could not be updated. Check free space and try again.",
+  "permanentlyClearMessageCache": "Permanently clear message cache?",
+  "allRetainedMessagesAndDownloadedAttachments": "All retained messages and downloaded attachments for this bot will be removed. Telegram cannot restore these messages. The user list, bot configuration, and cache limit will remain.",
+  "clearCache": "Clear cache",
+  "storageCache": "Storage & cache",
+  "controlHowMuchConversationHistoryStays": "Control how much conversation history stays on this device.",
+  "messageCache": "Message cache",
+  "readingUsage": "Reading usage…",
+  "cacheUsage": "{used} used of {limit} MiB",
+  "@cacheUsage": {
+    "placeholders": {
+      "used": {
+        "type": "String"
+      },
+      "limit": {
+        "type": "String"
+      }
+    }
+  },
+  "cacheLimitMiB": "Cache limit (MiB)",
+  "label1512MiBPerBotDefault": "1–512 MiB per bot · default 10 MiB",
+  "enterAWholeNumberFrom1": "Enter a whole number from 1 to 512 MiB.",
+  "saveLimit": "Save limit",
+  "keepsUpTo20RecentMessages": "Keeps up to 20 recent messages per conversation within the shared budget. Attachments download only when opened. Old attachments are removed first, then old messages. Lowering the limit removes excess cached content immediately.",
+  "userDirectory": "User directory",
+  "userDirectorySummary": "User directory: {size} · {count} known users",
+  "@userDirectorySummary": {
+    "placeholders": {
+      "size": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "userIDsNamesLastInteractionTimes": "User IDs, names, last interaction times, and settings are stored separately from the message cache. Brief extra space may be needed when writing or reclaiming storage.",
+  "clearMessageCache": "Clear message cache",
+  "couldNotOpenTheInboxCheck": "Could not open the inbox. Check free space and try again.",
+  "couldNotReadTheUserList": "Could not read the user list. Try again.",
+  "conversations": "Conversations",
+  "knownUsersMostRecentInteractionFirst": "Known users, most recent interaction first. Activity is recorded while the bot is running; this is not an online status.",
+  "inboxUnavailable": "Inbox unavailable",
+  "retry": "Retry",
+  "yourConversationsWillAppearHere": "Your conversations will appear here",
+  "noUsersObservedYetStartThe": "No users observed yet. Start the bot to collect new private conversations.",
+  "inboxUsersTitle": "{botName} · Users",
+  "@inboxUsersTitle": {
+    "placeholders": {
+      "botName": {
+        "type": "String"
+      }
+    }
+  },
+  "inboxPageSummary": "Page {page} of {totalPages} · {count} users",
+  "@inboxPageSummary": {
+    "placeholders": {
+      "page": {
+        "type": "String"
+      },
+      "totalPages": {
+        "type": "String"
+      },
+      "count": {
+        "type": "String"
+      }
+    }
+  },
+  "dismiss": "Dismiss",
+  "anotherActionAlreadyUsesThisOutput": "Another action already uses this output name.",
+  "libraryName": "Library name",
+  "saveAndLink": "Save and link",
+  "useUpTo80Characters": "Use up to 80 characters.",
+  "editOutputName": "Edit output name",
+  "theOutputNameCouldNotBe": "The output name could not be saved.",
+  "buttonAnswersRequireACallbackQuery": "Button answers require a callback-query event.",
+  "inlineAnswersRequireAnInlineQuery": "Inline answers require an inline-query event.",
+  "theActionIsInTheLibrary": "The action is in the library, but its link could not be saved. Add it from the action picker.",
+  "deleteActionAction": "Delete action?",
+  "removeActionFromEvent": "Remove action from event?",
+  "laterActionsReferringToItsOutput": "Later actions referring to its output will need updating.",
+  "addEvent": "Add event",
+  "query": "Query",
+  "command": "Command",
+  "textMessage": "Text message",
+  "callbackQuery": "Callback query",
+  "inlineQuery": "Inline query",
+  "pollingTimer": "Polling timer",
+  "anEventWithThisQueryAlready": "An event with this query already exists.",
+  "theEventCouldNotBeSaved": "The event could not be saved.",
+  "deleteBot": "Delete bot?",
+  "deleteBotConfirmation": "Remove {name} and its local configuration from this device?",
+  "@deleteBotConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "deleteBotAction": "Delete bot",
+  "theBotCouldNotBeRemoved": "The bot could not be removed.",
+  "theDatabaseBrowserCouldNotBe": "The database browser could not be opened.",
+  "botDatabase": "Bot database",
+  "executionConsole": "Execution console",
+  "usersAndInbox": "Users and inbox",
+  "pluginConfiguration": "Plugin configuration",
+  "botConfiguration": "Bot configuration",
+  "yourIntegrationAndItsSavedSettings": "Your integration and its saved settings.",
+  "chooseWhatHappensWhenSomeoneMessages": "Choose what happens when someone messages your bot.",
+  "plugin": "Plugin",
+  "active": "Active",
+  "stopped": "Stopped",
+  "setupOnly": "Setup only",
+  "editParameters": "Edit parameters",
+  "versionLabel": "Version {version}",
+  "@versionLabel": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "shareAsQRCode": "Share as QR code",
+  "admins": "Admins",
+  "savedSecurely": "Saved securely",
+  "notSet": "Not set",
+  "thisPluginRunsOnThisDevice": "This plugin runs on this device while the bot is started.",
+  "setupOnlyYourSettingsAreSaved": "Setup only. Your settings are saved; this installed version does not execute automations.",
+  "thisBotCouldNotRestartCheck": "This bot could not restart. Check its configuration and connection.",
+  "automations": "Automations",
+  "stopBot": "Stop bot",
+  "turnOffAutoStart": "Turn off auto-start",
+  "startBot": "Start bot",
+  "theBotCouldNotBeStarted": "The bot could not be started or stopped. Check background settings and try again.",
+  "details": "Details",
+  "botName": "Bot name",
+  "saveBotName": "Save bot name",
+  "botNameSaved": "Bot name saved.",
+  "noneAdded": "None added",
+  "editAdmins": "Edit admins",
+  "events": "Events",
+  "giveYourBotSomethingToDo": "Give your bot something to do",
+  "addACommandTextMessageOr": "Add a command, text message, or callback query, then attach an action.",
+  "eventSummary": "{trigger} · {actions} actions · {bindings} bindings",
+  "@eventSummary": {
+    "placeholders": {
+      "trigger": {
+        "type": "String"
+      },
+      "actions": {
+        "type": "String"
+      },
+      "bindings": {
+        "type": "String"
+      }
+    }
+  },
+  "variablesAndAPICredentials": "Variables and API credentials",
+  "thisPluginHasNoEditableSettings": "This plugin has no editable settings.",
+  "pluginSettingsCouldNotBeLoaded": "Plugin settings could not be loaded.",
+  "theRequiredPluginVersionIsUnavailable": "The required plugin version is unavailable.",
+  "theBotCouldNotBeSaved": "The bot could not be saved. Your draft is still here.",
+  "createBot": "Create bot",
+  "settingsUnavailable": "Settings unavailable",
+  "botSettingsStorageCouldNotBe": "Bot settings storage could not be opened. Reopen Bottogram to try again.",
+  "botSetup": "Bot setup",
+  "connectYourTelegramBotThenChoose": "Connect your Telegram bot, then choose how to configure it.",
+  "telegramDetails": "Telegram details",
+  "theseDetailsBelongToEveryBot": "These details belong to every bot, with or without a plugin.",
+  "aNameYouWillRecognize": "A name you will recognize",
+  "enterABotName": "Enter a bot name.",
+  "helpWithTheTelegramBotToken": "Help with the Telegram bot token",
+  "getATelegramBotToken": "Get a Telegram bot token",
+  "openBotFatherInTelegramAndSend": "Open @BotFather in Telegram and send /newbot. Choose a name and username, then copy the token from BotFather’s final reply.",
+  "botfatherSFinalReplyWithThe": "BotFather’s final reply with the token masked",
+  "telegramBotToken": "Telegram bot token",
+  "createABotWithBotFatherIn": "Create a bot with BotFather in Telegram to get its token.",
+  "enterTheTelegramBotTokenFrom": "Enter the Telegram bot token from BotFather.",
+  "helpWithAdminIDs": "Help with admin IDs",
+  "findYourTelegramUserID": "Find your Telegram user ID",
+  "openUserinfobotFromTheTelegramAccount": "Open @userinfobot from the Telegram account that will administer the bot. Send /start and copy the numeric user ID from its reply.",
+  "exampleReplyShowingANumericTelegram": "Example reply showing a numeric Telegram user ID",
+  "setupMethod": "Setup method",
+  "buildYourOwnActionsOrUse": "Build your own actions or use an installed plugin.",
+  "manual": "Manual",
+  "managePlugins": "Manage plugins",
+  "credentialsAreSavedSecurelyStartThe": "Credentials are saved securely. Start the bot after creating it to run its automations.",
+  "settingsWillBeSavedSecurelyThis": "Settings will be saved securely. This plugin version is setup-only.",
+  "addEventsRepliesAndKeyboardsAfter": "Add events, replies, and keyboards after creating this bot.",
+  "addAction": "Add action",
+  "connectEachActionUsingItsNamed": "Connect each action using its named output.",
+  "actionLibrary": "Action library",
+  "newAction": "New action",
+  "theSharedActionCouldNotBe": "The shared action could not be added.",
+  "deleteEvent": "Delete event?",
+  "removeThisEventAndAllOf": "Remove this event and all of its actions from the bot?",
+  "deleteEventAction": "Delete event",
+  "event": "Event",
+  "actionsRunInTheOrderShown": "Actions run in the order shown when this event matches.",
+  "trigger": "Trigger",
+  "aTelegramCommandSuchAsStart": "A Telegram command, such as /start.",
+  "aMatchingTextMessage": "A matching text message.",
+  "aCallbackFromAnInlineKeyboard": "A callback from an inline keyboard button.",
+  "aMatchingInlineQuery": "A matching inline query.",
+  "runsWhileThisBotIsStarted": "Runs while this bot is started. Missed ticks are not replayed after an offline interval.",
+  "match": "Match",
+  "existingInlinePattern": "Existing inline pattern",
+  "exactValue": "Exact value",
+  "startsWith": "Starts with",
+  "anyTextExceptCommands": "Any text except commands",
+  "pollingIntervalInSeconds3086400": "Polling interval in seconds (30–86400)",
+  "acceptWidgetRequests": "Accept widget requests",
+  "runTheseActionsForMatchingWidget": "Run these actions for matching widget buttons in private chats.",
+  "inputSeparatorOptional": "Input separator (optional)",
+  "splitTheMatchingSuffixIntoEvent": "Split the matching suffix into '{{event.inputParts.0}}', .1, and so on.",
+  "saveQuery": "Save query",
+  "enterAPollingIntervalFrom30": "Enter a polling interval from 30 to 86400 seconds.",
+  "querySaved": "Query saved.",
+  "useEventInputForTheRemaining": "Use '{{event.input}}' for the remaining input. Put broad text events after specific events.",
+  "actions": "Actions",
+  "whatShouldHappenNext": "What should happen next?",
+  "sendContentCallAnAPIUpdate": "Send content, call an API, update a variable or use an earlier action’s result.",
+  "sharedActionPrefix": "Shared · ",
+  "moveActionUp": "Move action up",
+  "importBots": "Import bots",
+  "bots": "Bots",
+  "store": "Store",
+  "plugins": "Plugins",
+  "settings": "Settings",
+  "onThisDevice": "On this device",
+  "botStorageIsUnavailable": "Bot storage is unavailable",
+  "checkFreeSpaceThenReopenBottogram": "Check free space, then reopen Bottogram.",
+  "searchBots": "Search bots",
+  "yourBots": "Your bots",
+  "createAndManageTelegramBotsOn": "Create and manage Telegram bots on this device.",
+  "yourFirstBotStartsHere": "Your first bot starts here",
+  "addYourTelegramBotTokenChoose": "Add your Telegram bot token, choose a setup method, and keep everything in one place.",
+  "noMatchingBots": "No matching bots",
+  "tryADifferentNameOrClear": "Try a different name or clear the search.",
+  "clearSearch": "Clear search",
+  "theBotConfigurationCouldNotBe": "The bot configuration could not be imported.",
+  "chooseABot": "Choose a bot",
+  "yourDeviceLocalDataAndApp": "Your device, local data, and app information.",
+  "appearance": "Appearance",
+  "theme": "Theme",
+  "systemFollowsYourDeviceLightAnd": "System follows your device. Light and Dark stay as selected.",
+  "system": "System",
+  "light": "Light",
+  "dark": "Dark",
+  "localStorageCouldNotBeRead": "Local storage could not be read. Reopen Bottogram to try again.",
+  "running": "Running",
+  "dataStorage": "Data & storage",
+  "importingBots": "Importing bots...",
+  "restoreABackupFileOrScan": "Restore a backup file or scan a plugin bot QR code.",
+  "exportBotConfigurations": "Export bot configurations",
+  "chooseManualBotsToShareOr": "Choose manual bots to share or save. Files include bot tokens.",
+  "inboxCache": "Inbox & cache",
+  "addABotToManageIts": "Add a bot to manage its messages and cache limits.",
+  "chooseABotToManageUsers": "Choose a bot to manage users, messages, and cache limits.",
+  "backgroundActivity": "Background activity",
+  "checkBatteryBackgroundActivityAndNotification": "Check battery, background activity, and notification permissions.",
+  "keepBottogramRunningAndThisDevice": "Keep Bottogram running and this device connected to the internet while bots are started. Reopen the app and start bots again after a device restart.",
+  "about": "About",
+  "aboutBottogram": "About Bottogram",
+  "botConfigurationsAndRetainedConversationsAre": "Bot configurations and retained conversations are stored on this device. Plugin credentials use platform secure storage. Configuration exports contain tokens and do not include plugin setups or conversation history.",
+  "openSourceLicenses": "Open-source licenses",
+  "librariesAndNoticesUsedByBottogram": "Libraries and notices used by Bottogram.",
+  "botCreatedOpenBotsToReview": "Bot created. Open Bots to review its actions and start it.",
+  "botTemplates": "Bot templates",
+  "startWithAUsefulBotThen": "Start with a useful bot, then make its events and actions your own.",
+  "automation": "Automation",
+  "useTemplate": "Use template",
+  "theTemplateCouldNotBeSaved": "The template could not be saved or removed. Try again.",
+  "createKeyboardTemplate": "Create keyboard template",
+  "templateName": "Template name",
+  "replyKeyboard": "Reply keyboard",
+  "inlineKeyboard": "Inline keyboard",
+  "createTemplate": "Create template",
+  "deleteTemplate": "Delete template?",
+  "removeThisSavedTemplateKeyboardsAlready": "Remove this saved template? Keyboards already attached to actions keep their own copies.",
+  "deleteTemplateAction": "Delete template",
+  "templates": "Templates",
+  "keyboardTemplates": "Keyboard templates",
+  "reuseAKeyboardWithoutRebuildingIts": "Reuse a keyboard without rebuilding its buttons.",
+  "aShortcutForYourNextReply": "A shortcut for your next reply",
+  "createAnEmptyTemplateHereOr": "Create an empty template here, or save a finished keyboard from the action editor.",
+  "untitledKeyboard": "Untitled keyboard",
+  "shareBotAsQRCode": "Share bot as QR code?",
+  "doNotShareThisCodeWith": "Do not share this code with anyone. It contains the Telegram bot token, plugin API keys, and saved settings. Anyone who sees it can read those credentials.",
+  "continueLabel": "Continue",
+  "revealThePrivateQRCode": "Reveal the private QR code?",
+  "scanItOnlyWithYourOwn": "Scan it only with your own device. Keep it off screen shares, screenshots, and messages.",
+  "showQRCode": "Show QR code",
+  "thisBotSConfigurationIsToo": "This bot’s configuration is too large for a single QR code.",
+  "privateBotQRCode": "Private bot QR code",
+  "qrRequiredPlugin": "Requires the exact installed plugin: {plugin}",
+  "@qrRequiredPlugin": {
+    "placeholders": {
+      "plugin": {
+        "type": "String"
+      }
+    }
+  },
+  "anyoneWhoSeesThisCodeCan": "Anyone who sees this code can read the bot’s credentials.",
+  "theBotQRCodeCouldNot": "The bot QR code could not be generated.",
+  "backupFile": "Backup file",
+  "scanQRCode": "Scan QR code",
+  "importBotConfirmation": "Import {name}?",
+  "@importBotConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "importInstalledPluginNotice": "{plugin} {version} is installed. This device will save the bot’s credentials and settings. The imported bot starts in the stopped state.",
+  "@importInstalledPluginNotice": {
+    "placeholders": {
+      "plugin": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "importBot": "Import bot",
+  "botImported": "Bot imported.",
+  "theBotQRCodeCouldNot2": "The bot QR code could not be imported.",
+  "openABotQRImage": "Open a bot QR image",
+  "noQRCodeCouldBeRead": "No QR code could be read from this image.",
+  "scanBotQRCode": "Scan bot QR code",
+  "importAPluginBot": "Import a plugin bot",
+  "pointTheCameraAtTheBottogram": "Point the camera at the Bottogram QR code, or open a QR image.",
+  "openAnImageOfTheBottogram": "Open an image of the Bottogram QR code to scan it on this device.",
+  "cameraUnavailableYouCanOpenA": "Camera unavailable. You can open a QR image below.",
+  "readingQRImage": "Reading QR image…",
+  "openQRImage": "Open QR image",
+  "pluginMenuButton": "Menu button: {text}",
+  "@pluginMenuButton": {
+    "placeholders": {
+      "text": {
+        "type": "String"
+      }
+    }
+  },
+  "commands": "Commands",
+  "miniAppDestination": "Mini App: {destination}",
+  "@miniAppDestination": {
+    "placeholders": {
+      "destination": {
+        "type": "String"
+      }
+    }
+  },
+  "telegramDestinations": "Posts to Telegram chats: {label}{suffix}",
+  "@telegramDestinations": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "automationEnabledBy": "Controlled by: {setting}",
+  "@automationEnabledBy": {
+    "placeholders": {
+      "setting": {
+        "type": "String"
+      }
+    }
+  },
+  "sendsNotificationsToAllConfiguredAdmins": "Sends notifications to all configured admins.",
+  "automationPhotoRequest": "Downloads photos: {origin} → {path}",
+  "@automationPhotoRequest": {
+    "placeholders": {
+      "origin": {
+        "type": "String"
+      },
+      "path": {
+        "type": "String"
+      }
+    }
+  },
+  "automationGetRequest": "GET {url}",
+  "@automationGetRequest": {
+    "placeholders": {
+      "url": {
+        "type": "String"
+      }
+    }
+  },
+  "telegramChatId": "Telegram chat {chatId}",
+  "@telegramChatId": {
+    "placeholders": {
+      "chatId": {
+        "type": "String"
+      }
+    }
+  },
+  "failureCode": "Code: {code}",
+  "@failureCode": {
+    "placeholders": {
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "retryBot": "Retry bot",
+  "parametersCouldNotBeSavedCheck": "Parameters could not be saved. Check secure storage and try again.",
+  "leaveBlankToKeepTheSaved": "Leave blank to keep the saved value. Enter a new value only to replace it.",
+  "savingChangesRestartsARunningBot": "Saving changes restarts a running bot. Admin changes keep existing automation progress.",
+  "savingChangesRestartsARunningBot2": "Saving changes restarts a running bot. Admin and Telegram destination changes keep existing automation progress.",
+  "parametersSaved": "Parameters saved.",
+  "saveParameters": "Save parameters",
+  "editBotParameters": "Edit bot parameters",
+  "thePluginGuideCouldNotBe": "The plugin guide could not be opened. Check your browser and try again.",
+  "chooseAReadableJSONPluginFile": "Choose a readable JSON plugin file up to 256 KiB.",
+  "thePluginFileExceeds256KiB": "The plugin file exceeds 256 KiB.",
+  "installPluginConfirmation": "Install {name}?",
+  "@installPluginConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginNameAndVersion": "{name}\nVersion {version}",
+  "@pluginNameAndVersion": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "thisPluginCanMakeTheRequests": "This plugin can make the requests below while its bots are started. Install packages only from an author you trust with their API credentials.",
+  "setupOnlyThisPackageAddsConfiguration": "Setup only. This package adds configuration fields without executing automations.",
+  "additionalPluginFields": "Additional fields: {fields}",
+  "@additionalPluginFields": {
+    "placeholders": {
+      "fields": {
+        "type": "String"
+      }
+    }
+  },
+  "editablePluginSettings": "Editable settings: {settings}",
+  "@editablePluginSettings": {
+    "placeholders": {
+      "settings": {
+        "type": "String"
+      }
+    }
+  },
+  "install": "Install",
+  "thePluginCouldNotBeInstalled": "The plugin could not be installed. No settings were changed.",
+  "thePluginCouldNotBeRemoved": "The plugin could not be removed.",
+  "pluginsUnavailable": "Plugins unavailable",
+  "pluginStorageCouldNotBeOpened": "Plugin storage could not be opened. Reopen Bottogram to try again.",
+  "addASetupForTheWay": "Add a setup for the way your bot works.",
+  "readingPackage": "Reading package…",
+  "installFromFile": "Install from file",
+  "livePluginsRunWhileTheirBots": "Live plugins run while their bots are started. Existing Mini App buttons can open their website even when Bottogram is stopped.",
+  "yourNextIntegration": "Your next integration",
+  "installABottogramPluginJsonFile": "Install a .bottogram-plugin.json file, then choose it when creating a bot.",
+  "pluginVersionAndStatus": "Version {version} · {status}",
+  "@pluginVersionAndStatus": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "liveAutomations": "Live automations",
+  "uninstallPlugin": "Uninstall {name}",
+  "@uninstallPlugin": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "settingsCouldNotBeSavedYour": "Settings could not be saved. Your changes are still here.",
+  "pluginSettings": "Plugin settings",
+  "settingsSaved": "Settings saved.",
+  "saveSettings": "Save settings",
+  "hideField": "Hide {label}",
+  "@hideField": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "showField": "Show {label}",
+  "@showField": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "enterTelegramUserIDsSeparatedBy": "Enter Telegram user IDs separated by commas or line breaks.",
+  "couldNotSaveTheAdminsCheck": "Could not save the admins. Check the bot settings and try again.",
+  "saveAdmins": "Save admins",
+  "updatePluginConfirmation": "Update {name}?",
+  "@updatePluginConfirmation": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginVersionChange": "Version {oldVersion} → {newVersion}",
+  "@pluginVersionChange": {
+    "placeholders": {
+      "oldVersion": {
+        "type": "String"
+      },
+      "newVersion": {
+        "type": "String"
+      }
+    }
+  },
+  "theBotWillPauseWhileThe": "The bot will pause while the update is applied, then start again.",
+  "theBotWillStayStoppedAfter": "The bot will stay stopped after the update.",
+  "theUpdatedPluginReusesThisBot": "The updated plugin reuses this bot’s identity, secure keys and saved preferences.",
+  "pluginProgressRetained": "Progress retained: {routines}. Pending work and acknowledged deliveries are preserved.",
+  "@pluginProgressRetained": {
+    "placeholders": {
+      "routines": {
+        "type": "String"
+      }
+    }
+  },
+  "pluginRetiredRoutines": "Retired or replaced command routines: {routines}. Their queued replies will not be replayed.",
+  "@pluginRetiredRoutines": {
+    "placeholders": {
+      "routines": {
+        "type": "String"
+      }
+    }
+  },
+  "applyAndRestart": "Apply and restart",
+  "applyUpdate": "Apply update",
+  "theUpdateCouldNotBePrepared": "The update could not be prepared. The current version has not changed.",
+  "pluginUpdates": "Plugin updates",
+  "installedVersion": "Installed version",
+  "checkingUpdate": "Checking update…",
+  "reviewUpdate": "Review update",
+  "theBotCouldNotBeCreated": "The bot could not be created. Your settings are still here.",
+  "howItWorks": "How it works",
+  "createsANewBotWithEditable": "Creates a new bot with editable events, actions and sample content. Existing bots are never replaced.",
+  "getTheTokenFromBotFatherA": "Get the token from BotFather. A token already in your bot list cannot be reused.",
+  "enterAValidTelegramBotToken": "Enter a valid Telegram bot token.",
+  "templateSettings": "Template settings",
+  "completeThisField": "Complete this field.",
+  "editTheSamplesOrAddYour": "Edit the samples or add your own content before creating the bot.",
+  "sampleCapacity": "Capacity: {capacity}",
+  "@sampleCapacity": {
+    "placeholders": {
+      "capacity": {
+        "type": "String"
+      }
+    }
+  },
+  "removeSample": "Remove sample",
+  "creating": "Creating…",
+  "createBotFromTemplate": "Create bot from template",
+  "addSampleContent": "Add sample content",
+  "editSampleContent": "Edit sample content",
+  "enterAValue": "Enter a value.",
+  "theBotCouldNotBeStarted2": "The bot could not be started or stopped. Check its connection.",
+  "viewBotError": "View bot error",
+  "needsAttention": "Needs attention",
+  "pluginBot": "Plugin bot",
+  "manualBot": "Manual bot",
+  "reviewPluginVersion": "Review version {version}",
+  "@reviewPluginVersion": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "updateAvailable": "Update available",
+  "openUsersAndInbox": "Open users and inbox",
+  "botSettings": "Bot settings",
+  "configurePlugin": "Configure plugin",
+  "nothingSavedYet": "Nothing saved yet.",
+  "saveButtonRow": "Save button row",
+  "createButtonRow": "Create button row",
+  "theButtonRowCouldNotBe": "The button row could not be saved.",
+  "editSharedRow": "Edit shared row",
+  "saveRowToLibrary": "Save row to library",
+  "saveNumberedRow": "Save row {number} to library",
+  "@saveNumberedRow": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "newSharedRow": "New shared row",
+  "chooseSavedRow": "Choose saved row",
+  "buttonRowLibrary": "Button row library",
+  "editLocalRow": "Edit local row",
+  "unavailableRow": "Unavailable row",
+  "removeRowLink": "Remove row link",
+  "savingUpdatesEveryActionLinkedTo": "Saving updates every action linked to this row.",
+  "buttonText": "Button text",
+  "callbackOrURL": "Callback or URL",
+  "removeButton": "Remove button",
+  "addButton": "Add button",
+  "saveChanges": "Save changes",
+  "buttonQueryOrURL": "Button query or URL",
+  "aURLOpensALinkOther": "A URL opens a link. Other values trigger a callback query.",
+  "newRow": "New row",
+  "addAButtonToPreviewYour": "Add a button to preview your keyboard.",
+  "aMessageToSendWhenTapped": "A message to send when tapped",
+  "previewTapAButtonToRemove": "Preview · tap a button to remove it",
+  "removeKeyboardButton": "Remove {label}{suffix}",
+  "@removeKeyboardButton": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "saveKeyboardTemplate": "Save keyboard template",
+  "saveTemplate": "Save template",
+  "templateSaved": "Template saved.",
+  "theTemplateCouldNotBeSaved2": "The template could not be saved. Try again.",
+  "switchBackToTheLinkedRows": "Switch back to the linked rows’ keyboard type to edit or remove them.",
+  "keyboard": "Keyboard",
+  "addButtonsBelowYourReplyOr": "Add buttons below your reply or alongside the message.",
+  "none": "None",
+  "chooseTemplate": "Choose template",
+  "thisActionHasNoKeyboard": "This action has no keyboard.",
+  "saveAsTemplate": "Save as template",
+  "language": "Language",
+  "deviceLanguage": "Device language",
+  "languageUnavailable": "The language setting is unavailable. Reopen Bottogram to try again.",
+  "languageSaveFailed": "The language could not be saved. Try again.",
+  "botCount": "{count, plural, one{{count} bot} other{{count} bots}}",
+  "@botCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "botEventAndActionCount": "{count, plural, one{{count} event} other{{count} events}} · {actions, plural, one{{actions} action} other{{actions} actions}}",
+  "@botEventAndActionCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "actions": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "pluginDependents": "{count, plural, one{{count} bot} other{{count} bots}} using this version",
+  "@pluginDependents": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "pluginFieldCounts": "{fields, plural, one{{fields} setup field} other{{fields} setup fields}} · {settings, plural, one{{settings} setting} other{{settings} settings}}",
+  "@pluginFieldCounts": {
+    "placeholders": {
+      "fields": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "settings": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "tableCount": "{count, plural, one{{count} table} other{{count} tables}} · counts load as tables become visible",
+  "@tableCount": {
+    "placeholders": {
+      "count": {
+        "type": "int",
+        "format": "decimalPattern"
+      }
+    }
+  },
+  "rowCount": "{rows, plural, one{{rows} row} other{{rows} rows}}{suffix}",
+  "@rowCount": {
+    "placeholders": {
+      "rows": {
+        "type": "int",
+        "format": "decimalPattern"
+      },
+      "suffix": {
+        "type": "String"
+      }
+    }
+  },
+  "numberValueType": "number",
+  "textValueType": "text",
+  "booleanValueType": "boolean",
+  "plainTextFormat": "plain",
+  "stopOnFailure": "stop",
+  "continueOnFailure": "continue",
+  "notEqualsOperator": "notEquals",
+  "greaterThanOperator": "greater",
+  "lessThanOperator": "less",
+  "storeLearning": "Learning",
+  "storeFinance": "Finance",
+  "storeProductivity": "Productivity",
+  "storeKnowledge": "Knowledge",
+  "storeFeedback": "Feedback",
+  "storeSupport": "Support",
+  "themeLoadFailed": "Appearance settings could not be loaded. Reopen Bottogram to try again.",
+  "themeSaveFailed": "The theme preference could not be saved. Try again.",
+  "optionalDestinationSuffix": " (optional)",
+  "inboxStorageUnavailable": "Inbox storage could not be opened. Check free space and try again.",
+  "inboxStorageWriteFailed": "Inbox storage failed. Some recent messages may not have been saved. Check free space and inbox settings.",
+  "automationAllChats": "{command} · all chats",
+  "@automationAllChats": {
+    "placeholders": {
+      "command": {
+        "type": "String"
+      }
+    }
+  },
+  "automationSelectedChats": "{commands} · {chats} chats",
+  "@automationSelectedChats": {
+    "placeholders": {
+      "commands": {
+        "type": "String"
+      },
+      "chats": {
+        "type": "String"
+      }
+    }
+  },
+  "automationPrivateWidgets": "Private-chat buttons and widgets",
+  "automationAdminOnly": "admin only",
+  "automationPrivateChats": "private chats",
+  "automationScheduledChecks": "Scheduled checks · every {seconds} seconds",
+  "@automationScheduledChecks": {
+    "placeholders": {
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "automationLiteralHeader": "Header: {name} (literal value)",
+  "@automationLiteralHeader": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "automationHeaderFieldValue": "field value",
+  "automationHeaderUrlOrigin": "URL origin",
+  "automationHeaderUrlAuthority": "URL host and port",
+  "automationMappedHeader": "Header: {name} ← {field} ({transform})",
+  "@automationMappedHeader": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "field": {
+        "type": "String"
+      },
+      "transform": {
+        "type": "String"
+      }
+    }
+  },
+  "automationBearerToken": "Bearer token",
+  "automationCustomHeader": "Custom header {name}",
+  "@automationCustomHeader": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "automationAuthentication": "Authentication: {method} ← {field} (secure storage)",
+  "@automationAuthentication": {
+    "placeholders": {
+      "method": {
+        "type": "String"
+      },
+      "field": {
+        "type": "String"
+      }
+    }
+  }
+}

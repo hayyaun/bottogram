@@ -1,4 +1,7 @@
+import 'package:bottogram/l10n/strings.dart';
+import 'package:bottogram/l10n/generated/app_localizations.dart';
 import 'package:bottogram/pages/home.dart';
+import 'package:bottogram/ui/language_preferences.dart';
 import 'package:bottogram/inbox/diagnostics.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
@@ -38,12 +41,15 @@ void main() async {
 
   final preferences = ThemePreferences();
   await preferences.ready;
-  runApp(MyApp(preferences: preferences));
+  final language = LanguagePreferences();
+  await language.ready;
+  runApp(MyApp(preferences: preferences, language: language));
 }
 
 class MyApp extends StatefulWidget {
-  const MyApp({super.key, this.preferences});
+  const MyApp({super.key, this.preferences, this.language});
   final ThemePreferences? preferences;
+  final LanguagePreferences? language;
   @override
   State<MyApp> createState() => _MyAppState();
 }
@@ -59,14 +65,16 @@ class _MyAppState extends State<MyApp> {
         ChangeNotifierProvider(
           create: (_) => widget.preferences ?? ThemePreferences(),
         ),
+        ChangeNotifierProvider(
+          create: (_) => widget.language ?? LanguagePreferences(),
+        ),
         ChangeNotifierProvider(create: (_) => PluginRepository()),
         Provider<BackgroundPlatform>(
           create: (_) => BackgroundPlatform.create(),
         ),
         ChangeNotifierProvider(
-          create:
-              (context) =>
-                  BackgroundController(context.read<BackgroundPlatform>()),
+          create: (context) =>
+              BackgroundController(context.read<BackgroundPlatform>()),
         ),
       ],
       child: MultiBlocProvider(
@@ -91,72 +99,66 @@ class _MyAppState extends State<MyApp> {
           ),
         ],
         child: Builder(
-          builder:
-              (context) => MaterialApp(
+          builder: (context) => MaterialApp(
+            navigatorKey: navigatorKey,
+            locale: context.watch<LanguagePreferences>().language.locale,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+              value:
+                  (Theme.of(context).brightness == Brightness.dark
+                          ? SystemUiOverlayStyle.light
+                          : SystemUiOverlayStyle.dark)
+                      .copyWith(
+                        statusBarColor: Colors.transparent,
+                        systemNavigationBarIconBrightness:
+                            Theme.of(context).brightness == Brightness.dark
+                            ? Brightness.light
+                            : Brightness.dark,
+                        systemNavigationBarColor: Theme.of(
+                          context,
+                        ).scaffoldBackgroundColor,
+                      ),
+              child: BackgroundSetupHost(
+                controller: context.watch<BackgroundController>(),
                 navigatorKey: navigatorKey,
-                builder:
-                    (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
-                      value: (Theme.of(context).brightness == Brightness.dark
-                              ? SystemUiOverlayStyle.light
-                              : SystemUiOverlayStyle.dark)
-                          .copyWith(
-                            statusBarColor: Colors.transparent,
-                            systemNavigationBarIconBrightness:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? Brightness.light
-                                    : Brightness.dark,
-                            systemNavigationBarColor:
-                                Theme.of(context).scaffoldBackgroundColor,
-                          ),
-                      child: BackgroundSetupHost(
-                        controller: context.watch<BackgroundController>(),
-                        navigatorKey: navigatorKey,
-                        child: ValueListenableBuilder<String?>(
-                          valueListenable: InboxDiagnostics.notice,
-                          builder:
-                              (context, error, _) => Column(
+                child: ValueListenableBuilder<InboxStorageProblem?>(
+                  valueListenable: InboxDiagnostics.notice,
+                  builder: (context, error, _) => Column(
+                    children: [
+                      if (error != null)
+                        Material(
+                          color: Theme.of(context).colorScheme.errorContainer,
+                          child: SafeArea(
+                            bottom: false,
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Row(
                                 children: [
-                                  if (error != null)
-                                    Material(
-                                      color:
-                                          Theme.of(
-                                            context,
-                                          ).colorScheme.errorContainer,
-                                      child: SafeArea(
-                                        bottom: false,
-                                        child: Padding(
-                                          padding: const EdgeInsets.all(12),
-                                          child: Row(
-                                            children: [
-                                              Expanded(child: Text(error)),
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        InboxDiagnostics
-                                                            .notice
-                                                            .value = null,
-                                                child: const Text('Dismiss'),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  Expanded(
-                                    child: child ?? const SizedBox.shrink(),
+                                  Expanded(child: Text(error.message(context))),
+                                  TextButton(
+                                    onPressed: () =>
+                                        InboxDiagnostics.notice.value = null,
+                                    child: Text(context.strings.dismiss),
                                   ),
                                 ],
                               ),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                title: 'Bottogram',
-                theme: BottogramDesign.theme,
-                darkTheme: BottogramDesign.darkTheme,
-                themeMode: context.watch<ThemePreferences>().mode,
-                debugShowCheckedModeBanner: false,
-                home: const HomePage(title: 'Bottogram'),
+                      Expanded(child: child ?? const SizedBox.shrink()),
+                    ],
+                  ),
+                ),
               ),
+            ),
+            title: 'Bottogram',
+            theme: BottogramDesign.theme,
+            darkTheme: BottogramDesign.darkTheme,
+            themeMode: context.watch<ThemePreferences>().mode,
+            debugShowCheckedModeBanner: false,
+            home: const HomePage(title: 'Bottogram'),
+          ),
         ),
       ),
     );

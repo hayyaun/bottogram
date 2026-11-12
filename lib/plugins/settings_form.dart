@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:bottogram/ui/design.dart';
 
@@ -70,7 +71,7 @@ class _PluginSettingsFormState extends State<PluginSettingsForm> {
         setState(
           () => _error = error is PluginException
               ? error.message
-              : 'Settings could not be saved. Your changes are still here.',
+              : context.strings.settingsCouldNotBeSavedYour,
         );
       }
     } finally {
@@ -90,7 +91,7 @@ class _PluginSettingsFormState extends State<PluginSettingsForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Plugin settings',
+            context.strings.pluginSettings,
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 12),
@@ -155,16 +156,18 @@ class _PluginSettingsFormState extends State<PluginSettingsForm> {
               child: BNotice(message: _error!, error: true),
             ),
           if (_saved)
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(bottom: 16),
               child: BNotice(
-                message: 'Settings saved.',
+                message: context.strings.settingsSaved,
                 icon: Icons.check_circle_outline,
               ),
             ),
           FilledButton(
             onPressed: _saving ? null : _save,
-            child: Text(_saving ? 'Saving…' : 'Save settings'),
+            child: Text(
+              _saving ? context.strings.saving : context.strings.saveSettings,
+            ),
           ),
         ],
       ),

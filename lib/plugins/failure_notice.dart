@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 
 import '../runtime/failure_presentation.dart';
@@ -41,7 +42,7 @@ class PluginFailureNotice extends StatelessWidget {
         Text(failure.message),
         if (failure.destination case final String destination) ...[
           const SizedBox(height: 8),
-          Text('Telegram chat $destination'),
+          Text(context.strings.telegramChatId(destination)),
         ],
         if (failure.help != null) ...[
           const SizedBox(height: 8),
@@ -53,7 +54,7 @@ class PluginFailureNotice extends StatelessWidget {
         ],
         const SizedBox(height: 12),
         SelectableText(
-          'Code: ${failure.code}',
+          context.strings.failureCode(context.leftToRightText(failure.code)),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         if (failure.action == 'editPluginParameters' &&
@@ -61,13 +62,13 @@ class PluginFailureNotice extends StatelessWidget {
           TextButton.icon(
             onPressed: onEditParameters,
             icon: const Icon(Icons.edit_outlined),
-            label: const Text('Edit parameters'),
+            label: Text(context.strings.editParameters),
           ),
         if (failure.action == 'retry' && onRetry != null)
           TextButton.icon(
             onPressed: onRetry,
             icon: const Icon(Icons.refresh),
-            label: const Text('Retry bot'),
+            label: Text(context.strings.retryBot),
           ),
       ],
     ),

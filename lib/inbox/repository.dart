@@ -238,7 +238,7 @@ class InboxRepository {
     lastError =
         'Inbox storage failed. Some recent messages may not have been saved. '
         'Check free space and inbox settings.';
-    InboxDiagnostics.notice.value = lastError;
+    InboxDiagnostics.notice.value = InboxStorageProblem.writeFailed;
     if (!_errors.isClosed) _errors.add(lastError!);
     _notify();
   }

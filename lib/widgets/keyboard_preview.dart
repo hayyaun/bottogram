@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/ui/design.dart';
 import 'package:flutter/material.dart';
 
@@ -15,7 +16,7 @@ class KeyboardPreview extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          'Preview · tap a button to remove it',
+          context.strings.previewTapAButtonToRemove,
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
@@ -60,7 +61,10 @@ class KeyboardPreviewKey extends StatelessWidget {
   final VoidCallback onRemove;
   @override
   Widget build(BuildContext context) => Tooltip(
-    message: 'Remove $label${detail == null ? '' : '\n$detail'}',
+    message: context.strings.removeKeyboardButton(
+      label,
+      detail == null ? '' : '\n$detail',
+    ),
     child: OutlinedButton(
       style: OutlinedButton.styleFrom(
         backgroundColor: BColors.of(context).surface,

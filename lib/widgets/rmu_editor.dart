@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import '../builder/parts.dart';
 import 'builder_part_picker.dart';
 import 'package:bottogram/pages/templates.dart';
@@ -38,11 +39,11 @@ class _RmuEditorState extends State<RMUEditor> {
     final store = context.read<RMUsCubit>();
     final result = await showBEntryDialog<String>(
       context,
-      title: 'Save keyboard template',
-      fieldLabel: 'Template name',
+      title: context.strings.saveKeyboardTemplate,
+      fieldLabel: context.strings.templateName,
       initialType: '',
       initialText: 'Keyboard ${store.state.length + 1}',
-      action: 'Save template',
+      action: context.strings.saveTemplate,
     );
     if (result == null || !mounted || rmu == null) return;
     try {
@@ -50,13 +51,11 @@ class _RmuEditorState extends State<RMUEditor> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Template saved.')));
+      ).showSnackBar(SnackBar(content: Text(context.strings.templateSaved)));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('The template could not be saved. Try again.'),
-          ),
+          SnackBar(content: Text(context.strings.theTemplateCouldNotBeSaved2)),
         );
       }
     }
@@ -129,9 +128,7 @@ class _RmuEditorState extends State<RMUEditor> {
         ? BuilderParts.reply
         : BuilderParts.inline;
     if (keyboard.containsKey(other)) {
-      return const Text(
-        'Switch back to the linked rows’ keyboard type to edit or remove them.',
-      );
+      return Text(context.strings.switchBackToTheLinkedRows);
     }
     return BuilderRowLibrary(
       kind: kind,
@@ -183,8 +180,8 @@ class _RmuEditorState extends State<RMUEditor> {
 
   @override
   Widget build(BuildContext context) => BSection(
-    title: 'Keyboard',
-    description: 'Add buttons below your reply or alongside the message.',
+    title: context.strings.keyboard,
+    description: context.strings.addButtonsBelowYourReplyOr,
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -195,9 +192,9 @@ class _RmuEditorState extends State<RMUEditor> {
             for (final option in VirtRMUType.values)
               ChoiceChip(
                 label: Text(switch (option) {
-                  VirtRMUType.none => 'None',
-                  VirtRMUType.keyboard => 'Reply keyboard',
-                  VirtRMUType.inlineKeyboard => 'Inline keyboard',
+                  VirtRMUType.none => context.strings.none,
+                  VirtRMUType.keyboard => context.strings.replyKeyboard,
+                  VirtRMUType.inlineKeyboard => context.strings.inlineKeyboard,
                 }),
                 selected: current == option,
                 onSelected: (_) => selectOption(option),
@@ -205,18 +202,18 @@ class _RmuEditorState extends State<RMUEditor> {
           ],
         ),
         Align(
-          alignment: Alignment.centerLeft,
+          alignment: AlignmentDirectional.centerStart,
           child: TextButton.icon(
             onPressed: _chooseTemplate,
             icon: const Icon(Icons.bookmarks_outlined, size: 18),
-            label: const Text('Choose template'),
+            label: Text(context.strings.chooseTemplate),
           ),
         ),
         const SizedBox(height: 12),
         switch (current) {
-          VirtRMUType.none => const BNotice(
+          VirtRMUType.none => BNotice(
             icon: Icons.keyboard_hide_outlined,
-            message: 'This action has no keyboard.',
+            message: context.strings.thisActionHasNoKeyboard,
           ),
           VirtRMUType.keyboard => KeyboardEditor(
             key: ObjectKey(rmu),
@@ -231,11 +228,11 @@ class _RmuEditorState extends State<RMUEditor> {
         if (rmu != null) ...[
           const SizedBox(height: 16),
           Align(
-            alignment: Alignment.centerLeft,
+            alignment: AlignmentDirectional.centerStart,
             child: TextButton.icon(
               onPressed: _saveTemplate,
               icon: const Icon(Icons.bookmark_add_outlined, size: 18),
-              label: const Text('Save as template'),
+              label: Text(context.strings.saveAsTemplate),
             ),
           ),
         ],

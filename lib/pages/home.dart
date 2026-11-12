@@ -1,5 +1,6 @@
 import 'dart:ui' show ImageFilter;
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/background/controller.dart';
 import 'package:bottogram/background/guide.dart';
 import 'package:bottogram/dialogs/share_dialog.dart';
@@ -36,11 +37,10 @@ class _HomePageState extends State<HomePage> {
 
   void _addBot() => Navigator.of(context).push(
     MaterialPageRoute<void>(
-      builder:
-          (_) => CreateBotPage(
-            bots: context.read<BotsCubit>(),
-            plugins: context.read<PluginRepository>(),
-          ),
+      builder: (_) => CreateBotPage(
+        bots: context.read<BotsCubit>(),
+        plugins: context.read<PluginRepository>(),
+      ),
     ),
   );
   void _share() =>
@@ -61,12 +61,12 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
       IconButton(
-        tooltip: 'Import bots',
+        tooltip: context.strings.importBots,
         icon: const Icon(Icons.file_download_outlined),
         onPressed: () => chooseBotImport(context),
       ),
       IconButton(
-        tooltip: 'Share bots',
+        tooltip: context.strings.shareBots,
         onPressed: _share,
         icon: const Icon(Icons.ios_share_outlined),
       ),
@@ -83,12 +83,15 @@ class _HomePageState extends State<HomePage> {
         cacheWidth: 96,
       ),
       const SizedBox(width: 10),
-      Text(
-        widget.title,
-        style: BottogramDesign.text(
-          20,
-          strong: true,
-          color: inverse ? BColors.canvas : BColors.of(context).ink,
+      Flexible(
+        child: Text(
+          widget.title,
+          overflow: TextOverflow.ellipsis,
+          style: BottogramDesign.text(
+            20,
+            strong: true,
+            color: inverse ? BColors.canvas : BColors.of(context).ink,
+          ),
         ),
       ),
     ],
@@ -114,28 +117,33 @@ class _HomePageState extends State<HomePage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Padding(
-                        padding: const EdgeInsets.fromLTRB(24, 32, 20, 40),
+                        padding: const EdgeInsetsDirectional.fromSTEB(
+                          24,
+                          32,
+                          20,
+                          40,
+                        ),
                         child: _brand(inverse: true),
                       ),
                       _railItem(
                         _HomeTab.bots,
                         Icons.smart_toy_outlined,
-                        'Bots',
+                        context.strings.bots,
                       ),
                       _railItem(
                         _HomeTab.store,
                         Icons.storefront_outlined,
-                        'Store',
+                        context.strings.store,
                       ),
                       _railItem(
                         _HomeTab.plugins,
                         Icons.extension_outlined,
-                        'Plugins',
+                        context.strings.plugins,
                       ),
                       _railItem(
                         _HomeTab.settings,
                         Icons.settings_outlined,
-                        'Settings',
+                        context.strings.settings,
                       ),
                       const Spacer(),
                       Padding(
@@ -148,11 +156,13 @@ class _HomePageState extends State<HomePage> {
                               size: 18,
                             ),
                             const SizedBox(width: 10),
-                            Text(
-                              'On this device',
-                              style: BottogramDesign.text(
-                                13,
-                                color: BColors.inverseMuted,
+                            Expanded(
+                              child: Text(
+                                context.strings.onThisDevice,
+                                style: BottogramDesign.text(
+                                  13,
+                                  color: BColors.inverseMuted,
+                                ),
                               ),
                             ),
                           ],
@@ -233,7 +243,7 @@ class _HomePageState extends State<HomePage> {
                   builder: (context, constraints) {
                     final label = TextPainter(
                       text: TextSpan(
-                        text: 'Settings',
+                        text: context.strings.settings,
                         style: BottogramDesign.text(12, strong: true),
                       ),
                       textDirection: Directionality.of(context),
@@ -248,7 +258,7 @@ class _HomePageState extends State<HomePage> {
                           child: _mobileItem(
                             _HomeTab.bots,
                             Icons.smart_toy_outlined,
-                            'Bots',
+                            context.strings.bots,
                             showLabel: showLabels,
                           ),
                         ),
@@ -256,7 +266,7 @@ class _HomePageState extends State<HomePage> {
                           child: _mobileItem(
                             _HomeTab.store,
                             Icons.storefront_outlined,
-                            'Store',
+                            context.strings.store,
                             showLabel: showLabels,
                           ),
                         ),
@@ -264,7 +274,7 @@ class _HomePageState extends State<HomePage> {
                           padding: const EdgeInsets.symmetric(horizontal: 4),
                           child: IconButton.filled(
                             onPressed: _addBot,
-                            tooltip: 'Create bot',
+                            tooltip: context.strings.createBot,
                             style: IconButton.styleFrom(
                               minimumSize: const Size(52, 52),
                               backgroundColor: BColors.of(context).ink,
@@ -278,7 +288,7 @@ class _HomePageState extends State<HomePage> {
                           child: _mobileItem(
                             _HomeTab.plugins,
                             Icons.extension_outlined,
-                            'Plugins',
+                            context.strings.plugins,
                             showLabel: showLabels,
                           ),
                         ),
@@ -286,7 +296,7 @@ class _HomePageState extends State<HomePage> {
                           child: _mobileItem(
                             _HomeTab.settings,
                             Icons.settings_outlined,
-                            'Settings',
+                            context.strings.settings,
                             showLabel: showLabels,
                           ),
                         ),
@@ -322,10 +332,9 @@ class _HomePageState extends State<HomePage> {
           constraints: const BoxConstraints(minHeight: 52),
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
           decoration: BoxDecoration(
-            color:
-                _page == index
-                    ? BColors.of(context).subtle
-                    : Colors.transparent,
+            color: _page == index
+                ? BColors.of(context).subtle
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(24),
           ),
           child: Column(
@@ -335,10 +344,9 @@ class _HomePageState extends State<HomePage> {
               Icon(
                 icon,
                 size: 22,
-                color:
-                    _page == index
-                        ? BColors.of(context).ink
-                        : BColors.of(context).muted,
+                color: _page == index
+                    ? BColors.of(context).ink
+                    : BColors.of(context).muted,
               ),
               if (showLabel) ...[
                 const SizedBox(height: 2),
@@ -379,10 +387,10 @@ class _HomePageState extends State<HomePage> {
     future: context.read<BotsCubit>().ready,
     builder: (context, snapshot) {
       if (snapshot.hasError) {
-        return const BEmptyState(
+        return BEmptyState(
           icon: Icons.folder_off_outlined,
-          title: 'Bot storage is unavailable',
-          message: 'Check free space, then reopen Bottogram.',
+          title: context.strings.botStorageIsUnavailable,
+          message: context.strings.checkFreeSpaceThenReopenBottogram,
         );
       }
       if (snapshot.connectionState != ConnectionState.done) {
@@ -392,15 +400,14 @@ class _HomePageState extends State<HomePage> {
         builder: (context, allBots) {
           final store = context.read<BotsCubit>();
           final query = _search.text.trim().toLowerCase();
-          final bots =
-              allBots
-                  .where((bot) => bot.name.toLowerCase().contains(query))
-                  .toList();
+          final bots = allBots
+              .where((bot) => bot.name.toLowerCase().contains(query))
+              .toList();
           final search = TextField(
             controller: _search,
             onChanged: (_) => setState(() {}),
-            decoration: const InputDecoration(
-              hintText: 'Search bots',
+            decoration: InputDecoration(
+              hintText: context.strings.searchBots,
               prefixIcon: Icon(Icons.search),
               contentPadding: EdgeInsets.symmetric(
                 horizontal: 16,
@@ -420,160 +427,143 @@ class _HomePageState extends State<HomePage> {
               wide ? 24 : 0,
             ),
             child: LayoutBuilder(
-              builder:
-                  (context, constraints) => CustomScrollView(
-                    slivers: [
-                      SliverToBoxAdapter(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            if (!wide) _mobileHeader(compact: compact),
-                            BHeading(
-                              title: 'Your bots',
-                              subtitle:
-                                  'Create and manage Telegram bots on this device.',
-                              actions: [
-                                if (!compact) ..._botActions(),
-                                if (wide) ...[
-                                  const SizedBox(width: 8),
-                                  FilledButton.icon(
-                                    onPressed: _addBot,
-                                    icon: const Icon(Icons.add),
-                                    label: const Text('Create bot'),
-                                  ),
-                                ],
-                              ],
-                            ),
-                            SizedBox(height: compact ? 16 : 24),
-                            if (store.lastError != null) ...[
-                              BNotice(
-                                message: store.lastError!,
-                                error: true,
-                                trailing: IconButton(
-                                  tooltip: 'Dismiss',
-                                  onPressed:
-                                      () => setState(
-                                        () => store.lastError = null,
-                                      ),
-                                  icon: const Icon(Icons.close, size: 18),
-                                ),
+              builder: (context, constraints) => CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        if (!wide) _mobileHeader(compact: compact),
+                        BHeading(
+                          title: context.strings.yourBots,
+                          subtitle:
+                              context.strings.createAndManageTelegramBotsOn,
+                          actions: [
+                            if (!compact) ..._botActions(),
+                            if (wide) ...[
+                              const SizedBox(width: 8),
+                              FilledButton.icon(
+                                onPressed: _addBot,
+                                icon: const Icon(Icons.add),
+                                label: Text(context.strings.createBot),
                               ),
-                              const SizedBox(height: 16),
-                            ],
-                            if (allBots.isNotEmpty) ...[
-                              if (constraints.maxWidth < 500)
-                                Column(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    Text(
-                                      '${allBots.length} ${allBots.length == 1 ? 'bot' : 'bots'}',
-                                      style:
-                                          Theme.of(
-                                            context,
-                                          ).textTheme.titleSmall,
-                                    ),
-                                    SizedBox(height: compact ? 8 : 12),
-                                    search,
-                                  ],
-                                )
-                              else
-                                Row(
-                                  children: [
-                                    Text(
-                                      '${allBots.length} ${allBots.length == 1 ? 'bot' : 'bots'}',
-                                      style:
-                                          Theme.of(
-                                            context,
-                                          ).textTheme.titleSmall,
-                                    ),
-                                    const Spacer(),
-                                    SizedBox(width: 300, child: search),
-                                  ],
-                                ),
-                              SizedBox(height: compact ? 16 : 24),
                             ],
                           ],
                         ),
-                      ),
-                      if (allBots.isEmpty)
-                        const SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: BEmptyState(
-                            icon: Icons.smart_toy_outlined,
-                            title: 'Your first bot starts here',
-                            message:
-                                'Add your Telegram bot token, choose a setup method, and keep everything in one place.',
-                          ),
-                        )
-                      else if (bots.isEmpty)
-                        SliverFillRemaining(
-                          hasScrollBody: false,
-                          child: BEmptyState(
-                            icon: Icons.search_off_rounded,
-                            title: 'No matching bots',
-                            message:
-                                'Try a different name or clear the search.',
-                            action: TextButton(
-                              onPressed: () => setState(_search.clear),
-                              child: const Text('Clear search'),
+                        SizedBox(height: compact ? 16 : 24),
+                        if (store.lastError != null) ...[
+                          BNotice(
+                            message: store.lastError!,
+                            error: true,
+                            trailing: IconButton(
+                              tooltip: context.strings.dismiss,
+                              onPressed: () =>
+                                  setState(() => store.lastError = null),
+                              icon: const Icon(Icons.close, size: 18),
                             ),
                           ),
-                        )
-                      else if (compact)
-                        SliverPadding(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          sliver: SliverList.separated(
-                            itemCount: bots.length,
-                            separatorBuilder: (_, _) => const SizedBox(height: 8),
-                            itemBuilder: (_, index) {
-                              final bot = bots[index];
-                              return BotCard(
-                                key: ObjectKey(bot),
-                                bot: bot,
-                                compact: true,
-                              );
-                            },
-                          ),
-                        )
-                      else
-                        SliverPadding(
-                          padding: const EdgeInsets.only(bottom: 24),
-                          sliver: SliverGrid(
-                            gridDelegate:
-                                SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount:
-                                      constraints.maxWidth < 600
-                                          ? 1
-                                          : constraints.maxWidth < 1000
-                                          ? 2
-                                          : 3,
-                                  mainAxisSpacing: 16,
-                                  crossAxisSpacing: 16,
-                                  mainAxisExtent:
-                                      248 +
-                                      (MediaQuery.textScalerOf(
-                                                    context,
-                                                  ).scale(16) -
-                                                  16)
-                                              .clamp(0, 32)
-                                              .toDouble() *
-                                          10,
+                          const SizedBox(height: 16),
+                        ],
+                        if (allBots.isNotEmpty) ...[
+                          if (constraints.maxWidth < 500)
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Text(
+                                  context.strings.botCount(allBots.length),
+                                  style: Theme.of(context).textTheme.titleSmall,
                                 ),
-                            delegate: SliverChildBuilderDelegate(
-                              (_, index) => BotCard(bot: bots[index]),
-                              childCount: bots.length,
+                                SizedBox(height: compact ? 8 : 12),
+                                search,
+                              ],
+                            )
+                          else
+                            Row(
+                              children: [
+                                Text(
+                                  context.strings.botCount(allBots.length),
+                                  style: Theme.of(context).textTheme.titleSmall,
+                                ),
+                                const Spacer(),
+                                SizedBox(width: 300, child: search),
+                              ],
                             ),
-                          ),
-                        ),
-                      if (!wide)
-                        SliverToBoxAdapter(
-                          child: SizedBox(
-                            height: MediaQuery.paddingOf(context).bottom + 16,
-                          ),
-                        ),
-                    ],
+                          SizedBox(height: compact ? 16 : 24),
+                        ],
+                      ],
+                    ),
                   ),
+                  if (allBots.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: BEmptyState(
+                        icon: Icons.smart_toy_outlined,
+                        title: context.strings.yourFirstBotStartsHere,
+                        message: context.strings.addYourTelegramBotTokenChoose,
+                      ),
+                    )
+                  else if (bots.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: BEmptyState(
+                        icon: Icons.search_off_rounded,
+                        title: context.strings.noMatchingBots,
+                        message: context.strings.tryADifferentNameOrClear,
+                        action: TextButton(
+                          onPressed: () => setState(_search.clear),
+                          child: Text(context.strings.clearSearch),
+                        ),
+                      ),
+                    )
+                  else if (compact)
+                    SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      sliver: SliverList.separated(
+                        itemCount: bots.length,
+                        separatorBuilder: (_, _) => const SizedBox(height: 8),
+                        itemBuilder: (_, index) {
+                          final bot = bots[index];
+                          return BotCard(
+                            key: ObjectKey(bot),
+                            bot: bot,
+                            compact: true,
+                          );
+                        },
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: constraints.maxWidth < 600
+                              ? 1
+                              : constraints.maxWidth < 1000
+                              ? 2
+                              : 3,
+                          mainAxisSpacing: 16,
+                          crossAxisSpacing: 16,
+                          mainAxisExtent:
+                              248 +
+                              (MediaQuery.textScalerOf(context).scale(16) - 16)
+                                      .clamp(0, 32)
+                                      .toDouble() *
+                                  10,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (_, index) => BotCard(bot: bots[index]),
+                          childCount: bots.length,
+                        ),
+                      ),
+                    ),
+                  if (!wide)
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: MediaQuery.paddingOf(context).bottom + 16,
+                      ),
+                    ),
+                ],
+              ),
             ),
           );
         },

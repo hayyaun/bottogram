@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/ui/design.dart';
 import 'package:flutter/material.dart';
 import '../templates/catalog.dart';
@@ -15,11 +16,7 @@ class StorePage extends StatelessWidget {
     );
     if (created == true && context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Bot created. Open Bots to review its actions and start it.',
-          ),
-        ),
+        SnackBar(content: Text(context.strings.botCreatedOpenBotsToReview)),
       );
     }
   }
@@ -37,10 +34,9 @@ class StorePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (scrollHeader != null) scrollHeader!,
-          const BHeading(
-            title: 'Bot templates',
-            subtitle:
-                'Start with a useful bot, then make its events and actions your own.',
+          BHeading(
+            title: context.strings.botTemplates,
+            subtitle: context.strings.startWithAUsefulBotThen,
           ),
           const SizedBox(height: 24),
           LayoutBuilder(
@@ -79,16 +75,6 @@ class _TemplateCard extends StatelessWidget {
   final BotTemplate template;
   final VoidCallback onTap;
 
-  static const _categories = {
-    'quiz': 'Learning',
-    'crypto': 'Finance',
-    'tasks': 'Productivity',
-    'library': 'Knowledge',
-    'feedback': 'Feedback',
-    'requests': 'Support',
-    'registration': 'Events',
-  };
-
   @override
   Widget build(BuildContext context) {
     final colors = BColors.of(context);
@@ -115,7 +101,16 @@ class _TemplateCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  _categories[template.id] ?? 'Automation',
+                  switch (template.id) {
+                    'quiz' => context.strings.storeLearning,
+                    'crypto' => context.strings.storeFinance,
+                    'tasks' => context.strings.storeProductivity,
+                    'library' => context.strings.storeKnowledge,
+                    'feedback' => context.strings.storeFeedback,
+                    'requests' => context.strings.storeSupport,
+                    'registration' => context.strings.events,
+                    _ => context.strings.automation,
+                  },
                   style: BottogramDesign.text(
                     12,
                     strong: true,
@@ -140,7 +135,7 @@ class _TemplateCard extends StatelessWidget {
                   children: [
                     Expanded(
                       child: Text(
-                        'Use template',
+                        context.strings.useTemplate,
                         style: Theme.of(context).textTheme.labelLarge,
                       ),
                     ),

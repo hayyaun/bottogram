@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'console.dart';
 
@@ -18,10 +19,10 @@ class _BuilderConsolePageState extends State<BuilderConsolePage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: Text('${widget.botName} · Console'),
+      title: Text(context.strings.botConsoleTitle(widget.botName)),
       actions: [
         IconButton(
-          tooltip: 'Clear console',
+          tooltip: context.strings.clearConsole,
           onPressed: () => BuilderConsole.shared.clear(widget.botId),
           icon: const Icon(Icons.clear_all),
         ),
@@ -35,12 +36,12 @@ class _BuilderConsolePageState extends State<BuilderConsolePage> {
             children: [
               Expanded(
                 child: Text(
-                  'This session · latest 200 entries · request bodies and values are not logged',
+                  context.strings.thisSessionLatest200EntriesRequest,
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
               FilterChip(
-                label: const Text('Errors'),
+                label: Text(context.strings.errors),
                 selected: _errorsOnly,
                 onSelected: (v) => setState(() => _errorsOnly = v),
               ),
@@ -51,21 +52,15 @@ class _BuilderConsolePageState extends State<BuilderConsolePage> {
           child: ListenableBuilder(
             listenable: BuilderConsole.shared,
             builder: (context, _) {
-              final entries =
-                  BuilderConsole.shared
-                      .entries(widget.botId)
-                      .where(
-                        (e) =>
-                            !_errorsOnly ||
-                            {'error', 'failed'}.contains(e.status),
-                      )
-                      .toList();
+              final entries = BuilderConsole.shared
+                  .entries(widget.botId)
+                  .where(
+                    (e) =>
+                        !_errorsOnly || {'error', 'failed'}.contains(e.status),
+                  )
+                  .toList();
               if (entries.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'Run the bot to see its event and action activity.',
-                  ),
-                );
+                return Center(child: Text(context.strings.runTheBotToSeeIts));
               }
               return ListView.separated(
                 padding: const EdgeInsets.all(16),
@@ -87,7 +82,7 @@ class _BuilderConsolePageState extends State<BuilderConsolePage> {
                     ),
                     title: SelectableText(e.message),
                     subtitle: Text(
-                      '#${e.run} · ${e.event}${e.step.isEmpty ? '' : ' → ${e.step}'} · ${e.status}${e.elapsed == null ? '' : ' · ${e.elapsed!.inMilliseconds} ms'}\n${e.time.toLocal().toIso8601String().substring(11, 19)}',
+                      '#${e.run} · ${e.event}${e.step.isEmpty ? '' : ' → ${e.step}'} · ${e.status}${e.elapsed == null ? '' : context.strings.consoleElapsed('${e.elapsed!.inMilliseconds}')}\n${e.time.toLocal().toIso8601String().substring(11, 19)}',
                     ),
                   );
                 },

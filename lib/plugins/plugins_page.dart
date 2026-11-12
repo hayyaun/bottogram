@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:bottogram/ui/design.dart';
@@ -42,13 +43,12 @@ class _PluginsPageState extends State<PluginsPage> {
       // Platform diagnostics are not useful as user-facing browser guidance.
     }
     if (!opened && mounted) {
-      context.showSnackBar(
-        'The plugin guide could not be opened. Check your browser and try again.',
-      );
+      context.showSnackBar(context.strings.thePluginGuideCouldNotBe);
     }
   }
 
   Future<void> _install() async {
+    final strings = context.strings;
     setState(() {
       _busy = true;
       _error = null;
@@ -61,14 +61,12 @@ class _PluginsPageState extends State<PluginsPage> {
       if (file == null) return;
       final length = file.lengthSync() ?? await file.length();
       if (length != null && length > maxPluginBytes) {
-        throw const PluginException(
-          'Choose a readable JSON plugin file up to 256 KiB.',
-        );
+        throw PluginException(strings.chooseAReadableJSONPluginFile);
       }
       final builder = BytesBuilder(copy: false);
       await for (final chunk in file.readAsByteStream()) {
         if (builder.length + chunk.length > maxPluginBytes) {
-          throw const PluginException('The plugin file exceeds 256 KiB.');
+          throw PluginException(strings.thePluginFileExceeds256KiB);
         }
         builder.add(chunk);
       }
@@ -77,30 +75,39 @@ class _PluginsPageState extends State<PluginsPage> {
       final accepted = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Install ${plugin.name}?'),
+          title: Text(context.strings.installPluginConfirmation(plugin.name)),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('${plugin.id}\nVersion ${plugin.version}'),
+                Text(
+                  context.strings.pluginNameAndVersion(
+                    plugin.id,
+                    plugin.version,
+                  ),
+                ),
                 const SizedBox(height: 16),
                 if (plugin.description != null) Text(plugin.description!),
                 const SizedBox(height: 16),
                 Text(
                   plugin.executable
-                      ? 'This plugin can make the requests below while its bots are started. Install packages only from an author you trust with their API credentials.'
-                      : 'Setup only. This package adds configuration fields without executing automations.',
+                      ? context.strings.thisPluginCanMakeTheRequests
+                      : context.strings.setupOnlyThisPackageAddsConfiguration,
                 ),
                 if (plugin.executable) PluginCapabilityReview(plugin: plugin),
                 const SizedBox(height: 12),
                 Text(
-                  'Additional fields: ${plugin.fields.map((f) => f.label).join(', ')}',
+                  context.strings.additionalPluginFields(
+                    plugin.fields.map((f) => f.label).join(', '),
+                  ),
                 ),
                 if (plugin.settings.isNotEmpty) ...[
                   const SizedBox(height: 12),
                   Text(
-                    'Editable settings: ${plugin.settings.map((s) => s.label).join(', ')}',
+                    context.strings.editablePluginSettings(
+                      plugin.settings.map((s) => s.label).join(', '),
+                    ),
                   ),
                 ],
               ],
@@ -109,11 +116,11 @@ class _PluginsPageState extends State<PluginsPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.strings.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('Install'),
+              child: Text(context.strings.install),
             ),
           ],
         ),
@@ -124,7 +131,7 @@ class _PluginsPageState extends State<PluginsPage> {
         setState(
           () => _error = error is PluginException
               ? error.message
-              : 'The plugin could not be installed. No settings were changed.',
+              : context.strings.thePluginCouldNotBeInstalled,
         );
       }
     } finally {
@@ -140,7 +147,7 @@ class _PluginsPageState extends State<PluginsPage> {
         setState(
           () => _error = error is PluginException
               ? error.message
-              : 'The plugin could not be removed.',
+              : context.strings.thePluginCouldNotBeRemoved,
         );
       }
     }
@@ -152,11 +159,10 @@ class _PluginsPageState extends State<PluginsPage> {
       future: _ready,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const BEmptyState(
+          return BEmptyState(
             icon: Icons.extension_off_outlined,
-            title: 'Plugins unavailable',
-            message:
-                'Plugin storage could not be opened. Reopen Bottogram to try again.',
+            title: context.strings.pluginsUnavailable,
+            message: context.strings.pluginStorageCouldNotBeOpened,
           );
         }
         if (snapshot.connectionState != ConnectionState.done) {
@@ -182,14 +188,16 @@ class _PluginsPageState extends State<PluginsPage> {
                   children: [
                     if (widget.scrollHeader != null) widget.scrollHeader!,
                     BHeading(
-                      title: 'Plugins',
-                      subtitle: 'Add a setup for the way your bot works.',
+                      title: context.strings.plugins,
+                      subtitle: context.strings.addASetupForTheWay,
                       actions: [
                         FilledButton.icon(
                           onPressed: _busy ? null : _install,
                           icon: const Icon(Icons.file_open_outlined),
                           label: Text(
-                            _busy ? 'Reading package…' : 'Install from file',
+                            _busy
+                                ? context.strings.readingPackage
+                                : context.strings.installFromFile,
                           ),
                         ),
                       ],
@@ -207,9 +215,8 @@ class _PluginsPageState extends State<PluginsPage> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    const BNotice(
-                      message:
-                          'Live plugins run while their bots are started. Existing Mini App buttons can open their website even when Bottogram is stopped.',
+                    BNotice(
+                      message: context.strings.livePluginsRunWhileTheirBots,
                     ),
                     if (_error != null)
                       Padding(
@@ -218,11 +225,11 @@ class _PluginsPageState extends State<PluginsPage> {
                       ),
                     const SizedBox(height: 20),
                     if (plugins.isEmpty)
-                      const BEmptyState(
+                      BEmptyState(
                         icon: Icons.extension_outlined,
-                        title: 'Your next integration',
+                        title: context.strings.yourNextIntegration,
                         message:
-                            'Install a .bottogram-plugin.json file, then choose it when creating a bot.',
+                            context.strings.installABottogramPluginJsonFile,
                       ),
                     for (final plugin in plugins)
                       Padding(
@@ -257,7 +264,15 @@ class _PluginsPageState extends State<PluginsPage> {
                                           ).textTheme.titleLarge,
                                         ),
                                         Text(
-                                          'Version ${plugin.version} · ${plugin.executable ? 'Live automations' : 'Setup only'}',
+                                          context.strings
+                                              .pluginVersionAndStatus(
+                                                plugin.version,
+                                                plugin.executable
+                                                    ? context
+                                                          .strings
+                                                          .liveAutomations
+                                                    : context.strings.setupOnly,
+                                              ),
                                           style: Theme.of(
                                             context,
                                           ).textTheme.bodySmall,
@@ -266,7 +281,9 @@ class _PluginsPageState extends State<PluginsPage> {
                                     ),
                                   ),
                                   IconButton(
-                                    tooltip: 'Uninstall ${plugin.name}',
+                                    tooltip: context.strings.uninstallPlugin(
+                                      plugin.name,
+                                    ),
                                     onPressed: _busy
                                         ? null
                                         : () => _uninstall(plugin),
@@ -286,13 +303,20 @@ class _PluginsPageState extends State<PluginsPage> {
                                 runSpacing: 8,
                                 children: [
                                   Text(
-                                    '${widget.repository.dependents(plugin.storageKey)} ${widget.repository.dependents(plugin.storageKey) == 1 ? 'bot' : 'bots'} using this version',
+                                    context.strings.pluginDependents(
+                                      widget.repository.dependents(
+                                        plugin.storageKey,
+                                      ),
+                                    ),
                                     style: Theme.of(
                                       context,
                                     ).textTheme.bodySmall,
                                   ),
                                   Text(
-                                    '${plugin.fields.length} setup ${plugin.fields.length == 1 ? 'field' : 'fields'} · ${plugin.settings.length} ${plugin.settings.length == 1 ? 'setting' : 'settings'}',
+                                    context.strings.pluginFieldCounts(
+                                      plugin.fields.length,
+                                      plugin.settings.length,
+                                    ),
                                     style: Theme.of(
                                       context,
                                     ).textTheme.bodySmall,
@@ -314,7 +338,7 @@ class _PluginsPageState extends State<PluginsPage> {
     return widget.embedded
         ? content
         : Scaffold(
-            appBar: AppBar(title: const Text('Plugins')),
+            appBar: AppBar(title: Text(context.strings.plugins)),
             body: content,
           );
   }

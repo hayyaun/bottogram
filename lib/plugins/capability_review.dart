@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 
 import '../runtime/telegram_presentation.dart';
@@ -24,29 +25,39 @@ Iterable<String> _commands(ComponentDefinition trigger) sync* {
   }
 }
 
-String automationSummary(AutomationDefinition automation) {
+String automationSummary(
+  BuildContext context,
+  AutomationDefinition automation,
+) {
   final trigger = automation.trigger;
   if (trigger.type == 'telegram.command.v1') {
-    return '/${trigger.config['command']} · all chats';
+    return context.strings.automationAllChats(
+      context.leftToRightText('/${trigger.config['command']}'),
+    );
   }
   if (trigger.type == 'telegram.command.v2') {
     final commands = (trigger.config['commands'] as List)
         .map((command) => '/$command')
         .join(' · ');
     final chats = (trigger.config['chatTypes'] as List).join(', ');
-    return '$commands · $chats chats';
+    return context.strings.automationSelectedChats(
+      context.leftToRightText(commands),
+      chats,
+    );
   }
   if (trigger.type == interactionTrigger) {
     final commands = _commands(
       trigger,
     ).map((command) => '/$command').join(' · ');
-    if (commands.isEmpty) return 'Private-chat buttons and widgets';
+    if (commands.isEmpty) return context.strings.automationPrivateWidgets;
     final role = trigger.config['audience'] == 'admin'
-        ? 'admin only'
-        : 'private chats';
-    return '$commands · $role';
+        ? context.strings.automationAdminOnly
+        : context.strings.automationPrivateChats;
+    return '${context.leftToRightText(commands)} · $role';
   }
-  return 'Scheduled checks · every ${trigger.config['intervalSeconds']} seconds';
+  return context.strings.automationScheduledChecks(
+    trigger.config['intervalSeconds'].toString(),
+  );
 }
 
 /// Reviews declarations for any plugin; no installed package is special-cased.
@@ -58,23 +69,40 @@ class PluginCapabilityReview extends StatelessWidget {
   String _fieldLabel(String key) =>
       plugin.fields.firstWhere((field) => field.key == key).label;
 
-  String _headerDescription(MapEntry<String, dynamic> header) {
+  String _headerDescription(
+    BuildContext context,
+    MapEntry<String, dynamic> header,
+  ) {
     final binding = header.value;
-    if (binding is String) return 'Header: ${header.key} (literal value)';
+    if (binding is String) {
+      return context.strings.automationLiteralHeader(header.key);
+    }
     final transform = switch (binding['transform']) {
-      'value' => 'field value',
-      'url.origin' => 'URL origin',
-      'url.authority' => 'URL host and port',
-      _ => 'field value',
+      'value' => context.strings.automationHeaderFieldValue,
+      'url.origin' => context.strings.automationHeaderUrlOrigin,
+      'url.authority' => context.strings.automationHeaderUrlAuthority,
+      _ => context.strings.automationHeaderFieldValue,
     };
-    return 'Header: ${header.key} ← ${_fieldLabel(binding['field'] as String)} ($transform)';
+    return context.strings.automationMappedHeader(
+      header.key,
+      _fieldLabel(binding['field'] as String),
+      transform,
+    );
   }
 
-  String _authenticationDescription(Map<String, dynamic> authentication) {
+  String _authenticationDescription(
+    BuildContext context,
+    Map<String, dynamic> authentication,
+  ) {
     final method = authentication['type'] == 'bearer'
-        ? 'Bearer token'
-        : 'Custom header ${authentication['header']}';
-    return 'Authentication: $method ← ${_fieldLabel(authentication['secretField'] as String)} (secure storage)';
+        ? context.strings.automationBearerToken
+        : context.strings.automationCustomHeader(
+            authentication['header'].toString(),
+          );
+    return context.strings.automationAuthentication(
+      method,
+      _fieldLabel(authentication['secretField'] as String),
+    );
   }
 
   String _destination(Map<String, dynamic> target) {
@@ -99,7 +127,9 @@ class PluginCapabilityReview extends StatelessWidget {
       if (plugin.telegram?['menuButton'] != null) ...[
         const SizedBox(height: 12),
         Text(
-          'Menu button: ${plugin.telegram!['menuButton']['text'] ?? 'Commands'}',
+          context.strings.pluginMenuButton(
+            '${plugin.telegram!['menuButton']['text'] ?? context.strings.commands}',
+          ),
         ),
       ],
       for (final target in webAppTargets(
@@ -109,42 +139,58 @@ class PluginCapabilityReview extends StatelessWidget {
         ),
       ).map(_destination).toSet()) ...[
         const SizedBox(height: 8),
-        Text('Mini App: $target'),
+        Text(context.strings.miniAppDestination(target)),
       ],
       for (final automation in plugin.automations) ...[
         const SizedBox(height: 12),
-        Text(automationSummary(automation)),
+        Text(automationSummary(context, automation)),
         if (automation.destinationField case final String field)
           Text(
-            'Posts to Telegram chats: ${_fieldLabel(field)}'
-            '${fields?[field]?.trim().isNotEmpty == true ? ' → ${fields![field]}' : ' (optional)'}',
+            context.strings.telegramDestinations(
+              _fieldLabel(field),
+              fields?[field]?.trim().isNotEmpty == true
+                  ? ' → ${fields![field]}'
+                  : context.strings.optionalDestinationSuffix,
+            ),
           ),
         if (automation.enabledBySetting != null)
           Text(
-            'Controlled by: ${plugin.settings.firstWhere((s) => s.key == automation.enabledBySetting).label}',
+            context.strings.automationEnabledBy(
+              plugin.settings
+                  .firstWhere((s) => s.key == automation.enabledBySetting)
+                  .label,
+            ),
           ),
         for (final component in [
           automation.trigger,
           ...automation.actions,
         ]) ...[
           if (component.type == 'telegram.notify-admin.v1')
-            const Text('Sends notifications to all configured admins.'),
+            Text(context.strings.sendsNotificationsToAllConfiguredAdmins),
           for (final photo in presentationPhotos(component.config))
             Text(
-              'Downloads photos: ${_fieldLabel(photo['originField'] as String)} → ${photo['path']}',
+              context.strings.automationPhotoRequest(
+                _fieldLabel(photo['originField'] as String),
+                '${photo['path']}',
+              ),
             ),
           for (final request in AutomationRegistry.standard.requestsFor(
             component,
           )) ...[
-            Text('GET ${request['url']}'),
+            Text(
+              context.strings.automationGetRequest(
+                context.leftToRightText('${request['url']}'),
+              ),
+            ),
             for (final header
                 in (request['headers'] as Map<String, dynamic>? ??
                         const <String, dynamic>{})
                     .entries)
-              Text(_headerDescription(header)),
+              Text(_headerDescription(context, header)),
             if (request['authentication'] != null)
               Text(
                 _authenticationDescription(
+                  context,
                   request['authentication'] as Map<String, dynamic>,
                 ),
               ),

@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import '../ui/design.dart';
 import '../ui/dialogs.dart';
@@ -38,7 +39,7 @@ class _BuilderStatePageState extends State<BuilderStatePage> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Local bot settings could not be opened.';
+          _error = context.strings.localBotSettingsCouldNotBe;
         });
       }
     }
@@ -62,11 +63,13 @@ class _BuilderStatePageState extends State<BuilderStatePage> {
   }) async {
     if (!await confirmRemoval(
           context,
-          title: definition == null ? 'Delete credential?' : 'Delete variable?',
+          title: definition == null
+              ? context.strings.deleteCredential
+              : context.strings.deleteVariable,
           message: definition == null
-              ? 'Actions using this credential will fail until it is replaced.'
-              : 'Remove this variable and its saved values for every user of this bot?',
-          action: 'Delete',
+              ? context.strings.actionsUsingThisCredentialWillFail
+              : context.strings.removeThisVariableAndItsSaved,
+          action: context.strings.delete,
         ) ||
         !mounted) {
       return;
@@ -79,13 +82,15 @@ class _BuilderStatePageState extends State<BuilderStatePage> {
       }
       await _load();
     } catch (_) {
-      if (mounted) setState(() => _error = 'The item could not be removed.');
+      if (mounted) {
+        setState(() => _error = context.strings.theItemCouldNotBeRemoved);
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Variables and credentials')),
+    appBar: AppBar(title: Text(context.strings.variablesAndCredentials)),
     body: _loading
         ? const Center(child: CircularProgressIndicator())
         : ListView(
@@ -93,22 +98,21 @@ class _BuilderStatePageState extends State<BuilderStatePage> {
             children: [
               if (_error != null) BNotice(message: _error!, error: true),
               BSection(
-                title: 'Variables',
-                description:
-                    'User values belong to one Telegram user. Bot values are shared by the whole bot. Defaults do not create a record for every user.',
+                title: context.strings.variables,
+                description: context.strings.userValuesBelongToOneTelegram,
                 trailing: TextButton.icon(
                   onPressed: () => _add(false),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add'),
+                  label: Text(context.strings.add),
                 ),
                 child: Column(
                   children: [
                     if (_definitions.isEmpty)
-                      const ListTile(
+                      ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('No variables yet'),
+                        title: Text(context.strings.noVariablesYet),
                         subtitle: Text(
-                          'Create a variable, then use Set variable or Increment variable in an event.',
+                          context.strings.createAVariableThenUseSet,
                         ),
                       ),
                     for (final d in _definitions)
@@ -120,9 +124,14 @@ class _BuilderStatePageState extends State<BuilderStatePage> {
                               : Icons.smart_toy_outlined,
                         ),
                         title: SelectableText('${d.scope}.${d.name}'),
-                        subtitle: Text('${d.type} · default: ${d.initial}'),
+                        subtitle: Text(
+                          context.strings.variableSummary(
+                            d.type,
+                            '${d.initial}',
+                          ),
+                        ),
                         trailing: IconButton(
-                          tooltip: 'Delete variable',
+                          tooltip: context.strings.deleteVariable2,
                           onPressed: () => _remove(definition: d),
                           icon: const Icon(Icons.delete_outline),
                         ),
@@ -132,30 +141,29 @@ class _BuilderStatePageState extends State<BuilderStatePage> {
               ),
               const SizedBox(height: 24),
               BSection(
-                title: 'API credentials',
-                description:
-                    'Keys are saved in secure storage on this device. Actions refer to a credential by name.',
+                title: context.strings.apiCredentials,
+                description: context.strings.keysAreSavedInSecureStorage,
                 trailing: TextButton.icon(
                   onPressed: () => _add(true),
                   icon: const Icon(Icons.add),
-                  label: const Text('Add'),
+                  label: Text(context.strings.add),
                 ),
                 child: Column(
                   children: [
                     if (_credentials.isEmpty)
-                      const ListTile(
+                      ListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: Text('No saved credentials'),
+                        title: Text(context.strings.noSavedCredentials),
                       ),
                     for (final name in _credentials)
                       ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: const Icon(Icons.key_outlined),
                         title: Text(name),
-                        subtitle: const Text('Value hidden'),
+                        subtitle: Text(context.strings.valueHidden),
                         onTap: () => _add(true, existing: name),
                         trailing: IconButton(
-                          tooltip: 'Delete credential',
+                          tooltip: context.strings.deleteCredential2,
                           onPressed: () => _remove(credential: name),
                           icon: const Icon(Icons.delete_outline),
                         ),
@@ -233,7 +241,7 @@ class _StateEntryState extends State<_StateEntry> {
         setState(
           () => error = e is BuilderFailure
               ? e.message
-              : 'The value could not be saved.',
+              : context.strings.theValueCouldNotBeSaved,
         );
       }
     } finally {
@@ -243,7 +251,11 @@ class _StateEntryState extends State<_StateEntry> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.credential ? 'Save API credential' : 'Create variable'),
+    title: Text(
+      widget.credential
+          ? context.strings.saveAPICredential
+          : context.strings.createVariable,
+    ),
     content: SingleChildScrollView(
       child: SizedBox(
         width: 420,
@@ -253,30 +265,45 @@ class _StateEntryState extends State<_StateEntry> {
             TextField(
               controller: name,
               enabled: widget.existing == null,
-              decoration: const InputDecoration(
-                labelText: 'Name',
+              decoration: InputDecoration(
+                labelText: context.strings.name,
                 helperText:
-                    'Letters, numbers and underscores; start with a letter.',
+                    context.strings.lettersNumbersAndUnderscoresStartWith,
               ),
             ),
             const SizedBox(height: 12),
             if (!widget.credential) ...[
               DropdownButtonFormField<String>(
                 initialValue: scope,
-                decoration: const InputDecoration(labelText: 'Scope'),
-                items: const [
-                  DropdownMenuItem(value: 'user', child: Text('Per user')),
-                  DropdownMenuItem(value: 'bot', child: Text('Whole bot')),
+                decoration: InputDecoration(labelText: context.strings.scope),
+                items: [
+                  DropdownMenuItem(
+                    value: 'user',
+                    child: Text(context.strings.perUser),
+                  ),
+                  DropdownMenuItem(
+                    value: 'bot',
+                    child: Text(context.strings.wholeBot),
+                  ),
                 ],
                 onChanged: (v) => setState(() => scope = v!),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 initialValue: type,
-                decoration: const InputDecoration(labelText: 'Type'),
+                decoration: InputDecoration(
+                  labelText: context.strings.typeLabel,
+                ),
                 items: [
                   for (final t in ['number', 'text', 'boolean'])
-                    DropdownMenuItem(value: t, child: Text(t)),
+                    DropdownMenuItem(
+                      value: t,
+                      child: Text(switch (t) {
+                        'number' => context.strings.numberValueType,
+                        'text' => context.strings.textValueType,
+                        _ => context.strings.booleanValueType,
+                      }),
+                    ),
                 ],
                 onChanged: (v) => setState(() => type = v!),
               ),
@@ -286,9 +313,11 @@ class _StateEntryState extends State<_StateEntry> {
               controller: value,
               obscureText: widget.credential,
               decoration: InputDecoration(
-                labelText: widget.credential ? 'API key' : 'Default value',
+                labelText: widget.credential
+                    ? context.strings.apiKey
+                    : context.strings.defaultValue,
                 helperText: !widget.credential && type == 'boolean'
-                    ? 'true or false'
+                    ? context.strings.trueOrFalse
                     : null,
               ),
             ),
@@ -307,9 +336,12 @@ class _StateEntryState extends State<_StateEntry> {
     actions: [
       TextButton(
         onPressed: busy ? null : () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.strings.cancel),
       ),
-      FilledButton(onPressed: busy ? null : save, child: const Text('Save')),
+      FilledButton(
+        onPressed: busy ? null : save,
+        child: Text(context.strings.save),
+      ),
     ],
   );
 }

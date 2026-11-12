@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 
 import 'manifest.dart';
@@ -61,6 +62,7 @@ class _SecretFormFieldState extends State<SecretFormField> {
   Widget build(BuildContext context) => TextFormField(
     controller: widget.controller,
     validator: widget.validator,
+    textDirection: widget.secret || widget.numeric ? TextDirection.ltr : null,
     obscureText: widget.secret && !_visible,
     enableSuggestions: !widget.secret,
     autocorrect: !widget.secret,
@@ -78,8 +80,8 @@ class _SecretFormFieldState extends State<SecretFormField> {
       suffixIcon: widget.secret
           ? IconButton(
               tooltip: _visible
-                  ? 'Hide ${widget.label}'
-                  : 'Show ${widget.label}',
+                  ? context.strings.hideField(widget.label)
+                  : context.strings.showField(widget.label),
               onPressed: () => setState(() => _visible = !_visible),
               icon: Icon(
                 _visible
@@ -99,9 +101,9 @@ class AdminIdsField extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SecretFormField(
     controller: controller,
-    label: 'Admins',
+    label: context.strings.admins,
     multiline: true,
-    helpText: 'Enter Telegram user IDs separated by commas or line breaks.',
+    helpText: context.strings.enterTelegramUserIDsSeparatedBy,
     validator: validateAdminIds,
   );
 }
@@ -142,7 +144,7 @@ class _EditAdminsDialogState extends State<EditAdminsDialog> {
           _saving = false;
           _error = error is PluginException
               ? error.message
-              : 'Could not save the admins. Check the bot settings and try again.';
+              : context.strings.couldNotSaveTheAdminsCheck;
         });
       }
     }
@@ -150,7 +152,7 @@ class _EditAdminsDialogState extends State<EditAdminsDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Edit admins'),
+    title: Text(context.strings.editAdmins),
     content: SizedBox(
       width: 420,
       child: Form(
@@ -172,11 +174,13 @@ class _EditAdminsDialogState extends State<EditAdminsDialog> {
     actions: [
       TextButton(
         onPressed: _saving ? null : () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.strings.cancel),
       ),
       FilledButton(
         onPressed: _saving ? null : _save,
-        child: Text(_saving ? 'Saving…' : 'Save admins'),
+        child: Text(
+          _saving ? context.strings.saving : context.strings.saveAdmins,
+        ),
       ),
     ],
   );

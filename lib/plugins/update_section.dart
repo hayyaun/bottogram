@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -45,7 +46,7 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
       final accepted = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text('Update ${target.name}?'),
+          title: Text(context.strings.updatePluginConfirmation(target.name)),
           content: SingleChildScrollView(
             child: SizedBox(
               width: 520,
@@ -54,29 +55,37 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Version ${plan.current.version} → ${plan.target.version}',
+                    context.strings.pluginVersionChange(
+                      plan.current.version,
+                      plan.target.version,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
                     active
-                        ? 'The bot will pause while the update is applied, then start again.'
-                        : 'The bot will stay stopped after the update.',
+                        ? context.strings.theBotWillPauseWhileThe
+                        : context.strings.theBotWillStayStoppedAfter,
                   ),
                   const SizedBox(height: 12),
-                  const Text(
-                    'The updated plugin reuses this bot’s identity, secure keys and saved preferences.',
-                  ),
+                  Text(context.strings.theUpdatedPluginReusesThisBot),
                   if (plan.preservedAutomationIds.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Progress retained: ${plan.preservedAutomationIds.join(', ')}. Pending work and acknowledged deliveries are preserved.',
+                      context.strings.pluginProgressRetained(
+                        plan.preservedAutomationIds.join(', '),
+                      ),
                     ),
                   ],
                   if (plan.removedAutomationIds.isNotEmpty ||
                       plan.replacedAutomationIds.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(
-                      'Retired or replaced command routines: ${[...plan.removedAutomationIds, ...plan.replacedAutomationIds].join(', ')}. Their queued replies will not be replayed.',
+                      context.strings.pluginRetiredRoutines(
+                        [
+                          ...plan.removedAutomationIds,
+                          ...plan.replacedAutomationIds,
+                        ].join(', '),
+                      ),
                     ),
                   ],
                   const SizedBox(height: 12),
@@ -92,11 +101,15 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
+              child: Text(context.strings.cancel),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: Text(active ? 'Apply and restart' : 'Apply update'),
+              child: Text(
+                active
+                    ? context.strings.applyAndRestart
+                    : context.strings.applyUpdate,
+              ),
             ),
           ],
         ),
@@ -107,7 +120,7 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
         setState(
           () => _error = error is PluginException
               ? error.message
-              : 'The update could not be prepared. The current version has not changed.',
+              : context.strings.theUpdateCouldNotBePrepared,
         );
       }
     } finally {
@@ -140,7 +153,7 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Plugin updates',
+                context.strings.pluginUpdates,
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               if (selected != null) ...[
@@ -149,15 +162,15 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                   key: ValueKey(selected.storageKey),
                   initialValue: selected.storageKey,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Installed version',
+                  decoration: InputDecoration(
+                    labelText: context.strings.installedVersion,
                   ),
                   items: [
                     for (final p in candidates)
                       DropdownMenuItem(
                         value: p.storageKey,
                         child: Text(
-                          'Version ${p.version}',
+                          context.strings.versionLabel(p.version),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -171,7 +184,11 @@ class _PluginUpdateSectionState extends State<PluginUpdateSection> {
                 OutlinedButton.icon(
                   onPressed: _busy ? null : () => _review(selected),
                   icon: const Icon(Icons.system_update_alt),
-                  label: Text(_busy ? 'Checking update…' : 'Review update'),
+                  label: Text(
+                    _busy
+                        ? context.strings.checkingUpdate
+                        : context.strings.reviewUpdate,
+                  ),
                 ),
               ],
               if (_error != null) ...[

@@ -1,9 +1,9 @@
 import 'dart:async';
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:flutter/material.dart';
 import 'package:bottogram/ui/design.dart';
-import 'package:intl/intl.dart';
 
 import 'conversation_page.dart';
 import 'models.dart';
@@ -42,11 +42,7 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
       await _load();
     } catch (_) {
       if (mounted) {
-        setState(
-          () =>
-              _error =
-                  'Could not open the inbox. Check free space and try again.',
-        );
+        setState(() => _error = context.strings.couldNotOpenTheInboxCheck);
       }
     }
   }
@@ -63,7 +59,7 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
       });
     } catch (_) {
       if (mounted && request == _request) {
-        setState(() => _error = 'Could not read the user list. Try again.');
+        setState(() => _error = context.strings.couldNotReadTheUserList);
       }
     }
   }
@@ -91,19 +87,23 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Text(
-                'Conversations',
+                context.strings.conversations,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
               const SizedBox(height: 8),
               Text(
-                'Known users, most recent interaction first. Activity is recorded while the bot is running; this is not an online status.',
+                context.strings.knownUsersMostRecentInteractionFirst,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               if (repository?.lastError != null ||
-                  InboxDiagnostics.error != null) ...[
+                  InboxDiagnostics.notice.value != null) ...[
                 const SizedBox(height: 12),
                 BNotice(
-                  message: repository?.lastError ?? InboxDiagnostics.error!,
+                  message:
+                      (repository?.lastError != null
+                              ? InboxStorageProblem.writeFailed
+                              : InboxDiagnostics.notice.value!)
+                          .message(context),
                   error: true,
                 ),
               ],
@@ -116,11 +116,11 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
           hasScrollBody: false,
           child: BEmptyState(
             icon: Icons.error_outline,
-            title: 'Inbox unavailable',
+            title: context.strings.inboxUnavailable,
             message: _error!,
             action: TextButton(
               onPressed: repository == null ? _open : _load,
-              child: const Text('Retry'),
+              child: Text(context.strings.retry),
             ),
           ),
         )
@@ -129,13 +129,12 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
           child: Center(child: CircularProgressIndicator()),
         )
       else if (page.total == 0)
-        const SliverFillRemaining(
+        SliverFillRemaining(
           hasScrollBody: false,
           child: BEmptyState(
             icon: Icons.forum_outlined,
-            title: 'Your conversations will appear here',
-            message:
-                'No users observed yet. Start the bot to collect new private conversations.',
+            title: context.strings.yourConversationsWillAppearHere,
+            message: context.strings.noUsersObservedYetStartThe,
           ),
         )
       else
@@ -148,27 +147,24 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
               return BPanel(
                 key: ValueKey(user.id),
                 padding: EdgeInsets.zero,
-                onTap:
-                    () => Navigator.push(
-                      context,
-                      MaterialPageRoute<void>(
-                        builder:
-                            (_) => InboxConversationPage(
-                              repository: repository!,
-                              user: user,
-                              send:
-                                  (text) => repository.sendReply(
-                                    widget.bot.bot.api,
-                                    user.id,
-                                    text,
-                                  ),
-                              source: TelegramAttachmentSource(
-                                () => widget.bot.bot.api,
-                                widget.bot.token,
-                              ),
-                            ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => InboxConversationPage(
+                      repository: repository!,
+                      user: user,
+                      send: (text) => repository.sendReply(
+                        widget.bot.bot.api,
+                        user.id,
+                        text,
+                      ),
+                      source: TelegramAttachmentSource(
+                        () => widget.bot.bot.api,
+                        widget.bot.token,
                       ),
                     ),
+                  ),
+                ),
                 child: ListTile(
                   leading: CircleAvatar(
                     backgroundColor: BColors.of(context).subtle,
@@ -185,7 +181,7 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
                       user.username == null
                           ? '${user.id}'
                           : '@${user.username} · ${user.id}',
-                      DateFormat.yMd().add_Hm().format(
+                      context.formatDateAndTime(
                         DateTime.fromMillisecondsSinceEpoch(
                           user.lastInteraction * 1000,
                         ),
@@ -204,21 +200,20 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          '${widget.bot.name} · Users',
+          context.strings.inboxUsersTitle(widget.bot.name),
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           if (repository != null)
             IconButton(
-              tooltip: 'Inbox settings',
+              tooltip: context.strings.inboxSettings,
               icon: const Icon(Icons.settings_outlined),
-              onPressed:
-                  () => Navigator.push(
-                    context,
-                    MaterialPageRoute<void>(
-                      builder: (_) => InboxSettingsPage(repository: repository),
-                    ),
-                  ),
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => InboxSettingsPage(repository: repository),
+                ),
+              ),
             ),
         ],
       ),
@@ -247,26 +242,28 @@ class _InboxUsersPageState extends State<InboxUsersPage> {
                   child: Row(
                     children: [
                       IconButton(
-                        tooltip: 'Previous page',
-                        onPressed:
-                            page.page == 0
-                                ? null
-                                : () => _changePage(page.page - 1),
+                        tooltip: context.strings.previousPage,
+                        onPressed: page.page == 0
+                            ? null
+                            : () => _changePage(page.page - 1),
                         icon: const Icon(Icons.chevron_left),
                       ),
                       Expanded(
                         child: Text(
-                          'Page ${page.page + 1} of ${(page.total + inboxPageSize - 1) ~/ inboxPageSize} · ${page.total} users',
+                          context.strings.inboxPageSummary(
+                            '${page.page + 1}',
+                            '${(page.total + inboxPageSize - 1) ~/ inboxPageSize}',
+                            '${page.total}',
+                          ),
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
                       IconButton(
-                        tooltip: 'Next page',
-                        onPressed:
-                            !page.hasNext
-                                ? null
-                                : () => _changePage(page.page + 1),
+                        tooltip: context.strings.nextPage,
+                        onPressed: !page.hasNext
+                            ? null
+                            : () => _changePage(page.page + 1),
                         icon: const Icon(Icons.chevron_right),
                       ),
                     ],

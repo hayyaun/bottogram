@@ -1,10 +1,21 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+
+import '../l10n/strings.dart';
+
+enum InboxStorageProblem {
+  unavailable,
+  writeFailed;
+
+  String message(BuildContext context) => switch (this) {
+    unavailable => context.strings.inboxStorageUnavailable,
+    writeFailed => context.strings.inboxStorageWriteFailed,
+  };
+}
 
 class InboxDiagnostics {
-  static final notice = ValueNotifier<String?>(null);
-  static String? get error => notice.value;
+  static final notice = ValueNotifier<InboxStorageProblem?>(null);
+
   static void reportUnavailable() {
-    notice.value =
-        'Inbox storage could not be opened. Check free space and try again.';
+    notice.value = InboxStorageProblem.unavailable;
   }
 }

@@ -1,5 +1,6 @@
 import 'dart:convert';
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 
 import '../builder/parts.dart';
@@ -19,7 +20,8 @@ Future<String?> pickBuilderPart(
       shrinkWrap: true,
       children: [
         ListTile(title: Text(title)),
-        if (entries.isEmpty) const ListTile(title: Text('Nothing saved yet.')),
+        if (entries.isEmpty)
+          ListTile(title: Text(context.strings.nothingSavedYet)),
         for (final entry in entries.entries)
           ListTile(
             leading: const Icon(Icons.link),
@@ -39,12 +41,12 @@ Future<String?> nameBuilderPart(
   final result = await showBEntryDialog<bool>(
     context,
     title: title,
-    fieldLabel: 'Library name',
+    fieldLabel: context.strings.libraryName,
     initialType: true,
     initialText: initial ?? '',
-    action: 'Save',
+    action: context.strings.save,
     validate: (value) =>
-        value.trim().length > 80 ? 'Use up to 80 characters.' : null,
+        value.trim().length > 80 ? context.strings.useUpTo80Characters : null,
   );
   return result?.text.trim();
 }
@@ -83,7 +85,7 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
   List<List> get localRows => widget.localRows;
 
   Future<void> _save(BuildContext context, int index) async {
-    final label = await nameBuilderPart(context, 'Save button row');
+    final label = await nameBuilderPart(context, context.strings.saveButtonRow);
     if (label == null || !context.mounted) return;
     try {
       final id = BuilderParts.newId();
@@ -101,9 +103,9 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
   Future<void> _newRow(BuildContext context) async {
     final buttons = await _editButtons(context, [
       {'text': '', if (kind == BuilderParts.inline) 'callback_data': ''},
-    ], title: 'Create button row');
+    ], title: context.strings.createButtonRow);
     if (buttons == null || !context.mounted) return;
-    final label = await nameBuilderPart(context, 'Save button row');
+    final label = await nameBuilderPart(context, context.strings.saveButtonRow);
     if (label == null || !context.mounted) return;
     try {
       final id = BuilderParts.newId();
@@ -135,7 +137,7 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
           content: Text(
             error is BuilderFailure
                 ? error.message
-                : 'The button row could not be saved.',
+                : context.strings.theButtonRowCouldNotBe,
           ),
         ),
       );
@@ -145,7 +147,7 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
     final edited = await _editButtons(
       context,
       row,
-      title: 'Edit shared row',
+      title: context.strings.editSharedRow,
       shared: true,
     );
     if (edited == null || !context.mounted) return;
@@ -189,24 +191,27 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
                   onPressed: () => _save(context, index),
                   child: Text(
                     localRows.length == 1
-                        ? 'Save row to library'
-                        : 'Save row ${index + 1} to library',
+                        ? context.strings.saveRowToLibrary
+                        : context.strings.saveNumberedRow('${index + 1}'),
                   ),
                 ),
             TextButton.icon(
               icon: const Icon(Icons.add),
-              label: const Text('New shared row'),
+              label: Text(context.strings.newSharedRow),
               onPressed: () => _newRow(context),
             ),
             TextButton.icon(
               icon: const Icon(Icons.link),
-              label: const Text('Choose saved row'),
+              label: Text(context.strings.chooseSavedRow),
               onPressed: () async {
-                final id =
-                    await pickBuilderPart(context, 'Button row library', {
-                      for (final entry in rows.entries)
-                        if (_canLink(entry.value)) entry.key: entry.value,
-                    });
+                final id = await pickBuilderPart(
+                  context,
+                  context.strings.buttonRowLibrary,
+                  {
+                    for (final entry in rows.entries)
+                      if (_canLink(entry.value)) entry.key: entry.value,
+                  },
+                );
                 if (id != null && context.mounted) widget.onLink(id);
               },
             ),
@@ -225,13 +230,13 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
                 localRows[index].map((button) => button['text']).join(' · '),
               ),
               trailing: IconButton(
-                tooltip: 'Edit local row',
+                tooltip: context.strings.editLocalRow,
                 icon: const Icon(Icons.edit_outlined),
                 onPressed: () async {
                   final edited = await _editButtons(
                     context,
                     localRows[index].cast<Map>(),
-                    title: 'Edit local row',
+                    title: context.strings.editLocalRow,
                   );
                   if (edited != null && context.mounted) edit(index, edited);
                 },
@@ -242,7 +247,9 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
             dense: true,
             contentPadding: EdgeInsets.zero,
             leading: const Icon(Icons.link),
-            title: Text(rows[id]?['label'] as String? ?? 'Unavailable row'),
+            title: Text(
+              rows[id]?['label'] as String? ?? context.strings.unavailableRow,
+            ),
             subtitle: Text(
               (rows[id]?['buttons'] as List? ?? [])
                   .map((b) => b['text'])
@@ -252,12 +259,12 @@ class _BuilderRowLibraryState extends State<BuilderRowLibrary> {
               children: [
                 if (rows[id] case final row?)
                   IconButton(
-                    tooltip: 'Edit shared row',
+                    tooltip: context.strings.editSharedRow,
                     icon: const Icon(Icons.edit_outlined),
                     onPressed: () => _edit(context, id, row),
                   ),
                 IconButton(
-                  tooltip: 'Remove row link',
+                  tooltip: context.strings.removeRowLink,
                   icon: const Icon(Icons.link_off),
                   onPressed: () => widget.onUnlink(id),
                 ),
@@ -302,15 +309,15 @@ class _EditRowState extends State<_EditRow> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (widget.shared)
-                const Text('Saving updates every action linked to this row.'),
+                Text(context.strings.savingUpdatesEveryActionLinkedTo),
               for (final (index, button) in _buttons.indexed)
                 Column(
                   key: ValueKey(_keys[index]),
                   children: [
                     TextFormField(
                       initialValue: button['text'] as String?,
-                      decoration: const InputDecoration(
-                        labelText: 'Button text',
+                      decoration: InputDecoration(
+                        labelText: context.strings.buttonText,
                       ),
                       onChanged: (value) => button['text'] = value,
                       validator: _required,
@@ -320,8 +327,8 @@ class _EditRowState extends State<_EditRow> {
                         initialValue:
                             (button['url'] ?? button['callback_data'])
                                 as String?,
-                        decoration: const InputDecoration(
-                          labelText: 'Callback or URL',
+                        decoration: InputDecoration(
+                          labelText: context.strings.callbackOrURL,
                         ),
                         onChanged: (value) {
                           final previousUrl = button.remove('url');
@@ -342,7 +349,7 @@ class _EditRowState extends State<_EditRow> {
                           _buttons.removeAt(index);
                           _keys.removeAt(index);
                         }),
-                        child: const Text('Remove button'),
+                        child: Text(context.strings.removeButton),
                       ),
                   ],
                 ),
@@ -352,7 +359,7 @@ class _EditRowState extends State<_EditRow> {
                     _buttons.add({'text': '', if (inline) 'callback_data': ''});
                     _keys.add(_next++);
                   }),
-                  child: const Text('Add button'),
+                  child: Text(context.strings.addButton),
                 ),
             ],
           ),
@@ -362,17 +369,17 @@ class _EditRowState extends State<_EditRow> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.strings.cancel),
       ),
       FilledButton(
         onPressed: () {
           if (_form.currentState!.validate()) Navigator.pop(context, _buttons);
         },
-        child: const Text('Save changes'),
+        child: Text(context.strings.saveChanges),
       ),
     ],
   );
 
   String? _required(String? text) =>
-      text?.trim().isNotEmpty == true ? null : 'Enter a value.';
+      text?.trim().isNotEmpty == true ? null : context.strings.enterAValue;
 }

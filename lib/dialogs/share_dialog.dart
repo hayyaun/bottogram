@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +29,7 @@ class _ShareDialogState extends State<ShareDialog> {
     }
     setState(() {
       _sharing = false;
-      _error = store.lastError ?? 'The bots could not be shared. Try again.';
+      _error = store.lastError ?? context.strings.theBotsCouldNotBeShared;
     });
   }
 
@@ -40,7 +41,7 @@ class _ShareDialogState extends State<ShareDialog> {
         if (bot.setup?.usesPlugin != true && bot.setupError == null) index,
     };
     return AlertDialog(
-      title: const Text('Share bots'),
+      title: Text(context.strings.shareBots),
       content: SizedBox(
         width: 440,
         child: SingleChildScrollView(
@@ -48,47 +49,42 @@ class _ShareDialogState extends State<ShareDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const Text(
-                'Shared files include Telegram bot tokens. Choose who you share them with.',
-              ),
+              Text(context.strings.sharedFilesIncludeTelegramBotTokens),
               const SizedBox(height: 16),
-              if (bots.isEmpty) const Text('Create a bot before sharing.'),
+              if (bots.isEmpty) Text(context.strings.createABotBeforeSharing),
               for (final (index, bot) in bots.indexed)
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(bot.name),
                   value: _selected.contains(index),
-                  subtitle:
-                      exportable.contains(index)
-                          ? null
-                          : Text(
-                            bot.setup?.usesPlugin == true
-                                ? 'Share this plugin bot as a QR code from its settings.'
-                                : 'Complete this bot’s setup before exporting.',
-                          ),
-                  onChanged:
-                      _sharing || !exportable.contains(index)
-                          ? null
-                          : (value) => setState(() {
-                            value == true
-                                ? _selected.add(index)
-                                : _selected.remove(index);
-                          }),
+                  subtitle: exportable.contains(index)
+                      ? null
+                      : Text(
+                          bot.setup?.usesPlugin == true
+                              ? context.strings.shareThisPluginBotAsA
+                              : context.strings.completeThisBotSSetupBefore,
+                        ),
+                  onChanged: _sharing || !exportable.contains(index)
+                      ? null
+                      : (value) => setState(() {
+                          value == true
+                              ? _selected.add(index)
+                              : _selected.remove(index);
+                        }),
                 ),
               if (exportable.isNotEmpty)
                 Align(
-                  alignment: Alignment.centerLeft,
+                  alignment: AlignmentDirectional.centerStart,
                   child: TextButton.icon(
-                    onPressed:
-                        _sharing
-                            ? null
-                            : () => setState(() {
-                              _selected
-                                ..clear()
-                                ..addAll(exportable);
-                            }),
+                    onPressed: _sharing
+                        ? null
+                        : () => setState(() {
+                            _selected
+                              ..clear()
+                              ..addAll(exportable);
+                          }),
                     icon: const Icon(Icons.select_all),
-                    label: const Text('Select all'),
+                    label: Text(context.strings.selectAll),
                   ),
                 ),
               if (_error != null) BNotice(message: _error!, error: true),
@@ -99,12 +95,14 @@ class _ShareDialogState extends State<ShareDialog> {
       actions: [
         TextButton(
           onPressed: _sharing ? null : () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          child: Text(context.strings.cancel),
         ),
         FilledButton.icon(
           onPressed: _sharing || _selected.isEmpty ? null : _share,
           icon: const Icon(Icons.ios_share_outlined, size: 18),
-          label: Text(_sharing ? 'Sharing…' : 'Share selected'),
+          label: Text(
+            _sharing ? context.strings.sharing : context.strings.shareSelected,
+          ),
         ),
       ],
     );

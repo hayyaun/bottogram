@@ -1,4 +1,6 @@
 import 'dart:convert';
+
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../ui/design.dart';
@@ -74,12 +76,12 @@ class _DatabaseBrowserPageState extends State<DatabaseBrowserPage> {
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          '${widget.botName} · Database',
+          context.strings.botDatabaseTitle(widget.botName),
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           IconButton(
-            tooltip: 'Refresh tables',
+            tooltip: context.strings.refreshTables,
             onPressed: _loading ? null : _load,
             icon: const Icon(Icons.refresh),
           ),
@@ -96,15 +98,15 @@ class _DatabaseBrowserPageState extends State<DatabaseBrowserPage> {
                 const _ReadOnlyLabel(),
                 const SizedBox(height: 14),
                 TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Find a table',
+                  decoration: InputDecoration(
+                    labelText: context.strings.findATable,
                     prefixIcon: Icon(Icons.search),
                   ),
                   onChanged: (value) => setState(() => _search = value),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  '${_tables.length} ${_tables.length == 1 ? 'table' : 'tables'} · counts load as tables become visible',
+                  context.strings.tableCount(_tables.length),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
@@ -114,15 +116,15 @@ class _DatabaseBrowserPageState extends State<DatabaseBrowserPage> {
           if (_error != null) _ErrorNotice(message: _error!, retry: _load),
           Expanded(
             child: _loading && _tables.isEmpty
-                ? const Center(child: Text('Opening database…'))
+                ? Center(child: Text(context.strings.openingDatabase))
                 : visible.isEmpty
                 ? Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Text(
                         _tables.isEmpty
-                            ? 'No tables yet. Tables will appear when this bot stores data.'
-                            : 'No tables match this name.',
+                            ? context.strings.noTablesYetTablesWillAppear
+                            : context.strings.noTablesMatchThisName,
                       ),
                     ),
                   )
@@ -154,16 +156,22 @@ class _DatabaseBrowserPageState extends State<DatabaseBrowserPage> {
                           ),
                           builder: (context, snapshot) {
                             final suffix = table.internal
-                                ? ' · Internal table'
+                                ? context.strings.internalTableSuffix
                                 : '';
                             if (snapshot.hasError) {
-                              return Text('Count unavailable$suffix');
+                              return Text(
+                                context.strings.countUnavailableWithSuffix(
+                                  suffix,
+                                ),
+                              );
                             }
                             if (!snapshot.hasData) {
-                              return Text('Counting rows…$suffix');
+                              return Text(
+                                context.strings.countingRowsWithSuffix(suffix),
+                              );
                             }
                             return Text(
-                              '${snapshot.data} ${snapshot.data == 1 ? 'row' : 'rows'}$suffix',
+                              context.strings.rowCount(snapshot.data!, suffix),
                             );
                           },
                         ),
@@ -256,7 +264,7 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
       }
     } catch (_) {
       if (mounted && generation == _countGeneration) {
-        setState(() => _countError = 'Count unavailable');
+        setState(() => _countError = context.strings.countUnavailable);
       }
     }
   }
@@ -334,7 +342,7 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${widget.table.name} · Structure'),
+        title: Text(context.strings.tableStructureTitle(widget.table.name)),
         content: SizedBox(
           width: 740,
           child: SingleChildScrollView(
@@ -345,12 +353,12 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Column')),
-                      DataColumn(label: Text('Type')),
-                      DataColumn(label: Text('Required')),
-                      DataColumn(label: Text('Primary key')),
-                      DataColumn(label: Text('Default')),
+                    columns: [
+                      DataColumn(label: Text(context.strings.column)),
+                      DataColumn(label: Text(context.strings.typeLabel)),
+                      DataColumn(label: Text(context.strings.requiredLabel)),
+                      DataColumn(label: Text(context.strings.primaryKey)),
+                      DataColumn(label: Text(context.strings.defaultLabel)),
                     ],
                     rows: [
                       for (final column in schema.columns)
@@ -358,9 +366,19 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
                           cells: [
                             DataCell(SelectableText(column.name)),
                             DataCell(
-                              Text(column.type.isEmpty ? 'Any' : column.type),
+                              Text(
+                                column.type.isEmpty
+                                    ? context.strings.any
+                                    : column.type,
+                              ),
                             ),
-                            DataCell(Text(column.notNull ? 'Yes' : 'No')),
+                            DataCell(
+                              Text(
+                                column.notNull
+                                    ? context.strings.yes
+                                    : context.strings.no,
+                              ),
+                            ),
                             DataCell(
                               Text(
                                 column.primaryKey == 0
@@ -384,18 +402,21 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                Text('Indexes', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  context.strings.indexes,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 if (schema.indexes.isEmpty)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: 8),
-                    child: Text('No indexes'),
+                    child: Text(context.strings.noIndexes),
                   ),
                 for (final index in schema.indexes)
                   ListTile(
                     contentPadding: EdgeInsets.zero,
                     title: SelectableText(index.name),
                     subtitle: Text(
-                      '${index.unique ? 'Unique · ' : ''}${index.columns.isEmpty ? 'Expression index' : index.columns.join(', ')}',
+                      '${index.unique ? context.strings.uniqueIndexPrefix : ''}${index.columns.isEmpty ? context.strings.expressionIndex : index.columns.join(', ')}',
                     ),
                   ),
               ],
@@ -405,7 +426,7 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(context.strings.close),
           ),
         ],
       ),
@@ -420,12 +441,12 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
         title: Text(widget.table.name, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
-            tooltip: 'Table structure',
+            tooltip: context.strings.tableStructure,
             onPressed: _schema == null ? null : _structure,
             icon: const Icon(Icons.account_tree_outlined),
           ),
           IconButton(
-            tooltip: 'Refresh data',
+            tooltip: context.strings.refreshData,
             onPressed: _loading
                 ? null
                 : () {
@@ -449,7 +470,7 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '${widget.botName} · ${_count == null ? _countError ?? 'Counting rows…' : '$_count total rows'}',
+                  '${widget.botName} · ${_count == null ? _countError ?? context.strings.countingRows : context.strings.totalRows('$_count')}',
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 8),
@@ -460,16 +481,18 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
                       onPressed: _schema == null ? null : _filter,
                       icon: const Icon(Icons.filter_list, size: 18),
                       label: Text(
-                        _filterColumn == null ? 'Filter' : 'Filtered',
+                        _filterColumn == null
+                            ? context.strings.filter
+                            : context.strings.filtered,
                       ),
                     ),
                   ],
                 ),
                 if (_filterColumn != null)
                   InputChip(
-                    deleteButtonTooltipMessage: 'Clear filter',
+                    deleteButtonTooltipMessage: context.strings.clearFilter,
                     label: Text(
-                      '$_filterColumn · ${_operatorLabel(_filterOperator)}${_filterOperator == DatabaseFilterOperator.isNull || _filterOperator == DatabaseFilterOperator.isNotNull ? '' : ' · $_filterValue'}',
+                      '$_filterColumn · ${_operatorLabel(context, _filterOperator)}${_filterOperator == DatabaseFilterOperator.isNull || _filterOperator == DatabaseFilterOperator.isNotNull ? '' : ' · $_filterValue'}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -495,12 +518,12 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
                 ? Center(
                     child: Text(
                       _loading
-                          ? 'Loading rows…'
-                          : 'Data is unavailable. Refresh to try again.',
+                          ? context.strings.loadingRows
+                          : context.strings.dataIsUnavailableRefreshToTry,
                     ),
                   )
                 : page.rows.isEmpty
-                ? const Center(child: Text('No rows to display.'))
+                ? Center(child: Text(context.strings.noRowsToDisplay))
                 : _grid(page),
           ),
           _pagination(page),
@@ -572,7 +595,7 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
                               SizedBox(
                                 width: 180,
                                 child: Align(
-                                  alignment: Alignment.centerLeft,
+                                  alignment: AlignmentDirectional.centerStart,
                                   child: Text(
                                     _display(row[column]),
                                     maxLines: 2,
@@ -613,7 +636,7 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
           Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Text('Rows'),
+              Text(context.strings.rows),
               const SizedBox(width: 8),
               DropdownButton<int>(
                 value: _limit,
@@ -637,11 +660,11 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
             children: [
               Text(
                 page == null || page.rows.isEmpty
-                    ? '0 shown'
+                    ? context.strings.label0Shown
                     : '${_offset + 1}–${_offset + page.rows.length}',
               ),
               IconButton(
-                tooltip: 'Previous page',
+                tooltip: context.strings.previousPage,
                 onPressed: _loading || _offset == 0
                     ? null
                     : () {
@@ -651,7 +674,7 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
                 icon: const Icon(Icons.chevron_left),
               ),
               IconButton(
-                tooltip: 'Next page',
+                tooltip: context.strings.nextPage,
                 onPressed: _loading || page?.hasMore != true
                     ? null
                     : () {
@@ -695,11 +718,11 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
               await Clipboard.setData(ClipboardData(text: content));
             },
             icon: const Icon(Icons.copy, size: 18),
-            label: const Text('Copy'),
+            label: Text(context.strings.copy),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+            child: Text(context.strings.close),
           ),
         ],
       ),
@@ -710,12 +733,13 @@ class _DatabaseTablePageState extends State<DatabaseTablePage> {
 String _message(Object error) => error is DatabaseBrowseException
     ? error.message
     : 'The database could not be read. Refresh and try again.';
-String _operatorLabel(DatabaseFilterOperator operator) => switch (operator) {
-  DatabaseFilterOperator.equals => 'equals',
-  DatabaseFilterOperator.contains => 'contains',
-  DatabaseFilterOperator.isNull => 'is NULL',
-  DatabaseFilterOperator.isNotNull => 'is not NULL',
-};
+String _operatorLabel(BuildContext context, DatabaseFilterOperator operator) =>
+    switch (operator) {
+      DatabaseFilterOperator.equals => context.strings.equals,
+      DatabaseFilterOperator.contains => context.strings.contains,
+      DatabaseFilterOperator.isNull => context.strings.isNULL,
+      DatabaseFilterOperator.isNotNull => context.strings.isNotNULL,
+    };
 Uint8List? _blob(Object? value) {
   if (value is Uint8List) return value;
   if (value is Map && value.length == 1 && value['base64'] is String) {
@@ -767,7 +791,10 @@ class _ReadOnlyLabel extends StatelessWidget {
       ),
       const SizedBox(width: 6),
       Flexible(
-        child: Text('Read only', style: Theme.of(context).textTheme.bodySmall),
+        child: Text(
+          context.strings.readOnly,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
       ),
     ],
   );
@@ -784,7 +811,7 @@ class _ErrorNotice extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         BNotice(message: message, error: true),
-        TextButton(onPressed: retry, child: const Text('Try again')),
+        TextButton(onPressed: retry, child: Text(context.strings.tryAgain)),
       ],
     ),
   );
@@ -823,7 +850,7 @@ class _FilterDialogState extends State<_FilterDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Filter rows'),
+    title: Text(context.strings.filterRows),
     content: SizedBox(
       width: 420,
       child: SingleChildScrollView(
@@ -833,7 +860,7 @@ class _FilterDialogState extends State<_FilterDialog> {
             DropdownButtonFormField<String>(
               initialValue: _column,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Column'),
+              decoration: InputDecoration(labelText: context.strings.column),
               items: [
                 for (final c in widget.columns)
                   DropdownMenuItem(
@@ -849,10 +876,15 @@ class _FilterDialogState extends State<_FilterDialog> {
             DropdownButtonFormField<DatabaseFilterOperator>(
               initialValue: _operator,
               isExpanded: true,
-              decoration: const InputDecoration(labelText: 'Comparison'),
+              decoration: InputDecoration(
+                labelText: context.strings.comparison,
+              ),
               items: [
                 for (final op in DatabaseFilterOperator.values)
-                  DropdownMenuItem(value: op, child: Text(_operatorLabel(op))),
+                  DropdownMenuItem(
+                    value: op,
+                    child: Text(_operatorLabel(context, op)),
+                  ),
               ],
               onChanged: (value) {
                 if (value != null) setState(() => _operator = value);
@@ -864,9 +896,9 @@ class _FilterDialogState extends State<_FilterDialog> {
               TextField(
                 controller: _value,
                 maxLength: 4096,
-                decoration: const InputDecoration(
-                  labelText: 'Value',
-                  helperText: 'Text is matched literally.',
+                decoration: InputDecoration(
+                  labelText: context.strings.value,
+                  helperText: context.strings.textIsMatchedLiterally,
                 ),
               ),
             ],
@@ -877,14 +909,14 @@ class _FilterDialogState extends State<_FilterDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.strings.cancel),
       ),
       FilledButton(
         onPressed: () => Navigator.pop(
           context,
           _FilterSelection(_column, _operator, _value.text),
         ),
-        child: const Text('Apply'),
+        child: Text(context.strings.apply),
       ),
     ],
   );

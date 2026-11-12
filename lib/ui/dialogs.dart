@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 
 class BEntry<T> {
@@ -78,7 +79,9 @@ class _EntryDialogState<T> extends State<_EntryDialog<T>> {
                 DropdownButtonFormField<T>(
                   initialValue: _type,
                   isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Type'),
+                  decoration: InputDecoration(
+                    labelText: context.strings.typeLabel,
+                  ),
                   items: [
                     for (final entry in widget.types.entries)
                       DropdownMenuItem(
@@ -99,7 +102,7 @@ class _EntryDialogState<T> extends State<_EntryDialog<T>> {
                 onFieldSubmitted: (_) => _save(),
                 decoration: InputDecoration(labelText: widget.fieldLabel),
                 validator: (value) => value == null || value.trim().isEmpty
-                    ? 'Enter a value.'
+                    ? context.strings.enterAValue
                     : widget.validate?.call(value),
               ),
             ],
@@ -110,7 +113,7 @@ class _EntryDialogState<T> extends State<_EntryDialog<T>> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.strings.cancel),
       ),
       FilledButton(onPressed: _save, child: Text(widget.action)),
     ],
@@ -131,7 +134,7 @@ Future<bool> confirmRemoval(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.strings.cancel),
           ),
           FilledButton(
             style: FilledButton.styleFrom(

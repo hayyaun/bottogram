@@ -1,17 +1,17 @@
 import 'dart:async';
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:bottogram/ui/design.dart';
 
 import 'models.dart';
 import 'repository.dart';
 
-String formatInboxBytes(int bytes) =>
-    bytes < 1024
-        ? '$bytes B'
-        : bytes < mib
-        ? '${(bytes / 1024).toStringAsFixed(1)} KiB'
-        : '${(bytes / mib).toStringAsFixed(2)} MiB';
+String formatInboxBytes(int bytes) => bytes < 1024
+    ? '$bytes B'
+    : bytes < mib
+    ? '${(bytes / 1024).toStringAsFixed(1)} KiB'
+    : '${(bytes / mib).toStringAsFixed(2)} MiB';
 
 class InboxSettingsPage extends StatefulWidget {
   const InboxSettingsPage({super.key, required this.repository});
@@ -43,11 +43,7 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
       if (mounted) setState(() => _usage = usage);
     } catch (_) {
       if (mounted) {
-        setState(
-          () =>
-              _error =
-                  'Could not read cache usage. Check free space and try again.',
-        );
+        setState(() => _error = context.strings.couldNotReadCacheUsageCheck);
       }
     }
   }
@@ -63,11 +59,9 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is InboxException
-                      ? error.message
-                      : 'Cache storage could not be updated. Check free space and try again.',
+          () => _error = error is InboxException
+              ? error.message
+              : context.strings.cacheStorageCouldNotBeUpdated,
         );
       }
     } finally {
@@ -78,24 +72,22 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
   Future<void> _clear() async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Permanently clear message cache?'),
-            content: const Text(
-              'All retained messages and downloaded attachments for this bot will be removed. '
-              'Telegram cannot restore these messages. The user list, bot configuration, and cache limit will remain.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: const Text('Clear cache'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text(context.strings.permanentlyClearMessageCache),
+        content: Text(
+          context.strings.allRetainedMessagesAndDownloadedAttachments,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(context.strings.cancel),
           ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(context.strings.clearCache),
+          ),
+        ],
+      ),
     );
     if (confirmed == true && mounted) await _run(widget.repository.clearCache);
   }
@@ -109,7 +101,7 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Inbox settings')),
+    appBar: AppBar(title: Text(context.strings.inboxSettings)),
     body: SingleChildScrollView(
       keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       child: BContent(
@@ -117,34 +109,34 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const BHeading(
-              title: 'Storage & cache',
-              subtitle:
-                  'Control how much conversation history stays on this device.',
+            BHeading(
+              title: context.strings.storageCache,
+              subtitle: context.strings.controlHowMuchConversationHistoryStays,
             ),
             const SizedBox(height: 28),
             BPanel(
               child: BSection(
-                title: 'Message cache',
+                title: context.strings.messageCache,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
                       _usage == null
-                          ? 'Reading usage…'
-                          : '${formatInboxBytes(_usage!.cacheBytes)} used of ${widget.repository.settings.limitMiB} MiB',
+                          ? context.strings.readingUsage
+                          : context.strings.cacheUsage(
+                              formatInboxBytes(_usage!.cacheBytes),
+                              '${widget.repository.settings.limitMiB}',
+                            ),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
                     LinearProgressIndicator(
-                      value:
-                          _usage == null
-                              ? null
-                              : (_usage!.cacheBytes /
-                                      (widget.repository.settings.limitMiB *
-                                          mib))
-                                  .clamp(0.0, 1.0)
-                                  .toDouble(),
+                      value: _usage == null
+                          ? null
+                          : (_usage!.cacheBytes /
+                                    (widget.repository.settings.limitMiB * mib))
+                                .clamp(0.0, 1.0)
+                                .toDouble(),
                       minHeight: 6,
                       borderRadius: BorderRadius.circular(4),
                     ),
@@ -153,30 +145,29 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
                       controller: _limit,
                       enabled: !_busy,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Cache limit (MiB)',
-                        helperText: '1–512 MiB per bot · default 10 MiB',
+                      decoration: InputDecoration(
+                        labelText: context.strings.cacheLimitMiB,
+                        helperText: context.strings.label1512MiBPerBotDefault,
                       ),
                     ),
                     const SizedBox(height: 20),
                     FilledButton(
-                      onPressed:
-                          _busy
-                              ? null
-                              : () => _run(() async {
-                                final value = int.tryParse(_limit.text.trim());
-                                if (value == null) {
-                                  throw const InboxException(
-                                    'Enter a whole number from 1 to 512 MiB.',
-                                  );
-                                }
-                                await widget.repository.setLimit(value);
-                              }),
-                      child: const Text('Save limit'),
+                      onPressed: _busy
+                          ? null
+                          : () => _run(() async {
+                              final value = int.tryParse(_limit.text.trim());
+                              if (value == null) {
+                                throw InboxException(
+                                  context.strings.enterAWholeNumberFrom1,
+                                );
+                              }
+                              await widget.repository.setLimit(value);
+                            }),
+                      child: Text(context.strings.saveLimit),
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Keeps up to 20 recent messages per conversation within the shared budget. Attachments download only when opened. Old attachments are removed first, then old messages. Lowering the limit removes excess cached content immediately.',
+                      context.strings.keepsUpTo20RecentMessages,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -186,16 +177,21 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
             const SizedBox(height: 20),
             BPanel(
               child: BSection(
-                title: 'User directory',
+                title: context.strings.userDirectory,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      'User directory: ${_usage == null ? '…' : formatInboxBytes(_usage!.directoryBytes)} · ${_usage?.userCount ?? 0} known users',
+                      context.strings.userDirectorySummary(
+                        _usage == null
+                            ? '…'
+                            : formatInboxBytes(_usage!.directoryBytes),
+                        '${_usage?.userCount ?? 0}',
+                      ),
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'User IDs, names, last interaction times, and settings are stored separately from the message cache. Brief extra space may be needed when writing or reclaiming storage.',
+                      context.strings.userIDsNamesLastInteractionTimes,
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -209,7 +205,7 @@ class _InboxSettingsPageState extends State<InboxSettingsPage> {
                 foregroundColor: BColors.of(context).error,
               ),
               icon: const Icon(Icons.delete_sweep_outlined),
-              label: const Text('Clear message cache'),
+              label: Text(context.strings.clearMessageCache),
             ),
             if (_busy)
               const Padding(

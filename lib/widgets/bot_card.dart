@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/pages/bot.dart';
 import 'package:bottogram/inbox/users_page.dart';
 import 'package:bottogram/plugins/manifest.dart';
@@ -47,7 +48,7 @@ class _BotCardState extends State<BotCard> {
         context.showSnackBar(
           error is PluginException
               ? error.message
-              : 'The bot could not be started or stopped. Check its connection.',
+              : context.strings.theBotCouldNotBeStarted2,
         );
       }
     } finally {
@@ -77,7 +78,7 @@ class _BotCardState extends State<BotCard> {
     );
     final status = bot.setupError != null || error != null
         ? Tooltip(
-            message: 'View bot error',
+            message: context.strings.viewBotError,
             child: TextButton(
               onPressed: () => _settings(focusError: true),
               style: TextButton.styleFrom(
@@ -87,7 +88,7 @@ class _BotCardState extends State<BotCard> {
                 tapTargetSize: MaterialTapTargetSize.padded,
               ),
               child: BStatus(
-                label: 'Needs attention',
+                label: context.strings.needsAttention,
                 color: BColors.of(context).error,
                 background: BColors.of(context).errorWash,
               ),
@@ -95,17 +96,17 @@ class _BotCardState extends State<BotCard> {
           )
         : setupOnly
         ? BStatus(
-            label: 'Setup only',
+            label: context.strings.setupOnly,
             color: BColors.of(context).warning,
             background: BColors.of(context).warningWash,
           )
         : bot.active
         ? BStatus(
-            label: 'Active',
+            label: context.strings.active,
             color: BColors.of(context).success,
             background: BColors.of(context).successWash,
           )
-        : const BStatus(label: 'Stopped');
+        : BStatus(label: context.strings.stopped);
     final compact = widget.compact;
     final theme = Theme.of(context).textTheme;
     final colors = BColors.of(context);
@@ -133,13 +134,17 @@ class _BotCardState extends State<BotCard> {
         style: compact ? theme.titleMedium : theme.headlineSmall,
       ),
     );
-    final kind = plugin ? setup!.pluginName ?? 'Plugin bot' : 'Manual bot';
-    final summary =
-        '${bot.events.length} ${bot.events.length == 1 ? 'event' : 'events'} · $actions ${actions == 1 ? 'action' : 'actions'}';
+    final kind = plugin
+        ? setup!.pluginName ?? context.strings.pluginBot
+        : context.strings.manualBot;
+    final summary = context.strings.botEventAndActionCount(
+      bot.events.length,
+      actions,
+    );
     final updateButton = update == null
         ? null
         : Tooltip(
-            message: 'Review version ${update.version}',
+            message: context.strings.reviewPluginVersion(update.version),
             child: TextButton(
               onPressed: () => _settings(focusPluginUpdate: true),
               style: TextButton.styleFrom(
@@ -147,24 +152,24 @@ class _BotCardState extends State<BotCard> {
                 padding: EdgeInsets.zero,
                 alignment: AlignmentDirectional.centerStart,
               ),
-              child: const Text('Update available'),
+              child: Text(context.strings.updateAvailable),
             ),
           );
     final controls = [
       IconButton(
-        tooltip: 'Bot settings',
+        tooltip: context.strings.botSettings,
         onPressed: _settings,
         icon: Icon(Icons.settings_outlined, size: compact ? 22 : 24),
       ),
       if (compact) const SizedBox(width: 4),
       IconButton.outlined(
         tooltip: setupOnly
-            ? 'Configure plugin'
+            ? context.strings.configurePlugin
             : bot.active
-            ? 'Stop bot'
+            ? context.strings.stopBot
             : bot.resumeOnLaunch
-            ? 'Turn off auto-start'
-            : 'Start bot',
+            ? context.strings.turnOffAutoStart
+            : context.strings.startBot,
         onPressed: _busy
             ? null
             : setupOnly
@@ -259,7 +264,10 @@ class _BotCardState extends State<BotCard> {
             children: [
               icon,
               Expanded(
-                child: Align(alignment: Alignment.centerRight, child: status),
+                child: Align(
+                  alignment: AlignmentDirectional.centerEnd,
+                  child: status,
+                ),
               ),
             ],
           ),
@@ -283,7 +291,7 @@ class _BotCardState extends State<BotCard> {
                     else ...[
                       const SizedBox(height: 4),
                       Text(
-                        plugin ? 'Open users and inbox' : summary,
+                        plugin ? context.strings.openUsersAndInbox : summary,
                         style: BottogramDesign.text(13, color: colors.muted),
                       ),
                     ],

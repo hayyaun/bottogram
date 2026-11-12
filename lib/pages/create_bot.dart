@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/plugins_page.dart';
 import 'package:bottogram/plugins/repository.dart';
@@ -86,7 +87,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
         setState(
           () => _error = error is PluginException
               ? error.message
-              : 'The bot could not be saved. Your draft is still here.',
+              : context.strings.theBotCouldNotBeSaved,
         );
       }
     } finally {
@@ -96,16 +97,15 @@ class _CreateBotPageState extends State<CreateBotPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Create bot')),
+    appBar: AppBar(title: Text(context.strings.createBot)),
     body: FutureBuilder<void>(
       future: _ready,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const BEmptyState(
+          return BEmptyState(
             icon: Icons.folder_off_outlined,
-            title: 'Settings unavailable',
-            message:
-                'Bot settings storage could not be opened. Reopen Bottogram to try again.',
+            title: context.strings.settingsUnavailable,
+            message: context.strings.botSettingsStorageCouldNotBe,
           );
         }
         if (snapshot.connectionState != ConnectionState.done) {
@@ -122,17 +122,17 @@ class _CreateBotPageState extends State<CreateBotPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const BHeading(
-                      title: 'Bot setup',
+                    BHeading(
+                      title: context.strings.botSetup,
                       subtitle:
-                          'Connect your Telegram bot, then choose how to configure it.',
+                          context.strings.connectYourTelegramBotThenChoose,
                     ),
                     const SizedBox(height: 32),
                     BPanel(
                       child: BSection(
-                        title: 'Telegram details',
+                        title: context.strings.telegramDetails,
                         description:
-                            'These details belong to every bot, with or without a plugin.',
+                            context.strings.theseDetailsBelongToEveryBot,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -140,46 +140,52 @@ class _CreateBotPageState extends State<CreateBotPage> {
                               controller: _name,
                               maxLength: 100,
                               textInputAction: TextInputAction.next,
-                              decoration: const InputDecoration(
-                                labelText: 'Bot name',
-                                hintText: 'A name you will recognize',
+                              decoration: InputDecoration(
+                                labelText: context.strings.botName,
+                                hintText: context.strings.aNameYouWillRecognize,
                               ),
                               validator: (value) =>
                                   value == null || value.trim().isEmpty
-                                  ? 'Enter a bot name.'
+                                  ? context.strings.enterABotName
                                   : null,
                             ),
-                            const _SetupHelp(
-                              label: 'Help with the Telegram bot token',
-                              title: 'Get a Telegram bot token',
-                              description:
-                                  'Open @BotFather in Telegram and send /newbot. Choose a name and username, then copy the token from BotFather’s final reply.',
+                            _SetupHelp(
+                              label:
+                                  context.strings.helpWithTheTelegramBotToken,
+                              title: context.strings.getATelegramBotToken,
+                              description: context
+                                  .strings
+                                  .openBotFatherInTelegramAndSend,
                               illustration:
                                   'assets/help/telegram_bot_token.png',
                               illustrationLabel:
-                                  'BotFather’s final reply with the token masked',
+                                  context.strings.botfatherSFinalReplyWithThe,
                             ),
                             SecretFormField(
                               controller: _token,
-                              label: 'Telegram bot token',
+                              label: context.strings.telegramBotToken,
                               secret: true,
                               helpText:
-                                  'Create a bot with BotFather in Telegram to get its token.',
+                                  context.strings.createABotWithBotFatherIn,
                               validator: (value) =>
                                   RegExp(
                                     r'^[0-9]+:[A-Za-z0-9_-]+$',
                                   ).hasMatch(value?.trim() ?? '')
                                   ? null
-                                  : 'Enter the Telegram bot token from BotFather.',
+                                  : context
+                                        .strings
+                                        .enterTheTelegramBotTokenFrom,
                             ),
-                            const _SetupHelp(
-                              label: 'Help with admin IDs',
-                              title: 'Find your Telegram user ID',
-                              description:
-                                  'Open @userinfobot from the Telegram account that will administer the bot. Send /start and copy the numeric user ID from its reply.',
+                            _SetupHelp(
+                              label: context.strings.helpWithAdminIDs,
+                              title: context.strings.findYourTelegramUserID,
+                              description: context
+                                  .strings
+                                  .openUserinfobotFromTheTelegramAccount,
                               illustration: 'assets/help/telegram_admin_id.png',
-                              illustrationLabel:
-                                  'Example reply showing a numeric Telegram user ID',
+                              illustrationLabel: context
+                                  .strings
+                                  .exampleReplyShowingANumericTelegram,
                             ),
                             AdminIdsField(controller: _admin),
                           ],
@@ -189,9 +195,8 @@ class _CreateBotPageState extends State<CreateBotPage> {
                     const SizedBox(height: 20),
                     BPanel(
                       child: BSection(
-                        title: 'Setup method',
-                        description:
-                            'Build your own actions or use an installed plugin.',
+                        title: context.strings.setupMethod,
+                        description: context.strings.buildYourOwnActionsOrUse,
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
@@ -205,14 +210,14 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                     initialValue:
                                         _plugin?.storageKey ?? 'manual',
                                     isExpanded: true,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Setup method',
+                                    decoration: InputDecoration(
+                                      labelText: context.strings.setupMethod,
                                       prefixIcon: Icon(Icons.tune_rounded),
                                     ),
                                     items: [
-                                      const DropdownMenuItem(
+                                      DropdownMenuItem(
                                         value: 'manual',
-                                        child: Text('Manual'),
+                                        child: Text(context.strings.manual),
                                       ),
                                       for (final plugin
                                           in widget.plugins.installed)
@@ -229,7 +234,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                   ),
                             ),
                             Align(
-                              alignment: Alignment.centerRight,
+                              alignment: AlignmentDirectional.centerEnd,
                               child: TextButton.icon(
                                 icon: const Icon(
                                   Icons.extension_outlined,
@@ -246,7 +251,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                   );
                                   if (mounted) setState(() {});
                                 },
-                                label: const Text('Manage plugins'),
+                                label: Text(context.strings.managePlugins),
                               ),
                             ),
                             if (_plugin != null) ...[
@@ -259,12 +264,18 @@ class _CreateBotPageState extends State<CreateBotPage> {
                               BNotice(
                                 icon: Icons.lock_outline_rounded,
                                 message: _plugin!.executable
-                                    ? 'Credentials are saved securely. Start the bot after creating it to run its automations.'
-                                    : 'Settings will be saved securely. This plugin version is setup-only.',
+                                    ? context
+                                          .strings
+                                          .credentialsAreSavedSecurelyStartThe
+                                    : context
+                                          .strings
+                                          .settingsWillBeSavedSecurelyThis,
                               ),
                             ] else
-                              const Text(
-                                'Add events, replies, and keyboards after creating this bot.',
+                              Text(
+                                context
+                                    .strings
+                                    .addEventsRepliesAndKeyboardsAfter,
                               ),
                           ],
                         ),
@@ -284,7 +295,11 @@ class _CreateBotPageState extends State<CreateBotPage> {
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Icon(Icons.add),
-                      label: Text(_saving ? 'Saving…' : 'Create bot'),
+                      label: Text(
+                        _saving
+                            ? context.strings.saving
+                            : context.strings.createBot,
+                      ),
                     ),
                     const SizedBox(height: 24),
                   ],
@@ -347,7 +362,7 @@ class _SetupHelp extends StatelessWidget {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
-              child: const Text('Done'),
+              child: Text(context.strings.done),
             ),
           ],
         ),

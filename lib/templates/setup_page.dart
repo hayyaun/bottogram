@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../builder/values.dart';
@@ -96,7 +97,7 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
               ? error.message
               : error is PluginException
               ? error.message
-              : 'The bot could not be created. Your settings are still here.',
+              : context.strings.theBotCouldNotBeCreated,
         );
       }
     } finally {
@@ -124,7 +125,7 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                 ),
                 ExpansionTile(
                   tilePadding: EdgeInsets.zero,
-                  title: const Text('How it works'),
+                  title: Text(context.strings.howItWorks),
                   children: [
                     Padding(
                       padding: const EdgeInsets.only(bottom: 16),
@@ -133,10 +134,7 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                   ],
                 ),
                 const SizedBox(height: 24),
-                const BNotice(
-                  message:
-                      'Creates a new bot with editable events, actions and sample content. Existing bots are never replaced.',
-                ),
+                BNotice(message: context.strings.createsANewBotWithEditable),
                 const SizedBox(height: 20),
                 BPanel(
                   child: Column(
@@ -144,26 +142,25 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                       TextFormField(
                         controller: _name,
                         maxLength: 100,
-                        decoration: const InputDecoration(
-                          labelText: 'Bot name',
+                        decoration: InputDecoration(
+                          labelText: context.strings.botName,
                         ),
                         validator: (v) => (v?.trim().isEmpty ?? true)
-                            ? 'Enter a bot name.'
+                            ? context.strings.enterABotName
                             : null,
                       ),
                       const SizedBox(height: 16),
                       SecretFormField(
                         controller: _token,
-                        label: 'Telegram bot token',
+                        label: context.strings.telegramBotToken,
                         secret: true,
-                        helpText:
-                            'Get the token from BotFather. A token already in your bot list cannot be reused.',
+                        helpText: context.strings.getTheTokenFromBotFatherA,
                         validator: (v) =>
                             RegExp(
                               r'^[0-9]+:[A-Za-z0-9_-]+$',
                             ).hasMatch(v?.trim() ?? '')
                             ? null
-                            : 'Enter a valid Telegram bot token.',
+                            : context.strings.enterAValidTelegramBotToken,
                       ),
                       const SizedBox(height: 16),
                       AdminIdsField(controller: _admin),
@@ -176,7 +173,7 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Template settings',
+                        context.strings.templateSettings,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 16),
@@ -191,7 +188,7 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                                 : TextInputType.text,
                             maxLength: 500,
                             validator: (v) => (v?.trim().isEmpty ?? true)
-                                ? 'Complete this field.'
+                                ? context.strings.completeThisField
                                 : null,
                           ),
                         ),
@@ -202,12 +199,11 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                   const SizedBox(height: 24),
                   BSection(
                     title: widget.template.dataset!.label,
-                    description:
-                        'Edit the samples or add your own content before creating the bot.',
+                    description: context.strings.editTheSamplesOrAddYour,
                     trailing: TextButton.icon(
                       onPressed: _rows.length >= 20 ? null : () => _editRow(),
                       icon: const Icon(Icons.add, size: 18),
-                      label: const Text('Add'),
+                      label: Text(context.strings.add),
                     ),
                     child: Column(
                       children: [
@@ -230,12 +226,14 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                                   (row['topic'] ??
                                           row['category'] ??
                                           row['kind'] ??
-                                          'Capacity: ${row['capacity']}')
+                                          context.strings.sampleCapacity(
+                                            '${row['capacity']}',
+                                          ))
                                       .toString(),
                                 ),
                                 onTap: () => _editRow(i),
                                 trailing: IconButton(
-                                  tooltip: 'Remove sample',
+                                  tooltip: context.strings.removeSample,
                                   onPressed: () =>
                                       setState(() => _rows.removeAt(i)),
                                   icon: const Icon(Icons.close, size: 20),
@@ -262,7 +260,9 @@ class _TemplateSetupPageState extends State<TemplateSetupPage> {
                         )
                       : const Icon(Icons.add),
                   label: Text(
-                    _saving ? 'Creating…' : 'Create bot from template',
+                    _saving
+                        ? context.strings.creating
+                        : context.strings.createBotFromTemplate,
                   ),
                 ),
                 const SizedBox(height: 24),
@@ -300,7 +300,9 @@ class _TemplateRowDialogState extends State<_TemplateRowDialog> {
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(
-      widget.initial == null ? 'Add sample content' : 'Edit sample content',
+      widget.initial == null
+          ? context.strings.addSampleContent
+          : context.strings.editSampleContent,
     ),
     content: SizedBox(
       width: 520,
@@ -331,7 +333,7 @@ class _TemplateRowDialogState extends State<_TemplateRowDialog> {
                         ? TextInputType.number
                         : TextInputType.multiline,
                     validator: (v) => (v?.trim().isEmpty ?? true)
-                        ? 'Complete this field.'
+                        ? context.strings.completeThisField
                         : null,
                   ),
                 ),
@@ -343,7 +345,7 @@ class _TemplateRowDialogState extends State<_TemplateRowDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.pop(context),
-        child: const Text('Cancel'),
+        child: Text(context.strings.cancel),
       ),
       FilledButton(
         onPressed: () {
@@ -353,7 +355,7 @@ class _TemplateRowDialogState extends State<_TemplateRowDialog> {
             });
           }
         },
-        child: const Text('Save'),
+        child: Text(context.strings.save),
       ),
     ],
   );

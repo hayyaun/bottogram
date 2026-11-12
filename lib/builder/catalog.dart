@@ -1,28 +1,33 @@
+import 'package:flutter/widgets.dart';
+
+import '../l10n/strings.dart';
+
 /// Shared labels and capabilities for the editor and execution validator.
 abstract final class BuilderCatalog {
-  static const labels = <String, String>{
-    'renderList': 'Render list',
-    'sql': 'Run SQL',
-    'reply': 'Send text',
-    'dice': 'Send dice',
-    'editText': 'Edit message text',
-    'editKeyboard': 'Edit message buttons',
-    'callbackAnswer': 'Answer button click',
-    'inlineAnswer': 'Answer inline query',
-    'photo': 'Send photo',
-    'video': 'Send video',
-    'document': 'Send document',
-    'audio': 'Send audio',
-    'voice': 'Send voice',
-    'animation': 'Send animation',
-    'sticker': 'Send sticker',
-    'deleteMessage': 'Delete message',
-    'pinMessage': 'Pin message',
-    'http': 'Call external API',
-    'setVariable': 'Set variable',
-    'incrementVariable': 'Increment variable',
-    'condition': 'Check condition',
-    'wait': 'Wait',
+  static String label(BuildContext context, String kind) => switch (kind) {
+    'renderList' => context.strings.renderList,
+    'sql' => context.strings.runSQL,
+    'reply' => context.strings.sendText,
+    'dice' => context.strings.sendDice,
+    'editText' => context.strings.editMessageText,
+    'editKeyboard' => context.strings.editMessageButtons,
+    'callbackAnswer' => context.strings.answerButtonClick,
+    'inlineAnswer' => context.strings.answerInlineQuery,
+    'photo' => context.strings.sendPhoto,
+    'video' => context.strings.sendVideo,
+    'document' => context.strings.sendDocument,
+    'audio' => context.strings.sendAudio,
+    'voice' => context.strings.sendVoice,
+    'animation' => context.strings.sendAnimation,
+    'sticker' => context.strings.sendSticker,
+    'deleteMessage' => context.strings.deleteMessage,
+    'pinMessage' => context.strings.pinMessage,
+    'http' => context.strings.callExternalAPI,
+    'setVariable' => context.strings.setVariable,
+    'incrementVariable' => context.strings.incrementVariable,
+    'condition' => context.strings.checkCondition,
+    'wait' => context.strings.wait,
+    _ => kind,
   };
   static const media = {
     'photo',

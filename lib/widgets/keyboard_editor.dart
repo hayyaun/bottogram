@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/utils/list.dart';
@@ -39,9 +40,9 @@ class _KeyboardState extends State<KeyboardEditor> {
         controller: _label,
         textInputAction: TextInputAction.done,
         onSubmitted: (_) => _add(),
-        decoration: const InputDecoration(
-          labelText: 'Button text',
-          hintText: 'A message to send when tapped',
+        decoration: InputDecoration(
+          labelText: context.strings.buttonText,
+          hintText: context.strings.aMessageToSendWhenTapped,
         ),
       ),
       const SizedBox(height: 12),
@@ -52,15 +53,14 @@ class _KeyboardState extends State<KeyboardEditor> {
           OutlinedButton.icon(
             onPressed: _add,
             icon: const Icon(Icons.add, size: 18),
-            label: const Text('Add button'),
+            label: Text(context.strings.addButton),
           ),
           TextButton.icon(
-            onPressed:
-                widget.rmu.items.isEmpty
-                    ? null
-                    : () => _update(() => widget.rmu.items.add(null)),
+            onPressed: widget.rmu.items.isEmpty
+                ? null
+                : () => _update(() => widget.rmu.items.add(null)),
             icon: const Icon(Icons.keyboard_return_rounded, size: 18),
-            label: const Text('New row'),
+            label: Text(context.strings.newRow),
           ),
         ],
       ),
@@ -73,15 +73,15 @@ class _KeyboardState extends State<KeyboardEditor> {
                 for (final label in row)
                   KeyboardPreviewKey(
                     label: label,
-                    onRemove:
-                        () => _update(() => widget.rmu.items.remove(label)),
+                    onRemove: () =>
+                        _update(() => widget.rmu.items.remove(label)),
                   ),
               ],
           ],
         )
       else
         Text(
-          'Add a button to preview your keyboard.',
+          context.strings.addAButtonToPreviewYour,
           style: Theme.of(context).textTheme.bodySmall,
         ),
     ],

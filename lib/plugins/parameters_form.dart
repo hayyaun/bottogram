@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:bottogram/ui/design.dart';
 import 'bot_setup.dart';
@@ -64,7 +65,7 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
         setState(
           () => _error = error is PluginException
               ? error.message
-              : 'Parameters could not be saved. Check secure storage and try again.',
+              : context.strings.parametersCouldNotBeSavedCheck,
         );
       }
     } finally {
@@ -96,7 +97,7 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
                         Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: BStatus(
-                            label: 'Saved securely',
+                            label: context.strings.savedSecurely,
                             color: BColors.of(context).success,
                             background: BColors.of(context).successWash,
                           ),
@@ -112,7 +113,7 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
                         helpText:
                             field.type == PluginFieldType.secret &&
                                 widget.setup.secretFields.contains(field.key)
-                            ? 'Leave blank to keep the saved value. Enter a new value only to replace it.'
+                            ? context.strings.leaveBlankToKeepTheSaved
                             : field.helpText,
                         validator: (value) =>
                             field.type == PluginFieldType.secret &&
@@ -129,8 +130,8 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
         ),
         Text(
           widget.plugin.destinationFields.isEmpty
-              ? 'Saving changes restarts a running bot. Admin changes keep existing automation progress.'
-              : 'Saving changes restarts a running bot. Admin and Telegram destination changes keep existing automation progress.',
+              ? context.strings.savingChangesRestartsARunningBot
+              : context.strings.savingChangesRestartsARunningBot2,
         ),
         const SizedBox(height: 16),
         if (_error != null) ...[
@@ -138,13 +139,15 @@ class _PluginParametersFormState extends State<PluginParametersForm> {
           const SizedBox(height: 16),
         ],
         if (_saved) ...[
-          const Text('Parameters saved.'),
+          Text(context.strings.parametersSaved),
           const SizedBox(height: 16),
         ],
         FilledButton.icon(
           onPressed: _busy ? null : _save,
           icon: const Icon(Icons.save_outlined),
-          label: Text(_busy ? 'Saving…' : 'Save parameters'),
+          label: Text(
+            _busy ? context.strings.saving : context.strings.saveParameters,
+          ),
         ),
       ],
     ),

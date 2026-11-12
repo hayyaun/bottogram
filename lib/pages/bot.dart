@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/inbox/users_page.dart';
 import 'package:bottogram/builder/console_page.dart';
 import 'package:bottogram/builder/state_page.dart';
@@ -81,21 +82,21 @@ class _BotPageState extends State<BotPage> {
   Future<void> _addEvent() async {
     final result = await showBEntryDialog<VirtEventType>(
       context,
-      title: 'Add event',
-      fieldLabel: 'Query',
+      title: context.strings.addEvent,
+      fieldLabel: context.strings.query,
       initialType: VirtEventType.command,
-      types: const {
-        VirtEventType.command: 'Command',
-        VirtEventType.text: 'Text message',
-        VirtEventType.callbackQuery: 'Callback query',
-        VirtEventType.inlineQuery: 'Inline query',
-        VirtEventType.polling: 'Polling timer',
+      types: {
+        VirtEventType.command: context.strings.command,
+        VirtEventType.text: context.strings.textMessage,
+        VirtEventType.callbackQuery: context.strings.callbackQuery,
+        VirtEventType.inlineQuery: context.strings.inlineQuery,
+        VirtEventType.polling: context.strings.pollingTimer,
       },
       validate: (query) =>
           widget.bot.events.any((event) => event.query == query)
-          ? 'An event with this query already exists.'
+          ? context.strings.anEventWithThisQueryAlready
           : null,
-      action: 'Add event',
+      action: context.strings.addEvent,
     );
     if (result == null || !mounted) return;
     final event = VirtEvent(query: result.text, type: result.type);
@@ -107,24 +108,27 @@ class _BotPageState extends State<BotPage> {
       await context.read<BotsCubit>().saveBot(widget.bot);
     } catch (_) {
       widget.bot.events.remove(event);
-      if (mounted) context.showSnackBar('The event could not be saved.');
+      if (mounted) {
+        context.showSnackBar(context.strings.theEventCouldNotBeSaved);
+      }
     }
   }
 
   Future<void> _remove() async {
     final accepted = await confirmRemoval(
       context,
-      title: 'Delete bot?',
-      message:
-          'Remove ${widget.bot.name} and its local configuration from this device?',
-      action: 'Delete bot',
+      title: context.strings.deleteBot,
+      message: context.strings.deleteBotConfirmation(widget.bot.name),
+      action: context.strings.deleteBotAction,
     );
     if (!accepted || !mounted) return;
     try {
       await context.read<BotsCubit>().remove(widget.bot);
       if (mounted) Navigator.pop(context);
     } catch (_) {
-      if (mounted) context.showSnackBar('The bot could not be removed.');
+      if (mounted) {
+        context.showSnackBar(context.strings.theBotCouldNotBeRemoved);
+      }
     }
   }
 
@@ -155,7 +159,7 @@ class _BotPageState extends State<BotPage> {
       );
     } catch (_) {
       if (mounted) {
-        context.showSnackBar('The database browser could not be opened.');
+        context.showSnackBar(context.strings.theDatabaseBrowserCouldNotBe);
       }
     }
   }
@@ -175,12 +179,12 @@ class _BotPageState extends State<BotPage> {
         title: Text(widget.bot.name, overflow: TextOverflow.ellipsis),
         actions: [
           IconButton(
-            tooltip: 'Bot database',
+            tooltip: context.strings.botDatabase,
             icon: const Icon(Icons.storage_outlined),
             onPressed: _openDatabase,
           ),
           IconButton(
-            tooltip: 'Execution console',
+            tooltip: context.strings.executionConsole,
             icon: const Icon(Icons.terminal),
             onPressed: () => Navigator.push(
               context,
@@ -194,7 +198,7 @@ class _BotPageState extends State<BotPage> {
           ),
           IconButton(
             icon: const Icon(Icons.people_outline),
-            tooltip: 'Users and inbox',
+            tooltip: context.strings.usersAndInbox,
             onPressed: () => Navigator.push(
               context,
               MaterialPageRoute<void>(
@@ -204,7 +208,7 @@ class _BotPageState extends State<BotPage> {
           ),
           IconButton(
             icon: const Icon(Icons.delete_outline),
-            tooltip: 'Delete bot',
+            tooltip: context.strings.deleteBotAction,
             onPressed: _remove,
           ),
         ],
@@ -217,10 +221,12 @@ class _BotPageState extends State<BotPage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               BHeading(
-                title: plugin ? 'Plugin configuration' : 'Bot configuration',
+                title: plugin
+                    ? context.strings.pluginConfiguration
+                    : context.strings.botConfiguration,
                 subtitle: plugin
-                    ? 'Your integration and its saved settings.'
-                    : 'Choose what happens when someone messages your bot.',
+                    ? context.strings.yourIntegrationAndItsSavedSettings
+                    : context.strings.chooseWhatHappensWhenSomeoneMessages,
               ),
               const SizedBox(height: 28),
               if (widget.bot.setupError != null) ...[
@@ -242,20 +248,22 @@ class _BotPageState extends State<BotPage> {
               if (plugin) ...[
                 BPanel(
                   child: BSection(
-                    title: setup!.pluginName ?? 'Plugin',
+                    title: setup!.pluginName ?? context.strings.plugin,
                     trailing: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         BStatus(
                           label: live
-                              ? (widget.bot.active ? 'Active' : 'Stopped')
-                              : 'Setup only',
+                              ? (widget.bot.active
+                                    ? context.strings.active
+                                    : context.strings.stopped)
+                              : context.strings.setupOnly,
                           color: BColors.of(context).warning,
                           background: BColors.of(context).warningWash,
                         ),
                         const SizedBox(width: 8),
                         IconButton(
-                          tooltip: 'Edit parameters',
+                          tooltip: context.strings.editParameters,
                           icon: const Icon(Icons.edit_outlined, size: 20),
                           onPressed: manifest == null
                               ? null
@@ -275,7 +283,9 @@ class _BotPageState extends State<BotPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Version ${setup.pluginKey!.split('@').last}',
+                          context.strings.versionLabel(
+                            setup.pluginKey!.split('@').last,
+                          ),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                         if (manifest != null) ...[
@@ -285,14 +295,14 @@ class _BotPageState extends State<BotPage> {
                             child: OutlinedButton.icon(
                               onPressed: _sharingQr ? null : _shareQr,
                               icon: const Icon(Icons.qr_code_2),
-                              label: const Text('Share as QR code'),
+                              label: Text(context.strings.shareAsQRCode),
                             ),
                           ),
                         ],
                         const SizedBox(height: 24),
                         _detail(
                           Icons.person_outline,
-                          'Admins',
+                          context.strings.admins,
                           setup.adminIds.join(', '),
                         ),
                         for (final field in manifest?.fields ?? <PluginField>[])
@@ -303,9 +313,10 @@ class _BotPageState extends State<BotPage> {
                             field.label,
                             field.type == PluginFieldType.secret
                                 ? (setup.secretFields.contains(field.key)
-                                      ? 'Saved securely'
-                                      : 'Not set')
-                                : setup.values[field.key] ?? 'Not set',
+                                      ? context.strings.savedSecurely
+                                      : context.strings.notSet)
+                                : setup.values[field.key] ??
+                                      context.strings.notSet,
                           ),
                       ],
                     ),
@@ -314,8 +325,8 @@ class _BotPageState extends State<BotPage> {
                 const SizedBox(height: 20),
                 BNotice(
                   message: live
-                      ? 'This plugin runs on this device while the bot is started.'
-                      : 'Setup only. Your settings are saved; this installed version does not execute automations.',
+                      ? context.strings.thisPluginRunsOnThisDevice
+                      : context.strings.setupOnlyYourSettingsAreSaved,
                 ),
                 const SizedBox(height: 20),
                 if (widget.bot.runtimeError != null) ...[
@@ -347,7 +358,7 @@ class _BotPageState extends State<BotPage> {
                             } catch (_) {
                               if (context.mounted) {
                                 context.showSnackBar(
-                                  'This bot could not restart. Check its configuration and connection.',
+                                  context.strings.thisBotCouldNotRestartCheck,
                                 );
                               }
                             }
@@ -368,13 +379,13 @@ class _BotPageState extends State<BotPage> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Text(
-                          'Automations',
+                          context.strings.automations,
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                         for (final automation in manifest!.automations)
                           Padding(
                             padding: const EdgeInsets.only(top: 12),
-                            child: Text(automationSummary(automation)),
+                            child: Text(automationSummary(context, automation)),
                           ),
                         const SizedBox(height: 20),
                         FilledButton.icon(
@@ -385,10 +396,10 @@ class _BotPageState extends State<BotPage> {
                           ),
                           label: Text(
                             widget.bot.active
-                                ? 'Stop bot'
+                                ? context.strings.stopBot
                                 : widget.bot.resumeOnLaunch
-                                ? 'Turn off auto-start'
-                                : 'Start bot',
+                                ? context.strings.turnOffAutoStart
+                                : context.strings.startBot,
                           ),
                           onPressed: () async {
                             try {
@@ -398,7 +409,7 @@ class _BotPageState extends State<BotPage> {
                             } catch (_) {
                               if (context.mounted) {
                                 context.showSnackBar(
-                                  'The bot could not be started or stopped. Check background settings and try again.',
+                                  context.strings.theBotCouldNotBeStarted,
                                 );
                               }
                             }
@@ -419,22 +430,24 @@ class _BotPageState extends State<BotPage> {
               ] else ...[
                 BPanel(
                   child: BSection(
-                    title: 'Details',
+                    title: context.strings.details,
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         TextField(
                           controller: ctrlName,
                           decoration: InputDecoration(
-                            labelText: 'Bot name',
+                            labelText: context.strings.botName,
                             suffixIcon: IconButton(
-                              tooltip: 'Save bot name',
+                              tooltip: context.strings.saveBotName,
                               onPressed: () {
                                 if (ctrlName.text.trim().isEmpty) return;
                                 widget.bot.name = ctrlName.text;
                                 context.read<BotsCubit>().update();
                                 setState(() {});
-                                context.showSnackBar('Bot name saved.');
+                                context.showSnackBar(
+                                  context.strings.botNameSaved,
+                                );
                               },
                               icon: const Icon(Icons.check_rounded),
                             ),
@@ -443,14 +456,15 @@ class _BotPageState extends State<BotPage> {
                         const SizedBox(height: 20),
                         _detail(
                           Icons.person_outline,
-                          'Admins',
-                          setup?.adminIds.join(', ') ?? 'None added',
+                          context.strings.admins,
+                          setup?.adminIds.join(', ') ??
+                              context.strings.noneAdded,
                         ),
                         Align(
                           alignment: AlignmentDirectional.centerStart,
                           child: TextButton(
                             onPressed: _editAdmins,
-                            child: const Text('Edit admins'),
+                            child: Text(context.strings.editAdmins),
                           ),
                         ),
                       ],
@@ -459,20 +473,19 @@ class _BotPageState extends State<BotPage> {
                 ),
                 const SizedBox(height: 32),
                 BSection(
-                  title: 'Events',
+                  title: context.strings.events,
                   trailing: TextButton.icon(
                     onPressed: _addEvent,
                     icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add event'),
+                    label: Text(context.strings.addEvent),
                   ),
                   child: BlocBuilder<BotsCubit, List<VirtBot>>(
                     builder: (context, _) {
                       if (widget.bot.events.isEmpty) {
-                        return const BEmptyState(
+                        return BEmptyState(
                           icon: Icons.bolt_outlined,
-                          title: 'Give your bot something to do',
-                          message:
-                              'Add a command, text message, or callback query, then attach an action.',
+                          title: context.strings.giveYourBotSomethingToDo,
+                          message: context.strings.addACommandTextMessageOr,
                         );
                       }
                       return Column(
@@ -500,7 +513,11 @@ class _BotPageState extends State<BotPage> {
                                     overflow: TextOverflow.ellipsis,
                                   ),
                                   subtitle: Text(
-                                    '${_eventLabel(event.type)} · ${event.acts.length} actions · ${_countEventBindings(event)} bindings',
+                                    context.strings.eventSummary(
+                                      _eventLabel(event.type),
+                                      '${event.acts.length}',
+                                      '${_countEventBindings(event)}',
+                                    ),
                                   ),
                                   trailing: const Icon(
                                     Icons.chevron_right_rounded,
@@ -516,7 +533,7 @@ class _BotPageState extends State<BotPage> {
                 const SizedBox(height: 16),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.data_object),
-                  label: const Text('Variables and API credentials'),
+                  label: Text(context.strings.variablesAndAPICredentials),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute<void>(
@@ -556,11 +573,11 @@ class _BotPageState extends State<BotPage> {
     ),
   );
   String _eventLabel(VirtEventType type) => switch (type) {
-    VirtEventType.command => 'Command',
-    VirtEventType.text => 'Text message',
-    VirtEventType.callbackQuery => 'Callback query',
-    VirtEventType.inlineQuery => 'Inline query',
-    VirtEventType.polling => 'Polling timer',
+    VirtEventType.command => context.strings.command,
+    VirtEventType.text => context.strings.textMessage,
+    VirtEventType.callbackQuery => context.strings.callbackQuery,
+    VirtEventType.inlineQuery => context.strings.inlineQuery,
+    VirtEventType.polling => context.strings.pollingTimer,
   };
   int _countEventBindings(VirtEvent target) => widget.bot.events.fold(
     0,
@@ -589,7 +606,7 @@ class _BotPageState extends State<BotPage> {
     for (final plugin in context.read<PluginRepository>().installed) {
       if (plugin.storageKey != setup.pluginKey) continue;
       if (plugin.settings.isEmpty) {
-        return const Text('This plugin has no editable settings.');
+        return Text(context.strings.thisPluginHasNoEditableSettings);
       }
       try {
         return PluginSettingsForm(
@@ -605,14 +622,14 @@ class _BotPageState extends State<BotPage> {
           },
         );
       } catch (_) {
-        return const BNotice(
-          message: 'Plugin settings could not be loaded.',
+        return BNotice(
+          message: context.strings.pluginSettingsCouldNotBeLoaded,
           error: true,
         );
       }
     }
-    return const BNotice(
-      message: 'The required plugin version is unavailable.',
+    return BNotice(
+      message: context.strings.theRequiredPluginVersionIsUnavailable,
       error: true,
     );
   }

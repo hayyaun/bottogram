@@ -1,11 +1,12 @@
 import 'dart:async';
 import 'dart:io' as io;
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import 'package:bottogram/ui/design.dart';
-import 'package:intl/intl.dart';
 import 'package:open_filex/open_filex.dart';
 
+import 'diagnostics.dart';
 import 'models.dart';
 import 'repository.dart';
 import 'settings_page.dart';
@@ -50,7 +51,9 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
       if (mounted && request == _request) setState(() => _messages = messages);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Could not read this conversation. Try again.');
+        setState(
+          () => _error = context.strings.couldNotReadThisConversationTry,
+        );
       }
     }
   }
@@ -71,9 +74,9 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is InboxException ? error.message : replyError(error),
+          () => _error = error is InboxException
+              ? error.message
+              : replyError(error),
         );
       }
     } finally {
@@ -83,6 +86,7 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
 
   Future<void> _open(CachedMessage message) async {
     if (_opening.contains(message.key)) return;
+    final strings = context.strings;
     setState(() => _opening.add(message.key));
     try {
       final file = await widget.repository.openAttachment(
@@ -94,9 +98,8 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
         await Navigator.push(
           context,
           MaterialPageRoute<void>(
-            builder:
-                (_) =>
-                    _InboxImagePage(file: file, repository: widget.repository),
+            builder: (_) =>
+                _InboxImagePage(file: file, repository: widget.repository),
           ),
         );
       } else {
@@ -105,19 +108,15 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
           type: message.attachment!.mimeType,
         );
         if (result.type != ResultType.done) {
-          throw const InboxException(
-            'No viewer could open this attachment. Install a compatible player or viewer and try again.',
-          );
+          throw InboxException(strings.noViewerCouldOpenThisAttachment);
         }
       }
     } catch (error) {
       if (mounted) {
         setState(
-          () =>
-              _error =
-                  error is InboxException
-                      ? error.message
-                      : 'Could not open this attachment. Try again.',
+          () => _error = error is InboxException
+              ? error.message
+              : context.strings.couldNotOpenThisAttachmentTry,
         );
       }
     } finally {
@@ -149,16 +148,14 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
       ),
       actions: [
         IconButton(
-          tooltip: 'Inbox settings',
+          tooltip: context.strings.inboxSettings,
           icon: const Icon(Icons.settings_outlined),
-          onPressed:
-              () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder:
-                      (_) => InboxSettingsPage(repository: widget.repository),
-                ),
-              ),
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute<void>(
+              builder: (_) => InboxSettingsPage(repository: widget.repository),
+            ),
+          ),
         ),
       ],
     ),
@@ -172,7 +169,7 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
               Padding(
                 padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
                 child: Text(
-                  'Latest 20 retained messages. Cleared or evicted history cannot be restored.',
+                  context.strings.latest20RetainedMessagesClearedOr,
                   style: Theme.of(context).textTheme.bodySmall,
                   textAlign: TextAlign.center,
                 ),
@@ -181,148 +178,137 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
               Padding(
                 padding: const EdgeInsets.all(12),
                 child: BNotice(
-                  message: widget.repository.lastError!,
+                  message: InboxStorageProblem.writeFailed.message(context),
                   error: true,
                 ),
               ),
             Expanded(
-              child:
-                  _messages == null
-                      ? const Center(child: CircularProgressIndicator())
-                      : _messages!.isEmpty
-                      ? const BEmptyState(
-                        icon: Icons.chat_bubble_outline_rounded,
-                        title: 'No retained messages',
-                        message:
-                            'History may have been cleared or evicted. You can still send a reply.',
-                      )
-                      : ListView.builder(
-                        reverse: true,
-                        padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
-                        itemCount: _messages!.length,
-                        itemBuilder: (context, index) {
-                          final message =
-                              _messages![_messages!.length - 1 - index];
-                          final attachment = message.attachment;
-                          final ink =
-                              message.outgoing
-                                  ? BColors.of(context).canvas
-                                  : BColors.of(context).ink;
-                          return Align(
-                            key: ValueKey(message.key),
-                            alignment:
-                                message.outgoing
-                                    ? Alignment.centerRight
-                                    : Alignment.centerLeft,
-                            child: Container(
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.sizeOf(context).width < 600
-                                        ? MediaQuery.sizeOf(context).width * .82
-                                        : 520,
-                              ),
-                              margin: const EdgeInsets.only(bottom: 16),
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color:
-                                    message.outgoing
-                                        ? BColors.of(context).ink
-                                        : BColors.of(context).surface,
-                                border:
-                                    message.outgoing
-                                        ? null
-                                        : Border.all(
-                                          color: BColors.of(context).line,
-                                        ),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: Radius.circular(
-                                    message.outgoing ? 16 : 4,
-                                  ),
-                                  bottomRight: Radius.circular(
-                                    message.outgoing ? 4 : 16,
-                                  ),
+              child: _messages == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : _messages!.isEmpty
+                  ? BEmptyState(
+                      icon: Icons.chat_bubble_outline_rounded,
+                      title: context.strings.noRetainedMessages,
+                      message: context.strings.historyMayHaveBeenClearedOr,
+                    )
+                  : ListView.builder(
+                      reverse: true,
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 20),
+                      itemCount: _messages!.length,
+                      itemBuilder: (context, index) {
+                        final message =
+                            _messages![_messages!.length - 1 - index];
+                        final attachment = message.attachment;
+                        final ink = message.outgoing
+                            ? BColors.of(context).canvas
+                            : BColors.of(context).ink;
+                        return Align(
+                          key: ValueKey(message.key),
+                          alignment: message.outgoing
+                              ? AlignmentDirectional.centerEnd
+                              : AlignmentDirectional.centerStart,
+                          child: Container(
+                            constraints: BoxConstraints(
+                              maxWidth: MediaQuery.sizeOf(context).width < 600
+                                  ? MediaQuery.sizeOf(context).width * .82
+                                  : 520,
+                            ),
+                            margin: const EdgeInsets.only(bottom: 16),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: message.outgoing
+                                  ? BColors.of(context).ink
+                                  : BColors.of(context).surface,
+                              border: message.outgoing
+                                  ? null
+                                  : Border.all(color: BColors.of(context).line),
+                              borderRadius: BorderRadius.only(
+                                topLeft: const Radius.circular(16),
+                                topRight: const Radius.circular(16),
+                                bottomLeft: Radius.circular(
+                                  message.outgoing ? 16 : 4,
+                                ),
+                                bottomRight: Radius.circular(
+                                  message.outgoing ? 4 : 16,
                                 ),
                               ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(
-                                    message.outgoing ? 'Bot' : widget.user.name,
-                                    style: BottogramDesign.text(
-                                      13,
-                                      strong: true,
-                                      color:
-                                          message.outgoing
-                                              ? BColors.of(context).inverseMuted
-                                              : BColors.of(context).muted,
-                                    ),
-                                  ),
-                                  if (message.text.isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 8,
-                                      ),
-                                      child: SelectableText(
-                                        message.text,
-                                        style: BottogramDesign.text(
-                                          16,
-                                          color: ink,
-                                        ),
-                                      ),
-                                    ),
-                                  if (attachment != null)
-                                    TextButton.icon(
-                                      style: TextButton.styleFrom(
-                                        foregroundColor: ink,
-                                        alignment: Alignment.centerLeft,
-                                        padding: const EdgeInsets.symmetric(
-                                          vertical: 12,
-                                        ),
-                                      ),
-                                      onPressed:
-                                          _opening.contains(message.key)
-                                              ? null
-                                              : () => _open(message),
-                                      icon:
-                                          _opening.contains(message.key)
-                                              ? SizedBox(
-                                                width: 18,
-                                                height: 18,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                      color: ink,
-                                                    ),
-                                              )
-                                              : Icon(
-                                                attachment.isImage
-                                                    ? Icons.image_outlined
-                                                    : Icons.attach_file,
-                                              ),
-                                      label: Text(
-                                        '${attachment.name}${attachment.size == null ? '' : ' · ${formatInboxBytes(attachment.size!)}'}',
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ),
-                                  Text(
-                                    '${DateFormat.yMd().add_Hm().format(DateTime.fromMillisecondsSinceEpoch(message.date * 1000))}${message.edited ? ' · edited' : ''}',
-                                    style: BottogramDesign.text(
-                                      13,
-                                      color:
-                                          message.outgoing
-                                              ? BColors.of(context).inverseMuted
-                                              : BColors.of(context).muted,
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ),
-                          );
-                        },
-                      ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  message.outgoing
+                                      ? context.strings.bot
+                                      : widget.user.name,
+                                  style: BottogramDesign.text(
+                                    13,
+                                    strong: true,
+                                    color: message.outgoing
+                                        ? BColors.of(context).inverseMuted
+                                        : BColors.of(context).muted,
+                                  ),
+                                ),
+                                if (message.text.isNotEmpty)
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 8,
+                                    ),
+                                    child: SelectableText(
+                                      message.text,
+                                      style: BottogramDesign.text(
+                                        16,
+                                        color: ink,
+                                      ),
+                                    ),
+                                  ),
+                                if (attachment != null)
+                                  TextButton.icon(
+                                    style: TextButton.styleFrom(
+                                      foregroundColor: ink,
+                                      alignment:
+                                          AlignmentDirectional.centerStart,
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12,
+                                      ),
+                                    ),
+                                    onPressed: _opening.contains(message.key)
+                                        ? null
+                                        : () => _open(message),
+                                    icon: _opening.contains(message.key)
+                                        ? SizedBox(
+                                            width: 18,
+                                            height: 18,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: ink,
+                                            ),
+                                          )
+                                        : Icon(
+                                            attachment.isImage
+                                                ? Icons.image_outlined
+                                                : Icons.attach_file,
+                                          ),
+                                    label: Text(
+                                      '${attachment.name}${attachment.size == null ? '' : ' · ${formatInboxBytes(attachment.size!)}'}',
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                Text(
+                                  '${context.formatDateAndTime(DateTime.fromMillisecondsSinceEpoch(message.date * 1000))}${message.edited ? context.strings.inboxEditedSuffix : ''}',
+                                  style: BottogramDesign.text(
+                                    13,
+                                    color: message.outgoing
+                                        ? BColors.of(context).inverseMuted
+                                        : BColors.of(context).muted,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
             ),
             if (_error != null)
               Padding(
@@ -346,9 +332,9 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                       minLines: 1,
                       maxLines: 4,
                       maxLength: 4096,
-                      decoration: const InputDecoration(
-                        labelText: 'Reply as bot',
-                        hintText: 'Write a message…',
+                      decoration: InputDecoration(
+                        labelText: context.strings.replyAsBot,
+                        hintText: context.strings.writeAMessage,
                       ),
                     ),
                   ),
@@ -356,23 +342,22 @@ class _InboxConversationPageState extends State<InboxConversationPage> {
                   Padding(
                     padding: const EdgeInsets.only(bottom: 28),
                     child: IconButton.filled(
-                      tooltip: 'Send reply',
+                      tooltip: context.strings.sendReply,
                       style: IconButton.styleFrom(
                         backgroundColor: BColors.of(context).ink,
                         foregroundColor: BColors.of(context).canvas,
                       ),
                       onPressed: _sending ? null : _send,
-                      icon:
-                          _sending
-                              ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: BColors.of(context).canvas,
-                                ),
-                              )
-                              : const Icon(Icons.arrow_upward_rounded),
+                      icon: _sending
+                          ? SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: BColors.of(context).canvas,
+                              ),
+                            )
+                          : const Icon(Icons.arrow_upward_rounded),
                     ),
                   ),
                 ],
@@ -426,18 +411,17 @@ class _InboxImagePageState extends State<_InboxImagePage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Attachment')),
+    appBar: AppBar(title: Text(context.strings.attachment)),
     body: Center(
-      child:
-          !_available
-              ? const Text('This attachment was removed from the cache.')
-              : InteractiveViewer(
-                child: Image(
-                  image: _image,
-                  errorBuilder:
-                      (_, _, _) => const Text('Could not display this image.'),
-                ),
+      child: !_available
+          ? Text(context.strings.thisAttachmentWasRemovedFromThe)
+          : InteractiveViewer(
+              child: Image(
+                image: _image,
+                errorBuilder: (_, _, _) =>
+                    Text(context.strings.couldNotDisplayThisImage),
               ),
+            ),
     ),
   );
 }

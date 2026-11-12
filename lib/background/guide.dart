@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:flutter/material.dart';
 import '../ui/design.dart';
 import 'controller.dart';
@@ -95,79 +96,76 @@ class _BackgroundSetupHostState extends State<BackgroundSetupHost> {
 class BackgroundGuide extends StatelessWidget {
   const BackgroundGuide({super.key, required this.controller});
   final BackgroundController controller;
-  String _status(bool? value, bool expected) =>
+  String _status(BuildContext context, bool? value, bool expected) =>
       value == null
-          ? 'Not checked'
-          : value == expected
-          ? 'Ready'
-          : 'Needs setup';
+      ? context.strings.backgroundNotChecked
+      : value == expected
+      ? context.strings.backgroundReady
+      : context.strings.backgroundNeedsSetup;
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) {
       final s = controller.snapshot;
       return Scaffold(
-        appBar: AppBar(title: const Text('Keep bots running')),
+        appBar: AppBar(title: Text(context.strings.keepBotsRunning)),
         body: SingleChildScrollView(
           child: BContent(
             maxWidth: 720,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const BHeading(
-                  title: 'Allow background activity',
-                  subtitle:
-                      'Started bots need a connection even when this screen is closed.',
+                BHeading(
+                  title: context.strings.allowBackgroundActivity,
+                  subtitle: context.strings.startedBotsNeedAConnectionEven,
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Bottogram keeps running bots in a foreground service when you leave the app. The notification shows how many bots are active and includes Stop bots. Running bots use battery and data.',
-                ),
+                Text(context.strings.bottogramKeepsRunningBotsInA),
                 const SizedBox(height: 24),
                 BPanel(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Battery optimization · ${_status(s.batteryExempt, true)}',
+                        context.strings.batteryOptimizationStatus(
+                          _status(context, s.batteryExempt, true),
+                        ),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'In Android battery settings, show all apps, select Bottogram, and choose Don’t optimize. On devices with additional app battery controls, allow background activity or choose Unrestricted.',
-                      ),
+                      Text(context.strings.inAndroidBatterySettingsShowAll),
                       const SizedBox(height: 16),
                       OutlinedButton(
                         onPressed: () => controller.openSettings(battery: true),
-                        child: const Text('Open battery settings'),
+                        child: Text(context.strings.openBatterySettings),
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Background restrictions · ${_status(s.backgroundRestricted, false)}',
+                        context.strings.backgroundRestrictionsStatus(
+                          _status(context, s.backgroundRestricted, false),
+                        ),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Open Bottogram’s app settings and check Battery or Background activity. Android settings differ by device.',
-                      ),
+                      Text(context.strings.openBottogramSAppSettingsAnd),
                       const SizedBox(height: 16),
                       OutlinedButton(
                         onPressed: () => controller.openSettings(),
-                        child: const Text('Open app settings'),
+                        child: Text(context.strings.openAppSettings),
                       ),
                       const SizedBox(height: 20),
                       Text(
-                        'Notifications · ${_status(s.notificationsEnabled, true)}',
+                        context.strings.notificationsStatus(
+                          _status(context, s.notificationsEnabled, true),
+                        ),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 12),
-                      const Text(
-                        'Allow notifications so you can see running bots and stop them. If a permission prompt no longer appears, enable notifications in app settings.',
-                      ),
+                      Text(context.strings.allowNotificationsSoYouCanSee),
                       const SizedBox(height: 16),
                       OutlinedButton(
                         onPressed: controller.requestNotifications,
-                        child: const Text('Allow notifications'),
+                        child: Text(context.strings.allowNotifications),
                       ),
                     ],
                   ),
@@ -178,24 +176,25 @@ class BackgroundGuide extends StatelessWidget {
                   BNotice(message: controller.actionError!, error: true),
                 const SizedBox(height: 16),
                 BNotice(
-                  message:
-                      s.ready
-                          ? 'Background setup is ready. Start a bot to run it. This does not check its API key or network connection.'
-                          : backgroundRequirement(controller),
+                  message: s.ready
+                      ? context.strings.backgroundSetupIsReadyStartA
+                      : backgroundRequirement(controller),
                 ),
                 const SizedBox(height: 20),
-                const Text(
-                  'If Android ends Bottogram or your device restarts, reopen Bottogram to resume the bots you left enabled. Stop bots in Bottogram or its notification to keep them off.',
-                ),
+                Text(context.strings.ifAndroidEndsBottogramOrYour),
                 const SizedBox(height: 24),
                 OutlinedButton(
                   onPressed: controller.refresh,
-                  child: const Text('Check again'),
+                  child: Text(context.strings.checkAgain),
                 ),
                 const SizedBox(height: 12),
                 FilledButton(
                   onPressed: () => Navigator.pop(context),
-                  child: Text(s.ready ? 'Done' : 'Skip for this opening'),
+                  child: Text(
+                    s.ready
+                        ? context.strings.done
+                        : context.strings.skipForThisOpening,
+                  ),
                 ),
               ],
             ),

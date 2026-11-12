@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/background/controller.dart';
 import 'package:bottogram/background/guide.dart';
 import 'package:bottogram/dialogs/share_dialog.dart';
@@ -6,6 +7,7 @@ import 'package:bottogram/plugins/bot_qr.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/ui/language_preferences.dart';
 import 'package:bottogram/ui/theme_preferences.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:flutter/material.dart';
@@ -46,7 +48,7 @@ class _SettingsPageState extends State<SettingsPage> {
       if (mounted) setState(() => _error = store.lastError);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'The bot configuration could not be imported.');
+        setState(() => _error = context.strings.theBotConfigurationCouldNotBe);
       }
     } finally {
       if (mounted) setState(() => _importing = false);
@@ -57,37 +59,35 @@ class _SettingsPageState extends State<SettingsPage> {
     final selected = await showModalBottomSheet<VirtBot>(
       context: context,
       showDragHandle: true,
-      builder:
-          (context) => SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: Text(
-                      'Choose a bot',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                  ),
-                  Flexible(
-                    child: ListView.builder(
-                      shrinkWrap: true,
-                      itemCount: bots.length,
-                      itemBuilder:
-                          (context, index) => ListTile(
-                            leading: const Icon(Icons.smart_toy_outlined),
-                            title: Text(bots[index].name),
-                            trailing: const Icon(Icons.chevron_right),
-                            onTap: () => Navigator.pop(context, bots[index]),
-                          ),
-                    ),
-                  ),
-                ],
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Text(
+                  context.strings.chooseABot,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
               ),
-            ),
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: bots.length,
+                  itemBuilder: (context, index) => ListTile(
+                    leading: const Icon(Icons.smart_toy_outlined),
+                    title: Text(bots[index].name),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => Navigator.pop(context, bots[index]),
+                  ),
+                ),
+              ),
+            ],
           ),
+        ),
+      ),
     );
     if (selected == null || !mounted) return;
     await Navigator.push<void>(
@@ -102,6 +102,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final plugins = context.watch<PluginRepository>();
     final background = context.watch<BackgroundController?>();
     final appearance = context.watch<ThemePreferences?>();
+    final language = context.watch<LanguagePreferences?>();
     return SingleChildScrollView(
       child: BContent(
         maxWidth: 840,
@@ -121,25 +122,66 @@ class _SettingsPageState extends State<SettingsPage> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (widget.scrollHeader != null) widget.scrollHeader!,
-                const BHeading(
-                  title: 'Settings',
-                  subtitle: 'Your device, local data, and app information.',
+                BHeading(
+                  title: context.strings.settings,
+                  subtitle: context.strings.yourDeviceLocalDataAndApp,
                 ),
                 const SizedBox(height: 24),
+                if (language != null) ...[
+                  BSection(
+                    title: context.strings.language,
+                    child: BPanel(
+                      child: Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final option in AppLanguage.values)
+                            ChoiceChip(
+                              label: Text(switch (option) {
+                                AppLanguage.system =>
+                                  context.strings.deviceLanguage,
+                                AppLanguage.english => 'English',
+                                AppLanguage.persian => 'فارسی',
+                              }),
+                              selected: language.language == option,
+                              onSelected: language.available && !language.saving
+                                  ? (selected) {
+                                      if (selected) {
+                                        language.setLanguage(option);
+                                      }
+                                    }
+                                  : null,
+                            ),
+                          if (!language.available)
+                            BNotice(
+                              message: context.strings.languageUnavailable,
+                              error: true,
+                            )
+                          else if (language.saveFailed)
+                            BNotice(
+                              message: context.strings.languageSaveFailed,
+                              error: true,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 28),
+                ],
                 if (appearance != null) ...[
                   BSection(
-                    title: 'Appearance',
+                    title: context.strings.appearance,
                     child: BPanel(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           Text(
-                            'Theme',
+                            context.strings.theme,
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'System follows your device. Light and Dark stay as selected.',
+                            context.strings.systemFollowsYourDeviceLightAnd,
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                           const SizedBox(height: 16),
@@ -150,15 +192,15 @@ class _SettingsPageState extends State<SettingsPage> {
                               for (final mode in ThemeMode.values)
                                 ChoiceChip(
                                   label: Text(switch (mode) {
-                                    ThemeMode.system => 'System',
-                                    ThemeMode.light => 'Light',
-                                    ThemeMode.dark => 'Dark',
+                                    ThemeMode.system => context.strings.system,
+                                    ThemeMode.light => context.strings.light,
+                                    ThemeMode.dark => context.strings.dark,
                                   }),
                                   selected: appearance.mode == mode,
                                   onSelected:
                                       appearance.available && !appearance.saving
-                                          ? (_) => appearance.setMode(mode)
-                                          : null,
+                                      ? (_) => appearance.setMode(mode)
+                                      : null,
                                 ),
                             ],
                           ),
@@ -168,7 +210,12 @@ class _SettingsPageState extends State<SettingsPage> {
                           ],
                           if (appearance.error != null) ...[
                             const SizedBox(height: 12),
-                            BNotice(message: appearance.error!, error: true),
+                            BNotice(
+                              message: appearance.available
+                                  ? context.strings.themeSaveFailed
+                                  : context.strings.themeLoadFailed,
+                              error: true,
+                            ),
                           ],
                         ],
                       ),
@@ -181,14 +228,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'On this device',
+                        context.strings.onThisDevice,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 20),
                       if (snapshot.hasError)
-                        const BNotice(
-                          message:
-                              'Local storage could not be read. Reopen Bottogram to try again.',
+                        BNotice(
+                          message: context.strings.localStorageCouldNotBeRead,
                           error: true,
                         )
                       else if (!ready)
@@ -198,15 +244,15 @@ class _SettingsPageState extends State<SettingsPage> {
                           spacing: 32,
                           runSpacing: 16,
                           children: [
-                            _metric(context, 'Bots', bots.length),
+                            _metric(context, context.strings.bots, bots.length),
                             _metric(
                               context,
-                              'Running',
+                              context.strings.running,
                               bots.where((bot) => bot.active).length,
                             ),
                             _metric(
                               context,
-                              'Plugins',
+                              context.strings.plugins,
                               plugins.installed.length,
                             ),
                           ],
@@ -216,45 +262,42 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 28),
                 BSection(
-                  title: 'Data & storage',
+                  title: context.strings.dataStorage,
                   child: BPanel(
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
                         _SettingsRow(
                           icon: Icons.file_download_outlined,
-                          title:
-                              _importing ? 'Importing bots...' : 'Import bots',
-                          description:
-                              'Restore a backup file or scan a plugin bot QR code.',
+                          title: _importing
+                              ? context.strings.importingBots
+                              : context.strings.importBots,
+                          description: context.strings.restoreABackupFileOrScan,
                           onTap: ready && !_importing ? _import : null,
                         ),
                         const Divider(),
                         _SettingsRow(
                           icon: Icons.ios_share_outlined,
-                          title: 'Export bot configurations',
+                          title: context.strings.exportBotConfigurations,
                           description:
-                              'Choose manual bots to share or save. Files include bot tokens.',
-                          onTap:
-                              ready && !_importing
-                                  ? () => showDialog<void>(
-                                    context: context,
-                                    builder: (_) => const ShareDialog(),
-                                  )
-                                  : null,
+                              context.strings.chooseManualBotsToShareOr,
+                          onTap: ready && !_importing
+                              ? () => showDialog<void>(
+                                  context: context,
+                                  builder: (_) => const ShareDialog(),
+                                )
+                              : null,
                         ),
                         const Divider(),
                         _SettingsRow(
                           icon: Icons.storage_outlined,
-                          title: 'Inbox & cache',
-                          description:
-                              bots.isEmpty
-                                  ? 'Add a bot to manage its messages and cache limits.'
-                                  : 'Choose a bot to manage users, messages, and cache limits.',
-                          onTap:
-                              ready && bots.isNotEmpty
-                                  ? () => _chooseInbox(bots)
-                                  : null,
+                          title: context.strings.inboxCache,
+                          description: bots.isEmpty
+                              ? context.strings.addABotToManageIts
+                              : context.strings.chooseABotToManageUsers,
+                          onTap: ready && bots.isNotEmpty
+                              ? () => _chooseInbox(bots)
+                              : null,
                         ),
                       ],
                     ),
@@ -266,76 +309,73 @@ class _SettingsPageState extends State<SettingsPage> {
                 ],
                 const SizedBox(height: 28),
                 BSection(
-                  title: 'Background activity',
+                  title: context.strings.backgroundActivity,
                   child: BPanel(
-                    padding:
-                        background?.snapshot.supported == true
-                            ? EdgeInsets.zero
-                            : const EdgeInsets.all(24),
-                    child:
-                        background?.snapshot.supported == true
-                            ? _SettingsRow(
-                              icon: Icons.battery_charging_full_outlined,
-                              title: 'Keep bots running',
-                              description:
-                                  background!.checked
-                                      ? backgroundRequirement(background)
-                                      : 'Check battery, background activity, and notification permissions.',
-                              onTap:
-                                  () => Navigator.push<void>(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (_) => BackgroundGuide(
-                                            controller: background,
-                                          ),
-                                    ),
-                                  ),
-                            )
-                            : const Text(
-                              'Keep Bottogram running and this device connected to the internet while bots are started. Reopen the app and start bots again after a device restart.',
+                    padding: background?.snapshot.supported == true
+                        ? EdgeInsets.zero
+                        : const EdgeInsets.all(24),
+                    child: background?.snapshot.supported == true
+                        ? _SettingsRow(
+                            icon: Icons.battery_charging_full_outlined,
+                            title: context.strings.keepBotsRunning,
+                            description: background!.checked
+                                ? backgroundRequirement(background)
+                                : context
+                                      .strings
+                                      .checkBatteryBackgroundActivityAndNotification,
+                            onTap: () => Navigator.push<void>(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    BackgroundGuide(controller: background),
+                              ),
                             ),
+                          )
+                        : Text(
+                            context.strings.keepBottogramRunningAndThisDevice,
+                          ),
                   ),
                 ),
                 const SizedBox(height: 28),
                 BSection(
-                  title: 'About',
+                  title: context.strings.about,
                   child: BPanel(
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
                         _SettingsRow(
                           icon: Icons.info_outline,
-                          title: 'About Bottogram',
+                          title: context.strings.aboutBottogram,
                           description:
-                              'Create and manage Telegram bots on this device.',
-                          onTap:
-                              () => showAboutDialog(
-                                context: context,
-                                applicationName: 'Bottogram',
-                                applicationIcon: Image.asset(
-                                  'assets/icon/foreground.png',
-                                  width: 40,
-                                  height: 40,
-                                ),
-                                children: [
-                                  const Text(
-                                    'Bot configurations and retained conversations are stored on this device. Plugin credentials use platform secure storage. Configuration exports contain tokens and do not include plugin setups or conversation history.',
-                                  ),
-                                ],
+                              context.strings.createAndManageTelegramBotsOn,
+                          onTap: () => showAboutDialog(
+                            context: context,
+                            applicationName: 'Bottogram',
+                            applicationIcon: Image.asset(
+                              'assets/icon/foreground.png',
+                              width: 40,
+                              height: 40,
+                            ),
+                            children: [
+                              Text(
+                                context
+                                    .strings
+                                    .botConfigurationsAndRetainedConversationsAre,
                               ),
+                            ],
+                          ),
                         ),
                         const Divider(),
                         _SettingsRow(
                           icon: Icons.description_outlined,
-                          title: 'Open-source licenses',
-                          description:
-                              'Libraries and notices used by Bottogram.',
-                          onTap:
-                              () => showLicensePage(
-                                context: context,
-                                applicationName: 'Bottogram',
-                              ),
+                          title: context.strings.openSourceLicenses,
+                          description: context
+                              .strings
+                              .librariesAndNoticesUsedByBottogram,
+                          onTap: () => showLicensePage(
+                            context: context,
+                            applicationName: 'Bottogram',
+                          ),
                         ),
                       ],
                     ),

@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/store/rmus.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/ui/design.dart';
@@ -25,10 +26,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
       await change();
     } catch (_) {
       if (mounted) {
-        setState(
-          () =>
-              _error = 'The template could not be saved or removed. Try again.',
-        );
+        setState(() => _error = context.strings.theTemplateCouldNotBeSaved);
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -38,20 +36,19 @@ class _TemplatesPageState extends State<TemplatesPage> {
   Future<void> _addTemplate() async {
     final result = await showBEntryDialog<VirtRMUType>(
       context,
-      title: 'Create keyboard template',
-      fieldLabel: 'Template name',
+      title: context.strings.createKeyboardTemplate,
+      fieldLabel: context.strings.templateName,
       initialType: VirtRMUType.keyboard,
-      types: const {
-        VirtRMUType.keyboard: 'Reply keyboard',
-        VirtRMUType.inlineKeyboard: 'Inline keyboard',
+      types: {
+        VirtRMUType.keyboard: context.strings.replyKeyboard,
+        VirtRMUType.inlineKeyboard: context.strings.inlineKeyboard,
       },
-      action: 'Create template',
+      action: context.strings.createTemplate,
     );
     if (result == null || !mounted) return;
-    final VirtRMU template =
-        result.type == VirtRMUType.keyboard
-            ? VirtRMUKeyboard()
-            : VirtRMUInlineKeyboard();
+    final VirtRMU template = result.type == VirtRMUType.keyboard
+        ? VirtRMUKeyboard()
+        : VirtRMUInlineKeyboard();
     template.name = result.text;
     await _run(() => context.read<RMUsCubit>().add(template));
   }
@@ -59,10 +56,9 @@ class _TemplatesPageState extends State<TemplatesPage> {
   Future<void> _remove(VirtRMU template) async {
     final accepted = await confirmRemoval(
       context,
-      title: 'Delete template?',
-      message:
-          'Remove this saved template? Keyboards already attached to actions keep their own copies.',
-      action: 'Delete template',
+      title: context.strings.deleteTemplate,
+      message: context.strings.removeThisSavedTemplateKeyboardsAlready,
+      action: context.strings.deleteTemplateAction,
     );
     if (accepted && mounted) {
       await _run(() => context.read<RMUsCubit>().remove(template));
@@ -71,7 +67,7 @@ class _TemplatesPageState extends State<TemplatesPage> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Templates')),
+    appBar: AppBar(title: Text(context.strings.templates)),
     body: SingleChildScrollView(
       child: BContent(
         maxWidth: 840,
@@ -79,13 +75,13 @@ class _TemplatesPageState extends State<TemplatesPage> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             BHeading(
-              title: 'Keyboard templates',
-              subtitle: 'Reuse a keyboard without rebuilding its buttons.',
+              title: context.strings.keyboardTemplates,
+              subtitle: context.strings.reuseAKeyboardWithoutRebuildingIts,
               actions: [
                 OutlinedButton.icon(
                   onPressed: _busy ? null : _addTemplate,
                   icon: const Icon(Icons.add),
-                  label: const Text('Create template'),
+                  label: Text(context.strings.createTemplate),
                 ),
               ],
             ),
@@ -113,11 +109,10 @@ class _TemplatesPageState extends State<TemplatesPage> {
                       return BNotice(message: storageError, error: true);
                     }
                     if (templates.isEmpty) {
-                      return const BEmptyState(
+                      return BEmptyState(
                         icon: Icons.bookmarks_outlined,
-                        title: 'A shortcut for your next reply',
-                        message:
-                            'Create an empty template here, or save a finished keyboard from the action editor.',
+                        title: context.strings.aShortcutForYourNextReply,
+                        message: context.strings.createAnEmptyTemplateHereOr,
                       );
                     }
                     return Column(
@@ -127,25 +122,26 @@ class _TemplatesPageState extends State<TemplatesPage> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: BPanel(
                               padding: EdgeInsets.zero,
-                              onTap:
-                                  _busy
-                                      ? null
-                                      : () => Navigator.pop(context, template),
+                              onTap: _busy
+                                  ? null
+                                  : () => Navigator.pop(context, template),
                               child: ListTile(
                                 leading: const Icon(Icons.keyboard_outlined),
                                 title: Text(
-                                  template.name ?? 'Untitled keyboard',
+                                  template.name ??
+                                      context.strings.untitledKeyboard,
                                 ),
                                 subtitle: Text(
                                   template.type == VirtRMUType.inlineKeyboard
-                                      ? 'Inline keyboard'
-                                      : 'Reply keyboard',
+                                      ? context.strings.inlineKeyboard
+                                      : context.strings.replyKeyboard,
                                 ),
                                 trailing: IconButton(
-                                  tooltip: 'Delete template',
+                                  tooltip: context.strings.deleteTemplateAction,
                                   icon: const Icon(Icons.delete_outline),
-                                  onPressed:
-                                      _busy ? null : () => _remove(template),
+                                  onPressed: _busy
+                                      ? null
+                                      : () => _remove(template),
                                 ),
                               ),
                             ),

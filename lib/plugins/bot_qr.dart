@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:bottogram/l10n/strings.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -18,24 +19,23 @@ import 'manifest.dart';
 Future<void> showPluginBotQr(BuildContext context, VirtBot bot) async {
   if (!await _confirm(
     context,
-    title: 'Share bot as QR code?',
-    message:
-        'Do not share this code with anyone. It contains the Telegram bot token, plugin API keys, and saved settings. Anyone who sees it can read those credentials.',
-    action: 'Continue',
+    title: context.strings.shareBotAsQRCode,
+    message: context.strings.doNotShareThisCodeWith,
+    action: context.strings.continueLabel,
   )) {
     return;
   }
   if (!context.mounted ||
       !await _confirm(
         context,
-        title: 'Reveal the private QR code?',
-        message:
-            'Scan it only with your own device. Keep it off screen shares, screenshots, and messages.',
-        action: 'Show QR code',
+        title: context.strings.revealThePrivateQRCode,
+        message: context.strings.scanItOnlyWithYourOwn,
+        action: context.strings.showQRCode,
       )) {
     return;
   }
   if (!context.mounted) return;
+  final strings = context.strings;
   try {
     final transfer = await context.read<BotsCubit>().exportPluginBot(bot);
     final result = QrValidator.validate(
@@ -45,15 +45,13 @@ Future<void> showPluginBotQr(BuildContext context, VirtBot bot) async {
     );
     final qr = result.qrCode;
     if (qr == null) {
-      throw const PluginException(
-        'This bot’s configuration is too large for a single QR code.',
-      );
+      throw PluginException(strings.thisBotSConfigurationIsToo);
     }
     if (!context.mounted) return;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
         builder: (context) => Scaffold(
-          appBar: AppBar(title: const Text('Private bot QR code')),
+          appBar: AppBar(title: Text(context.strings.privateBotQRCode)),
           body: SingleChildScrollView(
             child: BContent(
               maxWidth: 528,
@@ -62,19 +60,18 @@ Future<void> showPluginBotQr(BuildContext context, VirtBot bot) async {
                 children: [
                   BHeading(
                     title: transfer.name,
-                    subtitle:
-                        'Requires the exact installed plugin: ${transfer.pluginKey}',
+                    subtitle: context.strings.qrRequiredPlugin(
+                      context.leftToRightText(transfer.pluginKey),
+                    ),
                   ),
                   const SizedBox(height: 20),
-                  const Text(
-                    'Anyone who sees this code can read the bot’s credentials.',
-                  ),
+                  Text(context.strings.anyoneWhoSeesThisCodeCan),
                   const SizedBox(height: 16),
                   QrImageView.withQr(
                     qr: qr,
                     backgroundColor: Colors.white,
                     padding: const EdgeInsets.all(24),
-                    semanticsLabel: 'Private bot QR code',
+                    semanticsLabel: context.strings.privateBotQRCode,
                   ),
                 ],
               ),
@@ -85,7 +82,7 @@ Future<void> showPluginBotQr(BuildContext context, VirtBot bot) async {
     );
   } catch (error) {
     if (context.mounted) {
-      _notice(context, error, 'The bot QR code could not be generated.');
+      _notice(context, error, context.strings.theBotQRCodeCouldNot);
     }
   }
 }
@@ -96,20 +93,20 @@ Future<void> chooseBotImport(BuildContext context) async {
   final source = await showDialog<_BotImportSource>(
     context: context,
     builder: (context) => SimpleDialog(
-      title: const Text('Import bots'),
+      title: Text(context.strings.importBots),
       children: [
         SimpleDialogOption(
           onPressed: () => Navigator.pop(context, _BotImportSource.backup),
-          child: const ListTile(
+          child: ListTile(
             leading: Icon(Icons.folder_open_outlined),
-            title: Text('Backup file'),
+            title: Text(context.strings.backupFile),
           ),
         ),
         SimpleDialogOption(
           onPressed: () => Navigator.pop(context, _BotImportSource.qr),
-          child: const ListTile(
+          child: ListTile(
             leading: Icon(Icons.qr_code_scanner),
-            title: Text('Scan QR code'),
+            title: Text(context.strings.scanQRCode),
           ),
         ),
       ],
@@ -136,21 +133,23 @@ Future<void> _importPluginBotQr(BuildContext context) async {
     if (!context.mounted) return;
     final confirmed = await _confirm(
       context,
-      title: 'Import ${transfer.name}?',
-      message:
-          '${plugin.name} ${plugin.version} is installed. This device will save the bot’s credentials and settings. The imported bot starts in the stopped state.',
-      action: 'Import bot',
+      title: context.strings.importBotConfirmation(transfer.name),
+      message: context.strings.importInstalledPluginNotice(
+        plugin.name,
+        plugin.version,
+      ),
+      action: context.strings.importBot,
     );
     if (!confirmed || !context.mounted) return;
     await bots.importPluginBot(transfer);
     if (context.mounted) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Bot imported.')));
+      ).showSnackBar(SnackBar(content: Text(context.strings.botImported)));
     }
   } catch (error) {
     if (context.mounted) {
-      _notice(context, error, 'The bot QR code could not be imported.');
+      _notice(context, error, context.strings.theBotQRCodeCouldNot2);
     }
   }
 }
@@ -170,7 +169,7 @@ Future<bool> _confirm(
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(context.strings.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
@@ -235,7 +234,7 @@ class _BotQrScannerState extends State<_BotQrScanner> {
     });
     try {
       final file = await FilePicker.pickFile(
-        dialogTitle: 'Open a bot QR image',
+        dialogTitle: context.strings.openABotQRImage,
         type: FileType.custom,
         allowedExtensions: const ['png', 'jpg', 'jpeg', 'webp'],
       );
@@ -252,7 +251,7 @@ class _BotQrScannerState extends State<_BotQrScanner> {
       _finish(link);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'No QR code could be read from this image.');
+        setState(() => _error = context.strings.noQRCodeCouldBeRead);
       }
     } finally {
       if (mounted && !_finished) setState(() => _readingImage = false);
@@ -261,7 +260,7 @@ class _BotQrScannerState extends State<_BotQrScanner> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Scan bot QR code')),
+    appBar: AppBar(title: Text(context.strings.scanBotQRCode)),
     body: SingleChildScrollView(
       child: BContent(
         maxWidth: 600,
@@ -269,10 +268,10 @@ class _BotQrScannerState extends State<_BotQrScanner> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             BHeading(
-              title: 'Import a plugin bot',
+              title: context.strings.importAPluginBot,
               subtitle: _cameraSupported
-                  ? 'Point the camera at the Bottogram QR code, or open a QR image.'
-                  : 'Open an image of the Bottogram QR code to scan it on this device.',
+                  ? context.strings.pointTheCameraAtTheBottogram
+                  : context.strings.openAnImageOfTheBottogram,
             ),
             const SizedBox(height: 20),
             if (_cameraSupported && !_readingImage) ...[
@@ -282,10 +281,8 @@ class _BotQrScannerState extends State<_BotQrScanner> {
                   borderRadius: BottogramDesign.controlRadius,
                   child: MobileScanner(
                     onDetect: _detected,
-                    errorBuilder: (_, _) => const Center(
-                      child: Text(
-                        'Camera unavailable. You can open a QR image below.',
-                      ),
+                    errorBuilder: (_, _) => Center(
+                      child: Text(context.strings.cameraUnavailableYouCanOpenA),
                     ),
                   ),
                 ),
@@ -300,7 +297,9 @@ class _BotQrScannerState extends State<_BotQrScanner> {
               onPressed: _readingImage ? null : _openImage,
               icon: const Icon(Icons.image_outlined),
               label: Text(
-                _readingImage ? 'Reading QR image…' : 'Open QR image',
+                _readingImage
+                    ? context.strings.readingQRImage
+                    : context.strings.openQRImage,
               ),
             ),
           ],

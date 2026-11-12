@@ -1,3 +1,4 @@
+import 'package:bottogram/l10n/strings.dart';
 import 'package:bottogram/pages/act.dart';
 import 'package:bottogram/builder/catalog.dart';
 import 'package:bottogram/builder/store.dart';
@@ -79,29 +80,28 @@ class _EventPageState extends State<EventPage> {
           height: MediaQuery.sizeOf(context).height * .7,
           child: ListView(
             children: [
-              const ListTile(
-                title: Text('Add action'),
-                subtitle: Text('Connect each action using its named output.'),
+              ListTile(
+                title: Text(context.strings.addAction),
+                subtitle: Text(context.strings.connectEachActionUsingItsNamed),
               ),
               if (entries.isNotEmpty) ...[
-                const ListTile(title: Text('Action library')),
+                ListTile(title: Text(context.strings.actionLibrary)),
                 for (final entry in entries)
                   ListTile(
                     title: Text(entry.key),
                     subtitle: Text(
-                      BuilderCatalog.labels[entry.value.type.name] ??
-                          entry.value.type.name,
+                      BuilderCatalog.label(context, entry.value.type.name),
                     ),
                     leading: const Icon(Icons.link),
                     onTap: () =>
                         Navigator.pop(context, (entry.value.type, entry.key)),
                   ),
                 const Divider(),
-                const ListTile(title: Text('New action')),
+                ListTile(title: Text(context.strings.newAction)),
               ],
               for (final type in VirtActType.values.where(_supports))
                 ListTile(
-                  title: Text(BuilderCatalog.labels[type.name] ?? type.name),
+                  title: Text(BuilderCatalog.label(context, type.name)),
                   leading: Icon(
                     type == VirtActType.http
                         ? Icons.http
@@ -142,9 +142,7 @@ class _EventPageState extends State<EventPage> {
         widget.bot.events.removeWhere(added.contains);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('The shared action could not be added.'),
-            ),
+            SnackBar(content: Text(context.strings.theSharedActionCouldNotBe)),
           );
         }
       }
@@ -170,9 +168,9 @@ class _EventPageState extends State<EventPage> {
   Future<void> _remove() async {
     final accepted = await confirmRemoval(
       context,
-      title: 'Delete event?',
-      message: 'Remove this event and all of its actions from the bot?',
-      action: 'Delete event',
+      title: context.strings.deleteEvent,
+      message: context.strings.removeThisEventAndAllOf,
+      action: context.strings.deleteEventAction,
     );
     if (!accepted || !mounted) return;
     final index = widget.bot.events.indexOf(widget.ev);
@@ -188,10 +186,10 @@ class _EventPageState extends State<EventPage> {
   @override
   Widget build(BuildContext context) => Scaffold(
     appBar: AppBar(
-      title: const Text('Event'),
+      title: Text(context.strings.event),
       actions: [
         IconButton(
-          tooltip: 'Delete event',
+          tooltip: context.strings.deleteEventAction,
           icon: const Icon(Icons.delete_outline),
           onPressed: _remove,
         ),
@@ -206,22 +204,22 @@ class _EventPageState extends State<EventPage> {
           children: [
             BHeading(
               title: widget.ev.query,
-              subtitle:
-                  'Actions run in the order shown when this event matches.',
+              subtitle: context.strings.actionsRunInTheOrderShown,
             ),
             const SizedBox(height: 28),
             BPanel(
               child: BSection(
-                title: 'Trigger',
+                title: context.strings.trigger,
                 description: switch (widget.ev.type) {
                   VirtEventType.command =>
-                    'A Telegram command, such as /start.',
-                  VirtEventType.text => 'A matching text message.',
+                    context.strings.aTelegramCommandSuchAsStart,
+                  VirtEventType.text => context.strings.aMatchingTextMessage,
                   VirtEventType.callbackQuery =>
-                    'A callback from an inline keyboard button.',
-                  VirtEventType.inlineQuery => 'A matching inline query.',
+                    context.strings.aCallbackFromAnInlineKeyboard,
+                  VirtEventType.inlineQuery =>
+                    context.strings.aMatchingInlineQuery,
                   VirtEventType.polling =>
-                    'Runs while this bot is started. Missed ticks are not replayed after an offline interval.',
+                    context.strings.runsWhileThisBotIsStarted,
                 },
                 child: Column(
                   children: [
@@ -234,25 +232,31 @@ class _EventPageState extends State<EventPage> {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: DropdownButtonFormField<String>(
                           initialValue: _match,
-                          decoration: const InputDecoration(labelText: 'Match'),
+                          decoration: InputDecoration(
+                            labelText: context.strings.match,
+                          ),
                           items: [
                             if (_match == 'legacy')
-                              const DropdownMenuItem(
+                              DropdownMenuItem(
                                 value: 'legacy',
-                                child: Text('Existing inline pattern'),
+                                child: Text(
+                                  context.strings.existingInlinePattern,
+                                ),
                               ),
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                               value: 'exact',
-                              child: Text('Exact value'),
+                              child: Text(context.strings.exactValue),
                             ),
-                            const DropdownMenuItem(
+                            DropdownMenuItem(
                               value: 'prefix',
-                              child: Text('Starts with'),
+                              child: Text(context.strings.startsWith),
                             ),
                             if (widget.ev.type == VirtEventType.text)
-                              const DropdownMenuItem(
+                              DropdownMenuItem(
                                 value: 'any',
-                                child: Text('Any text except commands'),
+                                child: Text(
+                                  context.strings.anyTextExceptCommands,
+                                ),
                               ),
                           ],
                           onChanged: (value) {
@@ -266,17 +270,18 @@ class _EventPageState extends State<EventPage> {
                         child: TextFormField(
                           controller: ctrlInterval,
                           keyboardType: TextInputType.number,
-                          decoration: const InputDecoration(
-                            labelText: 'Polling interval in seconds (30–86400)',
+                          decoration: InputDecoration(
+                            labelText:
+                                context.strings.pollingIntervalInSeconds3086400,
                           ),
                         ),
                       ),
                     if (widget.ev.type == VirtEventType.callbackQuery)
                       SwitchListTile(
                         contentPadding: EdgeInsets.zero,
-                        title: const Text('Accept widget requests'),
-                        subtitle: const Text(
-                          'Run these actions for matching widget buttons in private chats.',
+                        title: Text(context.strings.acceptWidgetRequests),
+                        subtitle: Text(
+                          context.strings.runTheseActionsForMatchingWidget,
                         ),
                         value: _widgetQueries,
                         onChanged: (value) =>
@@ -288,19 +293,19 @@ class _EventPageState extends State<EventPage> {
                         child: TextField(
                           controller: ctrlSeparator,
                           maxLength: 8,
-                          decoration: const InputDecoration(
-                            labelText: 'Input separator (optional)',
+                          decoration: InputDecoration(
+                            labelText: context.strings.inputSeparatorOptional,
                             helperText:
-                                'Split the matching suffix into {{event.inputParts.0}}, .1, and so on.',
+                                context.strings.splitTheMatchingSuffixIntoEvent,
                           ),
                         ),
                       ),
                     TextField(
                       controller: ctrlQuery,
                       decoration: InputDecoration(
-                        labelText: 'Query',
+                        labelText: context.strings.query,
                         suffixIcon: IconButton(
-                          tooltip: 'Save query',
+                          tooltip: context.strings.saveQuery,
                           icon: const Icon(Icons.check_rounded),
                           onPressed: () async {
                             if (ctrlQuery.text.isEmpty && _match != 'any') {
@@ -323,9 +328,11 @@ class _EventPageState extends State<EventPage> {
                                   seconds < 30 ||
                                   seconds > 86400) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
+                                  SnackBar(
                                     content: Text(
-                                      'Enter a polling interval from 30 to 86400 seconds.',
+                                      context
+                                          .strings
+                                          .enterAPollingIntervalFrom30,
                                     ),
                                   ),
                                 );
@@ -357,17 +364,19 @@ class _EventPageState extends State<EventPage> {
                             if (!context.mounted) return;
                             setState(() {});
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Query saved.')),
+                              SnackBar(
+                                content: Text(context.strings.querySaved),
+                              ),
                             );
                           },
                         ),
                       ),
                     ),
                     if (_match == 'prefix' || _match == 'any')
-                      const Padding(
+                      Padding(
                         padding: EdgeInsets.only(top: 12),
                         child: Text(
-                          'Use {{event.input}} for the remaining input. Put broad text events after specific events.',
+                          context.strings.useEventInputForTheRemaining,
                         ),
                       ),
                   ],
@@ -376,20 +385,19 @@ class _EventPageState extends State<EventPage> {
             ),
             const SizedBox(height: 32),
             BSection(
-              title: 'Actions',
+              title: context.strings.actions,
               trailing: TextButton.icon(
                 onPressed: _addAction,
                 icon: const Icon(Icons.add, size: 18),
-                label: const Text('Add action'),
+                label: Text(context.strings.addAction),
               ),
               child: BlocBuilder<BotsCubit, List<VirtBot>>(
                 builder: (context, _) {
                   if (widget.ev.acts.isEmpty) {
-                    return const BEmptyState(
+                    return BEmptyState(
                       icon: Icons.chat_bubble_outline_rounded,
-                      title: 'What should happen next?',
-                      message:
-                          'Send content, call an API, update a variable or use an earlier action’s result.',
+                      title: context.strings.whatShouldHappenNext,
+                      message: context.strings.sendContentCallAnAPIUpdate,
                     );
                   }
                   return Column(
@@ -420,22 +428,22 @@ class _EventPageState extends State<EventPage> {
                                         ? act.config['url']?.toString() ??
                                               act.config['variable']
                                                   ?.toString() ??
-                                              BuilderCatalog.labels[act
-                                                  .type
-                                                  .name] ??
-                                              act.type.name
+                                              BuilderCatalog.label(
+                                                context,
+                                                act.type.name,
+                                              )
                                         : act.text),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
                               subtitle: Text(
-                                '${act.libraryName == null ? '' : 'Shared · '}${BuilderCatalog.labels[act.type.name] ?? act.type.name} · ${act.config['output'] ?? 'step${index + 1}'}',
+                                '${act.libraryName == null ? '' : context.strings.sharedActionPrefix}${BuilderCatalog.label(context, act.type.name)} · ${act.config['output'] ?? 'step${index + 1}'}',
                               ),
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
                                   IconButton(
-                                    tooltip: 'Move action up',
+                                    tooltip: context.strings.moveActionUp,
                                     visualDensity: VisualDensity.compact,
                                     onPressed: index == 0
                                         ? null

@@ -64,7 +64,7 @@ class _HomePageState extends State<HomePage> {
         ),
       IconButton(
         tooltip: context.strings.importBots,
-        icon: const Icon(Icons.file_download_outlined),
+        icon: const Icon(Icons.note_add_outlined),
         onPressed: () => chooseBotImport(context),
       ),
       IconButton(

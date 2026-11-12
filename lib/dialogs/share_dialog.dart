@@ -1,6 +1,8 @@
 import 'package:bottogram/l10n/strings.dart';
+import 'package:bottogram/plugins/bot_qr.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/units/virt_bot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -13,9 +15,23 @@ class ShareDialog extends StatefulWidget {
 class _ShareDialogState extends State<ShareDialog> {
   final Set<int> _selected = {};
   bool _sharing = false;
+  bool _sharingQr = false;
   String? _error;
+
+  bool get _busy => _sharing || _sharingQr;
+
+  Future<void> _shareQr(VirtBot bot) async {
+    if (_busy) return;
+    setState(() => _sharingQr = true);
+    try {
+      await showPluginBotQr(context, bot);
+    } finally {
+      if (mounted) setState(() => _sharingQr = false);
+    }
+  }
+
   Future<void> _share() async {
-    if (_sharing || _selected.isEmpty) return;
+    if (_busy || _selected.isEmpty) return;
     setState(() {
       _sharing = true;
       _error = null;
@@ -53,30 +69,42 @@ class _ShareDialogState extends State<ShareDialog> {
               const SizedBox(height: 16),
               if (bots.isEmpty) Text(context.strings.createABotBeforeSharing),
               for (final (index, bot) in bots.indexed)
-                CheckboxListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(bot.name),
-                  value: _selected.contains(index),
-                  subtitle: exportable.contains(index)
-                      ? null
-                      : Text(
-                          bot.setup?.usesPlugin == true
-                              ? context.strings.shareThisPluginBotAsA
-                              : context.strings.completeThisBotSSetupBefore,
-                        ),
-                  onChanged: _sharing || !exportable.contains(index)
-                      ? null
-                      : (value) => setState(() {
-                          value == true
-                              ? _selected.add(index)
-                              : _selected.remove(index);
-                        }),
-                ),
+                if (bot.setup?.usesPlugin == true)
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(bot.name),
+                    subtitle: bot.setupError == null
+                        ? null
+                        : Text(context.strings.completeThisBotSSetupBefore),
+                    trailing: IconButton(
+                      tooltip: context.strings.shareAsQRCode,
+                      onPressed: _busy || bot.setupError != null
+                          ? null
+                          : () => _shareQr(bot),
+                      icon: const Icon(Icons.qr_code_2),
+                    ),
+                  )
+                else
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(bot.name),
+                    value: _selected.contains(index),
+                    subtitle: exportable.contains(index)
+                        ? null
+                        : Text(context.strings.completeThisBotSSetupBefore),
+                    onChanged: _busy || !exportable.contains(index)
+                        ? null
+                        : (value) => setState(() {
+                            value == true
+                                ? _selected.add(index)
+                                : _selected.remove(index);
+                          }),
+                  ),
               if (exportable.isNotEmpty)
                 Align(
                   alignment: AlignmentDirectional.centerStart,
                   child: TextButton.icon(
-                    onPressed: _sharing
+                    onPressed: _busy
                         ? null
                         : () => setState(() {
                             _selected
@@ -94,11 +122,11 @@ class _ShareDialogState extends State<ShareDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _sharing ? null : () => Navigator.pop(context),
+          onPressed: _busy ? null : () => Navigator.pop(context),
           child: Text(context.strings.cancel),
         ),
         FilledButton.icon(
-          onPressed: _sharing || _selected.isEmpty ? null : _share,
+          onPressed: _busy || _selected.isEmpty ? null : _share,
           icon: const Icon(Icons.ios_share_outlined, size: 18),
           label: Text(
             _sharing ? context.strings.sharing : context.strings.shareSelected,

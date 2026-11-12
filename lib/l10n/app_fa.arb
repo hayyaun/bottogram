@@ -267,7 +267,6 @@
   "shareBots": "اشتراک‌گذاری ربات‌ها",
   "sharedFilesIncludeTelegramBotTokens": "فایل‌های اشتراکی حاوی توکن ربات تلگرام هستند. در انتخاب گیرنده دقت کنید.",
   "createABotBeforeSharing": "پیش از اشتراک‌گذاری، یک ربات بسازید.",
-  "shareThisPluginBotAsA": "این ربات افزونه را از تنظیمات خودش با کد QR به اشتراک بگذارید.",
   "completeThisBotSSetupBefore": "پیش از گرفتن خروجی، راه‌اندازی این ربات را کامل کنید.",
   "selectAll": "انتخاب همه",
   "sharing": "در حال اشتراک‌گذاری…",

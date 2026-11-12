@@ -18,6 +18,7 @@ import 'package:bottogram/pages/store.dart';
 import 'package:bottogram/pages/templates.dart';
 import 'package:bottogram/plugins/plugins_page.dart';
 import 'package:bottogram/plugins/bot_setup.dart';
+import 'package:bottogram/plugins/bot_transfer.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/store/rmus.dart';
@@ -34,6 +35,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 import 'background_test.dart' show FakeBackground;
 import 'inbox_repository_test.dart' show MemorySource;
@@ -49,6 +51,12 @@ class PreviewBots extends Cubit<List<VirtBot>> implements BotsCubit {
   String? lastError;
   int importCalls = 0;
   bool failImport = false;
+  Future<PluginBotTransfer> Function(VirtBot)? onExportPluginBot;
+
+  @override
+  Future<PluginBotTransfer> exportPluginBot(VirtBot bot) =>
+      onExportPluginBot!(bot);
+
   @override
   Future<void> import() async {
     importCalls++;
@@ -567,9 +575,18 @@ void main() {
           child: const HomePage(title: 'Bottogram'),
         ),
       );
-      final warning = find.byTooltip('Battery optimization can interrupt your bots.');
+      final warning = find.byTooltip(
+        'Battery optimization can interrupt your bots.',
+      );
       expect(warning, findsOneWidget);
-      expect(find.byTooltip('Import bots'), findsOneWidget);
+      final importButton = find.byTooltip('Import bots');
+      expect(
+        find.descendant(
+          of: importButton,
+          matching: find.byIcon(Icons.note_add_outlined),
+        ),
+        findsOneWidget,
+      );
       await tester.tap(warning);
       await tester.pumpAndSettle();
       expect(find.text('Keep bots running'), findsOneWidget);
@@ -626,6 +643,54 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Share bots opens the private QR flow for plugin bots', (
+    tester,
+  ) async {
+    cleanup(tester);
+    var exports = 0;
+    bots.onExportPluginBot = (bot) async {
+      expect(bot, same(pluginBot));
+      exports++;
+      final manifest = catalog.entries.single;
+      return PluginBotTransfer(
+        name: bot.name,
+        token: bot.token,
+        adminIds: bot.setup!.adminIds,
+        pluginKey: manifest.storageKey,
+        pluginDigest: manifest.digest,
+        parameters: const {},
+        settings: const {},
+      );
+    };
+    await pumpPage(tester, const HomePage(title: 'Bottogram'));
+    await tester.tap(find.byTooltip('Share bots'));
+    await tester.pumpAndSettle();
+
+    final manualSelection = find.widgetWithText(CheckboxListTile, manual.name);
+    expect(find.byType(CheckboxListTile), findsOneWidget);
+    await tester.tap(manualSelection);
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byTooltip('Share as QR code'));
+    await tester.pumpAndSettle();
+    expect(find.text('Share bot as QR code?'), findsOneWidget);
+    expect(exports, 0);
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('Reveal the private QR code?'), findsOneWidget);
+    expect(exports, 0);
+    await tester.tap(find.widgetWithText(FilledButton, 'Show QR code'));
+    await tester.pumpAndSettle();
+
+    expect(exports, 1);
+    expect(find.text('Private bot QR code'), findsOneWidget);
+    expect(find.byType(QrImageView), findsOneWidget);
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    expect(find.byType(ShareDialog), findsOneWidget);
+    expect(tester.widget<CheckboxListTile>(manualSelection).value, isTrue);
+  });
 
   testWidgets(
     'dark palette renders bot cards, plugins, dialogs and conversations',

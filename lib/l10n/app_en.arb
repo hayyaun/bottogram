@@ -361,7 +361,6 @@
   "shareBots": "Share bots",
   "sharedFilesIncludeTelegramBotTokens": "Shared files include Telegram bot tokens. Choose who you share them with.",
   "createABotBeforeSharing": "Create a bot before sharing.",
-  "shareThisPluginBotAsA": "Share this plugin bot as a QR code from its settings.",
   "completeThisBotSSetupBefore": "Complete this bot’s setup before exporting.",
   "selectAll": "Select all",
   "sharing": "Sharing…",

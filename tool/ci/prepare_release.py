@@ -158,6 +158,8 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
 - In **Share bots**, plugin bots have a QR button that opens the private
   sharing flow directly. You can return to your selected manual bots after
   viewing the QR code.
+- **Settings → Support** links to GitHub Issues for problem reports. The
+  Settings footer links to the source repository.
 
 ### Android auto-resume
 

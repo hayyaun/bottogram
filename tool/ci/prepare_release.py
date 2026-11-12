@@ -153,12 +153,10 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
 
 ### What’s new
 
-- Bottogram follows your device language by default. Persian includes a
-  right-to-left interface. You can also choose English or Persian in **Settings → Language**.
-- Bot cards on narrow screens are more compact and keep their controls visible.
-- WebP images save about 15 MiB in bundled assets. The illustrated setup guides
-  retain their original image quality.
-- Android’s foreground notification shows the active bot count as text.
+- Bottogram checks GitHub for a newer stable release at launch and periodically
+  while the app is running. The Home notice opens the new release’s downloads.
+- **Settings → About** shows the installed version and lets you check for updates
+  and see the result immediately.
 
 ### Android auto-resume
 

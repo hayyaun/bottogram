@@ -58,6 +58,34 @@ void main() {
     }
   });
 
+  testWidgets('a fresh launch checks again immediately', (tester) async {
+    final transport = _ReleaseTransport();
+    transport.release['tag_name'] = 'v1.4.0';
+
+    AppUpdates launch() =>
+        AppUpdates(transport: transport, readVersion: () async => '1.4.0+6')
+          ..start();
+
+    final first = launch();
+    try {
+      await tester.pump();
+      expect(first.available, isNull);
+      expect(transport.requests, hasLength(1));
+    } finally {
+      first.dispose();
+    }
+
+    transport.release['tag_name'] = 'v1.5.0';
+    final restarted = launch();
+    try {
+      await tester.pump();
+      expect(transport.requests, hasLength(2));
+      expect(restarted.available?.version, '1.5.0');
+    } finally {
+      restarted.dispose();
+    }
+  });
+
   testWidgets(
     'startup and manual checks share the release on Home and Settings',
     (tester) async {

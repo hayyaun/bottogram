@@ -36,9 +36,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:url_launcher_platform_interface/url_launcher_platform_interface.dart';
 
 import 'background_test.dart' show FakeBackground;
 import 'inbox_repository_test.dart' show MemorySource;
+import 'plugin_authoring_link_test.dart' show GuideLauncher;
 import 'plugins_test.dart' show MemoryCatalog, definition, package;
 import 'widget_test.dart' show WidgetInbox;
 
@@ -643,6 +645,54 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets('Settings opens GitHub Issues and the source repository', (
+    tester,
+  ) async {
+    cleanup(tester);
+    final previousLauncher = UrlLauncherPlatform.instance;
+    final launcher = GuideLauncher();
+    UrlLauncherPlatform.instance = launcher;
+    addTearDown(() => UrlLauncherPlatform.instance = previousLauncher);
+
+    if (captureEnabled) await loadFonts(tester);
+    await pumpPage(
+      tester,
+      const HomePage(title: 'Bottogram'),
+      size: const Size(360, 800),
+      scale: 1.4,
+    );
+    await tester.tap(find.byTooltip('Settings'));
+    await tester.pumpAndSettle();
+
+    final report = find.text('Report a problem');
+    await tester.ensureVisible(report);
+    await tester.tap(report);
+    await tester.pumpAndSettle();
+
+    final sourceLink = find.widgetWithText(TextButton, 'Source code on GitHub');
+    await tester.ensureVisible(sourceLink);
+    await tester.pumpAndSettle();
+    await capture(tester, 'settings-github-footer');
+    await tester.tap(sourceLink);
+    await tester.pumpAndSettle();
+
+    expect(launcher.calls, [
+      (
+        'https://github.com/hayyaun/bottogram/issues',
+        PreferredLaunchMode.externalApplication,
+      ),
+      (
+        'https://github.com/hayyaun/bottogram',
+        PreferredLaunchMode.externalApplication,
+      ),
+    ]);
+    launcher.result = false;
+    await tester.tap(sourceLink);
+    await tester.pumpAndSettle();
+    expect(find.text('Couldn’t open the GitHub page.'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   testWidgets('Share bots opens the private QR flow for plugin bots', (
     tester,

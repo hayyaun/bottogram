@@ -12,8 +12,10 @@ import 'package:bottogram/ui/theme_preferences.dart';
 import 'package:bottogram/updates/app_updates.dart';
 import 'package:bottogram/updates/update_notice.dart';
 import 'package:bottogram/units/virt_bot.dart';
+import 'package:bottogram/utils/context.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({super.key, this.scrollHeader});
@@ -24,6 +26,15 @@ class SettingsPage extends StatefulWidget {
 }
 
 class _SettingsPageState extends State<SettingsPage> {
+  static final _githubRepository = Uri.https(
+    'github.com',
+    '/hayyaun/bottogram',
+  );
+  static final _githubIssues = Uri.https(
+    'github.com',
+    '/hayyaun/bottogram/issues',
+  );
+
   late final Future<void> _ready;
   bool _importing = false;
   String? _error;
@@ -54,6 +65,18 @@ class _SettingsPageState extends State<SettingsPage> {
       }
     } finally {
       if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  Future<void> _openGitHubPage(Uri url) async {
+    var opened = false;
+    try {
+      opened = await launchUrl(url, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      // Show the same feedback if the platform cannot open the link.
+    }
+    if (!opened && mounted) {
+      context.showSnackBar(context.strings.githubLinkCouldNotBeOpened);
     }
   }
 
@@ -341,6 +364,20 @@ class _SettingsPageState extends State<SettingsPage> {
                 ),
                 const SizedBox(height: 28),
                 BSection(
+                  title: context.strings.support,
+                  child: BPanel(
+                    padding: EdgeInsets.zero,
+                    child: _SettingsRow(
+                      icon: Icons.bug_report_outlined,
+                      title: context.strings.reportAProblem,
+                      description: context.strings.reportAProblemDescription,
+                      trailingIcon: Icons.open_in_new_rounded,
+                      onTap: () => _openGitHubPage(_githubIssues),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 28),
+                BSection(
                   title: context.strings.about,
                   child: BPanel(
                     padding: EdgeInsets.zero,
@@ -392,6 +429,29 @@ class _SettingsPageState extends State<SettingsPage> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 20),
+                Center(
+                  child: TextButton(
+                    onPressed: () => _openGitHubPage(_githubRepository),
+                    style: TextButton.styleFrom(
+                      foregroundColor: BColors.of(context).muted,
+                      iconColor: BColors.of(context).muted,
+                      textStyle: BottogramDesign.text(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.code_rounded, size: 14),
+                        const SizedBox(width: 6),
+                        Flexible(
+                          child: Text(context.strings.sourceCodeOnGitHub),
+                        ),
+                        const SizedBox(width: 6),
+                        const Icon(Icons.open_in_new_rounded, size: 12),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             );
           },
@@ -415,11 +475,13 @@ class _SettingsRow extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.description,
+    this.trailingIcon = Icons.chevron_right,
     this.onTap,
   });
   final IconData icon;
   final String title;
   final String description;
+  final IconData trailingIcon;
   final VoidCallback? onTap;
 
   @override
@@ -428,7 +490,7 @@ class _SettingsRow extends StatelessWidget {
     leading: Icon(icon, size: 22),
     title: Text(title, style: Theme.of(context).textTheme.titleSmall),
     subtitle: Text(description, style: Theme.of(context).textTheme.bodySmall),
-    trailing: const Icon(Icons.chevron_right, size: 20),
+    trailing: Icon(trailingIcon, size: 20),
     minLeadingWidth: 24,
     horizontalTitleGap: 12,
     onTap: onTap,

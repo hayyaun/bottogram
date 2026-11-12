@@ -63,6 +63,11 @@ class BottogramApplication : Application() {
                         current.updateCounts(active, total)
                         result.success(null)
                     }
+                    "updateConnectionWarning" -> {
+                        val affected = call.argument<Int>("affected") ?: 0
+                        BotService.updateConnectionWarning(this, affected)
+                        result.success(null)
+                    }
                     "stopService" -> {
                         service?.stopExplicitly()
                         result.success(null)

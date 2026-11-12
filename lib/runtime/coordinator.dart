@@ -25,10 +25,13 @@ class BotRuntime extends ChangeNotifier {
   final ProgressStore progress;
   final JsonTransport Function()? httpClientFactory;
   final Set<VirtBot> _bots = {};
+  final Set<VirtBot> _connectionWarnings = {};
+  int? _publishedWarningCount;
   final _pluginExecutions = <VirtBot, PluginExecution>{};
   final Map<VirtBot, Map<String, String>> _errors = {};
   final Map<VirtBot, Map<String, FailurePresentation>> _failureDetails = {};
   Future<void> _tail = Future.value();
+  Future<void> _warningTail = Future.value();
   bool _closed = false;
   int _totalBots = 0;
   int get activeCount => _bots.where((bot) => bot.active).length;
@@ -65,7 +68,11 @@ class BotRuntime extends ChangeNotifier {
 
   Future<void> setTotalBots(int count) => _queue(() async {
     _totalBots = count;
-    if (activeCount > 0) await _sync();
+    if (activeCount > 0) {
+      await _sync();
+    } else {
+      await _syncConnectionWarning();
+    }
   });
 
   Future<void> start(VirtBot bot) => _queue(() async {
@@ -79,11 +86,11 @@ class BotRuntime extends ChangeNotifier {
         'This plugin version is setup-only. Install a live version and create a new bot with it.',
       );
     }
-    // Clean up a previous session that ended unexpectedly before replacing it.
-    await _stop(bot);
+    // Keep a connection warning visible until the new session reaches Telegram.
+    await _stop(bot, preserveConnectionIssue: true);
     try {
       final active = activeCount;
-      await lease.startService(active, max(_totalBots, active + 1));
+      await lease.startService(_connectedCount, max(_totalBots, active + 1));
     } catch (_) {
       await _sync();
       rethrow;
@@ -91,16 +98,32 @@ class BotRuntime extends ChangeNotifier {
     _bots.add(bot);
     _errors[bot] = {};
     _failureDetails[bot] = {};
+    bot.onTelegramConnectionChanged = () {
+      if (_closed || !_bots.contains(bot)) return;
+      if (bot.telegramConnectionIssue == null) {
+        _connectionWarnings.remove(bot);
+      } else {
+        _connectionWarnings.add(bot);
+      }
+      notifyListeners();
+      unawaited(_syncConnectionWarning());
+      unawaited(
+        _queue(() => _sync(stopIfIdle: false)).catchError((Object _) {}),
+      );
+    };
     bot.onRunningChanged = () {
       if (_closed) return;
       notifyListeners();
       if (!bot.active) {
         unawaited(
           _queue(() async {
+            if (!_bots.contains(bot) || bot.active) return;
             final failure =
                 bot.runtimeError ??
-                'Telegram polling stopped. Restart this bot.';
-            await _stop(bot);
+                (bot.telegramConnectionIssue == null
+                    ? 'Telegram polling stopped. Restart this bot.'
+                    : null);
+            await _stop(bot, preserveConnectionIssue: true);
             bot.runtimeError = failure;
             await _sync();
             notifyListeners();
@@ -110,7 +133,7 @@ class BotRuntime extends ChangeNotifier {
     };
     PluginExecution? execution;
     try {
-      await bot.bot.initialize().timeout(const Duration(seconds: 22));
+      await bot.initializeTelegram();
       if (manifest != null && setup != null) {
         execution = _pluginExecutions[bot] = PluginExecution(
           manifest: manifest,
@@ -144,7 +167,7 @@ class BotRuntime extends ChangeNotifier {
       await bot.start(pluginRuntime: manifest?.executable == true);
       execution?.synchronizeTelegram();
     } catch (_) {
-      await _stop(bot);
+      await _stop(bot, preserveConnectionIssue: true);
       rethrow;
     } finally {
       await _sync();
@@ -152,8 +175,13 @@ class BotRuntime extends ChangeNotifier {
     }
   });
 
-  Future<void> _stop(VirtBot bot) async {
+  Future<void> _stop(
+    VirtBot bot, {
+    bool preserveConnectionIssue = false,
+  }) async {
+    final issue = preserveConnectionIssue ? bot.telegramConnectionIssue : null;
     bot.onRunningChanged = null;
+    bot.onTelegramConnectionChanged = null;
     final drained = _pluginExecutions.remove(bot)?.stop();
     // Close Telegram before waiting for actions so a stalled send cannot hold Stop.
     await Future.wait<void>([bot.stop(), if (drained != null) drained]);
@@ -161,6 +189,8 @@ class BotRuntime extends ChangeNotifier {
     _errors.remove(bot);
     _failureDetails.remove(bot);
     bot.runtimeError = null;
+    bot.telegramConnectionIssue = issue;
+    if (issue == null) _connectionWarnings.remove(bot);
   }
 
   Future<void> stop(VirtBot bot) => _queue(() async {
@@ -170,7 +200,7 @@ class BotRuntime extends ChangeNotifier {
   });
   Future<void> stopAll() => _queue(() async {
     var failed = false;
-    for (final bot in List<VirtBot>.of(_bots)) {
+    for (final bot in {..._bots, ..._connectionWarnings}) {
       try {
         await _stop(bot);
       } catch (_) {
@@ -191,11 +221,33 @@ class BotRuntime extends ChangeNotifier {
     if (id != null) await progress.removeInstance(id);
   }
 
-  Future<void> _sync() {
+  int get _connectedCount => _bots
+      .where((bot) => bot.active && bot.telegramConnectionIssue == null)
+      .length;
+
+  Future<void> _syncConnectionWarning() =>
+      _warningTail = _warningTail.then((_) async {
+        final count = _connectionWarnings.length;
+        if (_publishedWarningCount == count) return;
+        try {
+          await lease.updateConnectionWarning(count);
+          _publishedWarningCount = count;
+        } catch (_) {
+          // Retry on the next sync without interrupting the bot or its service.
+        }
+      });
+
+  Future<void> _sync({bool stopIfIdle = true}) async {
     final active = activeCount;
-    return active == 0
-        ? lease.stopService()
-        : lease.updateService(active, max(_totalBots, active));
+    try {
+      if (active > 0) {
+        await lease.updateService(_connectedCount, max(_totalBots, active));
+      } else if (stopIfIdle) {
+        await lease.stopService();
+      }
+    } finally {
+      await _syncConnectionWarning();
+    }
   }
 
   Future<void> close() async {

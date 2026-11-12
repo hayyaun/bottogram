@@ -34,6 +34,9 @@ class FakeBackground extends BackgroundPlatform {
   @override
   Future<void> updateService(int active, int total) async {}
   @override
+  Future<void> updateConnectionWarning(int affected) async {}
+
+  @override
   Future<void> stopService() async {}
 }
 

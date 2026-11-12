@@ -1,0 +1,8 @@
+<resources>
+    <string name="telegram_connection_channel">Telegram connection</string>
+    <string name="telegram_connection_warning">Telegram offline</string>
+    <plurals name="telegram_bots_affected">
+        <item quantity="one">%d bot affected</item>
+        <item quantity="other">%d bots affected</item>
+    </plurals>
+</resources>

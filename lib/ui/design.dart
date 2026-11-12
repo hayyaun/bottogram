@@ -564,8 +564,15 @@ class BNotice extends StatelessWidget {
 }
 
 class BStatus extends StatelessWidget {
-  const BStatus({super.key, required this.label, this.color, this.background});
+  const BStatus({
+    super.key,
+    required this.label,
+    this.icon,
+    this.color,
+    this.background,
+  });
   final String label;
+  final IconData? icon;
   final Color? color;
   final Color? background;
   @override
@@ -575,13 +582,24 @@ class BStatus extends StatelessWidget {
       color: background ?? BColors.of(context).subtle,
       borderRadius: BorderRadius.circular(6),
     ),
-    child: Text(
-      label,
-      style: BottogramDesign.text(
-        13,
-        strong: true,
-        color: color ?? BColors.of(context).muted,
-      ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (icon != null) ...[
+          Icon(icon, size: 16, color: color ?? BColors.of(context).muted),
+          const SizedBox(width: 4),
+        ],
+        Flexible(
+          child: Text(
+            label,
+            style: BottogramDesign.text(
+              13,
+              strong: true,
+              color: color ?? BColors.of(context).muted,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }

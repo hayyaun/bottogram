@@ -18,6 +18,7 @@ import 'package:bottogram/plugins/update_section.dart';
 import 'package:bottogram/plugins/failure_notice.dart';
 import 'package:bottogram/pages/event.dart';
 import 'package:bottogram/runtime/failure_presentation.dart';
+import 'package:bottogram/runtime/telegram_connection.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/units/virt_event.dart';
@@ -45,6 +46,7 @@ class _BotPageState extends State<BotPage> {
   late final ctrlName = TextEditingController(text: widget.bot.name);
   final _errorAnchor = GlobalKey();
   bool _sharingQr = false;
+  bool _retryingTelegram = false;
   late final _pluginUpdateAnchor = GlobalKey();
 
   @override
@@ -141,6 +143,20 @@ class _BotPageState extends State<BotPage> {
     }
   }
 
+  Future<void> _retryTelegram() async {
+    if (_retryingTelegram) return;
+    setState(() => _retryingTelegram = true);
+    try {
+      await context.read<BotsCubit>().retryBot(widget.bot);
+    } catch (_) {
+      if (mounted && widget.bot.telegramConnectionIssue == null) {
+        context.showSnackBar(context.strings.thisBotCouldNotRestartCheck);
+      }
+    } finally {
+      if (mounted) setState(() => _retryingTelegram = false);
+    }
+  }
+
   Future<void> _openDatabase() async {
     try {
       await BuilderStore.shared.ready;
@@ -171,6 +187,7 @@ class _BotPageState extends State<BotPage> {
     final plugin = setup?.usesPlugin ?? false;
     final manifest = context.watch<PluginRepository>().manifestFor(setup);
     final live = manifest?.executable == true;
+    final connectionIssue = widget.bot.telegramConnectionIssue;
     final failures = widget.bot.runtimeError == null
         ? const <FailurePresentation>[]
         : context.read<BotsCubit>().runtime.failuresFor(widget.bot);
@@ -237,9 +254,36 @@ class _BotPageState extends State<BotPage> {
                 ),
                 const SizedBox(height: 20),
               ],
+              if (connectionIssue != null) ...[
+                Semantics(
+                  key: widget.bot.setupError == null ? _errorAnchor : null,
+                  liveRegion: true,
+                  child: BNotice(
+                    icon: Icons.cloud_off_outlined,
+                    error: true,
+                    message:
+                        connectionIssue == TelegramConnectionIssue.reconnecting
+                        ? context.strings.telegramReconnecting
+                        : context.strings.telegramConnectionRetry,
+                    trailing:
+                        connectionIssue == TelegramConnectionIssue.unavailable
+                        ? IconButton(
+                            tooltip: context.strings.retryBot,
+                            onPressed: _retryingTelegram
+                                ? null
+                                : _retryTelegram,
+                            icon: const Icon(Icons.refresh_rounded),
+                          )
+                        : null,
+                  ),
+                ),
+                const SizedBox(height: 20),
+              ],
               if (!plugin && widget.bot.runtimeError != null) ...[
                 BNotice(
-                  key: widget.bot.setupError == null ? _errorAnchor : null,
+                  key: widget.bot.setupError == null && connectionIssue == null
+                      ? _errorAnchor
+                      : null,
                   message: widget.bot.runtimeError!,
                   error: true,
                 ),
@@ -335,7 +379,10 @@ class _BotPageState extends State<BotPage> {
                       Padding(
                         padding: EdgeInsets.only(top: index == 0 ? 0 : 12),
                         child: PluginFailureNotice(
-                          key: widget.bot.setupError == null && index == 0
+                          key:
+                              widget.bot.setupError == null &&
+                                  connectionIssue == null &&
+                                  index == 0
                               ? _errorAnchor
                               : null,
                           failure: failure,
@@ -367,7 +414,11 @@ class _BotPageState extends State<BotPage> {
                       )
                   else
                     BNotice(
-                      key: widget.bot.setupError == null ? _errorAnchor : null,
+                      key:
+                          widget.bot.setupError == null &&
+                              connectionIssue == null
+                          ? _errorAnchor
+                          : null,
                       message: widget.bot.runtimeError!,
                       error: true,
                     ),

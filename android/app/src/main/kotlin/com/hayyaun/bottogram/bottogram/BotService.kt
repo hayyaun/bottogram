@@ -1,16 +1,21 @@
 package com.hayyaun.bottogram.bottogram
 
+import android.Manifest
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
+import androidx.core.content.ContextCompat
 
 /** Holds the user-started automation runtime, never another Flutter engine. */
 class BotService : Service() {
@@ -20,6 +25,52 @@ class BotService : Service() {
         const val STOP = "bottogram.STOP_BOTS"
         const val ACTIVE = "active"
         const val TOTAL = "total"
+        private const val CONNECTION_CHANNEL = "telegram_connection"
+        private const val CONNECTION_NOTICE = 8102
+
+        private fun openApp(context: Context): PendingIntent = PendingIntent.getActivity(
+            context, 0,
+            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        fun updateConnectionWarning(context: Context, affected: Int) {
+            require(affected >= 0)
+            val manager = context.getSystemService(NotificationManager::class.java)
+            if (affected == 0) {
+                manager.cancel(CONNECTION_NOTICE)
+                return
+            }
+            if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+            if (Build.VERSION.SDK_INT >= 33 &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                    PackageManager.PERMISSION_GRANTED
+            ) return
+            if (Build.VERSION.SDK_INT >= 26) {
+                manager.createNotificationChannel(
+                    NotificationChannel(
+                        CONNECTION_CHANNEL,
+                        context.getString(R.string.telegram_connection_channel),
+                        NotificationManager.IMPORTANCE_DEFAULT
+                    )
+                )
+            }
+            val warning = NotificationCompat.Builder(context, CONNECTION_CHANNEL)
+                .setSmallIcon(R.drawable.ic_telegram_connection_warning)
+                .setColor(0xFF99611C.toInt())
+                .setContentTitle(context.getString(R.string.telegram_connection_warning))
+                .setContentText(context.resources.getQuantityString(R.plurals.telegram_bots_affected, affected, affected))
+                .setContentIntent(openApp(context))
+                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                .setOnlyAlertOnce(true)
+                .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                .build()
+            try {
+                manager.notify(CONNECTION_NOTICE, warning)
+            } catch (_: SecurityException) {
+                // Permission may change between checking it and posting the warning.
+            }
+        }
     }
     var running = false
         private set
@@ -84,9 +135,6 @@ class BotService : Service() {
         stopSelf(); app.stateChanged()
     }
     private fun notification(): Notification {
-        val open = PendingIntent.getActivity(this, 0,
-            Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 1, Intent(this, BotService::class.java).setAction(STOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         return NotificationCompat.Builder(this, CHANNEL)
@@ -96,7 +144,7 @@ class BotService : Service() {
             .setColor(0xFF006F68.toInt())
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .setContentIntent(open)
+            .setContentIntent(openApp(this))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setShowWhen(false)

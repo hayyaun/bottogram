@@ -1,0 +1,8 @@
+<resources>
+    <string name="telegram_connection_channel">اتصال تلگرام</string>
+    <string name="telegram_connection_warning">قطع ارتباط تلگرام</string>
+    <plurals name="telegram_bots_affected">
+        <item quantity="one">اختلال در %d ربات</item>
+        <item quantity="other">اختلال در %d ربات</item>
+    </plurals>
+</resources>

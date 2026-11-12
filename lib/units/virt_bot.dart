@@ -6,6 +6,7 @@ import 'package:bottogram/inbox/repository.dart';
 import 'package:bottogram/inbox/transformer.dart';
 import 'package:bottogram/plugins/bot_setup.dart';
 import 'package:bottogram/plugins/manifest.dart';
+import 'package:bottogram/runtime/telegram_connection.dart';
 import 'package:bottogram/units/virt_act.dart';
 import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
@@ -27,14 +28,31 @@ class VirtBot extends HiveObject {
   String? runtimeError;
   bool resumeOnLaunch = false;
   VoidCallback? onRunningChanged;
+  VoidCallback? onTelegramConnectionChanged;
+  TelegramConnectionIssue? telegramConnectionIssue;
+  bool _watchTelegram = false;
   int _runGeneration = 0;
   BuilderSession? _builder;
   Future<InboxRepository> get inbox => InboxRepository.forToken(token);
 
   void _createTelegramSession() {
-    _telegramClient = DioHttpClient(
+    final client = _telegramClient = DioHttpClient(
       timeout: const Duration(seconds: 22),
       receiveTimeout: const Duration(seconds: 45),
+    );
+    // Observe the response before Televerse wraps the transport error.
+    client.dio.interceptors.insert(
+      0,
+      observeTelegramConnection((method, reachable) {
+        if (!_watchTelegram || !identical(_telegramClient, client)) return;
+        _setTelegramConnectionIssue(
+          reachable
+              ? null
+              : method == 'getMe'
+              ? TelegramConnectionIssue.unavailable
+              : TelegramConnectionIssue.reconnecting,
+        );
+      }),
     );
     bot = Bot(token, httpClient: _telegramClient, baseUrl: _telegramBaseUrl);
     bot.api.use(InboxTransformer(() => inbox));
@@ -78,6 +96,22 @@ class VirtBot extends HiveObject {
 
   bool pluginWidgetQueries = false;
 
+  void _setTelegramConnectionIssue(TelegramConnectionIssue? issue) {
+    if (telegramConnectionIssue == issue) return;
+    telegramConnectionIssue = issue;
+    onTelegramConnectionChanged?.call();
+  }
+
+  Future<void> initializeTelegram() async {
+    _watchTelegram = true;
+    try {
+      await bot.initialize().timeout(const Duration(seconds: 22));
+    } on TimeoutException {
+      _setTelegramConnectionIssue(TelegramConnectionIssue.unavailable);
+      rethrow;
+    }
+  }
+
   Future<void> start({bool pluginRuntime = false}) async {
     if (setupError != null) throw PluginException(setupError!);
     if ((setup?.usesPlugin ?? false) && !pluginRuntime) {
@@ -94,7 +128,7 @@ class VirtBot extends HiveObject {
         store.resolveAction(action, library: library);
       }
     }
-    await bot.initialize().timeout(const Duration(seconds: 22));
+    await initializeTelegram();
     final generation = ++_runGeneration;
     var acceptsWidgets = pluginRuntime && pluginWidgetQueries;
     if (!pluginRuntime) {
@@ -108,24 +142,29 @@ class VirtBot extends HiveObject {
         ev.add(bot, execute: (context) => session.receive(ev, context));
       }
     }
-    bot.onError((err) {
-      if (generation != _runGeneration) return;
-      runtimeError =
-          'Telegram polling stopped. Check the bot token and connection, then restart.';
-      _active = false;
-      onRunningChanged?.call();
+    final fetcher = LongPollingFetcher(
+      bot.api,
+      config: acceptsWidgets
+          ? const LongPollingConfig(allowedUpdates: [])
+          : const LongPollingConfig(),
+    );
+    bot.onError((error) {
+      if (generation != _runGeneration || !_active) return;
+      final retryingConnection =
+          error.isOfType<FetcherException>() &&
+          telegramConnectionIssue == TelegramConnectionIssue.reconnecting;
+      if (retryingConnection && fetcher.isRunning) return;
+      if (!retryingConnection) {
+        _setTelegramConnectionIssue(null);
+        runtimeError =
+            'Telegram polling stopped. Check the bot token and connection, then restart.';
+      }
+      _pollingEnded(generation);
     });
     // start() runs for the lifetime of polling; don't await that loop here.
     unawaited(
       bot
-          .start(
-            acceptsWidgets
-                ? LongPollingFetcher(
-                    bot.api,
-                    config: const LongPollingConfig(allowedUpdates: []),
-                  )
-                : null,
-          )
+          .start(fetcher)
           .then<void>(
             (_) => _pollingEnded(generation),
             onError: (Object error, StackTrace _) {
@@ -143,12 +182,17 @@ class VirtBot extends HiveObject {
 
   void _pollingEnded(int generation) {
     if (generation != _runGeneration || !_active) return;
+    _watchTelegram = false;
     _active = false;
+    if (telegramConnectionIssue == TelegramConnectionIssue.reconnecting) {
+      _setTelegramConnectionIssue(TelegramConnectionIssue.unavailable);
+    }
     onRunningChanged?.call();
   }
 
   Future<void> stop() async {
     _runGeneration++;
+    _watchTelegram = false;
     final builder = _builder;
     _builder = null;
     final drained = builder?.close();
@@ -163,6 +207,7 @@ class VirtBot extends HiveObject {
     }
     _createTelegramSession();
     _active = false;
+    _setTelegramConnectionIssue(null);
     onRunningChanged?.call();
   }
 

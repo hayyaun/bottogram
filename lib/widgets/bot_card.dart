@@ -44,7 +44,7 @@ class _BotCardState extends State<BotCard> {
       await store.toggle(widget.bot);
       store.update();
     } catch (error) {
-      if (mounted) {
+      if (mounted && widget.bot.telegramConnectionIssue == null) {
         context.showSnackBar(
           error is PluginException
               ? error.message
@@ -76,7 +76,8 @@ class _BotCardState extends State<BotCard> {
       0,
       (count, event) => count + event.acts.length,
     );
-    final status = bot.setupError != null || error != null
+    final connectionWarning = bot.telegramConnectionIssue != null;
+    final status = bot.setupError != null || error != null || connectionWarning
         ? Tooltip(
             message: context.strings.viewBotError,
             child: TextButton(
@@ -84,13 +85,22 @@ class _BotCardState extends State<BotCard> {
               style: TextButton.styleFrom(
                 minimumSize: const Size(48, 48),
                 padding: EdgeInsets.zero,
-                foregroundColor: BColors.of(context).error,
+                foregroundColor: connectionWarning
+                    ? BColors.of(context).warning
+                    : BColors.of(context).error,
                 tapTargetSize: MaterialTapTargetSize.padded,
               ),
               child: BStatus(
-                label: context.strings.needsAttention,
-                color: BColors.of(context).error,
-                background: BColors.of(context).errorWash,
+                label: connectionWarning
+                    ? context.strings.telegramOffline
+                    : context.strings.needsAttention,
+                icon: connectionWarning ? Icons.cloud_off_outlined : null,
+                color: connectionWarning
+                    ? BColors.of(context).warning
+                    : BColors.of(context).error,
+                background: connectionWarning
+                    ? BColors.of(context).warningWash
+                    : BColors.of(context).errorWash,
               ),
             ),
           )

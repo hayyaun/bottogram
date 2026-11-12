@@ -120,8 +120,10 @@ class BotsCubit extends Cubit<List<VirtBot>> {
               _awaitingRestore.add(key);
               return;
             }
-            bot.runtimeError =
-                'Automatic start failed. Check the bot and try again.';
+            if (bot.telegramConnectionIssue == null) {
+              bot.runtimeError =
+                  'Automatic start failed. Check the bot and try again.';
+            }
             emit(List<VirtBot>.of(state));
           }
         });
@@ -170,7 +172,7 @@ class BotsCubit extends Cubit<List<VirtBot>> {
     if (!state.contains(bot) || !bot.isInBox) {
       throw const PluginException('This bot is no longer available.');
     }
-    await runtime.stop(bot);
+    if (bot.active) await runtime.stop(bot);
     await _startRequested(bot);
   });
 

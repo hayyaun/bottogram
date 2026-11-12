@@ -810,6 +810,9 @@
       }
     }
   },
+  "telegramOffline": "Telegram offline",
+  "telegramReconnecting": "Reconnecting to Telegram…",
+  "telegramConnectionRetry": "Telegram unavailable. Check your connection.",
   "retryBot": "Retry bot",
   "parametersCouldNotBeSavedCheck": "Parameters could not be saved. Check secure storage and try again.",
   "leaveBlankToKeepTheSaved": "Leave blank to keep the saved value. Enter a new value only to replace it.",

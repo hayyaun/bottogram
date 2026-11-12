@@ -11,6 +11,7 @@ import 'package:bottogram/plugins/manifest.dart';
 import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/runtime/coordinator.dart';
 import 'package:bottogram/runtime/failure_presentation.dart';
+import 'package:bottogram/runtime/telegram_connection.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
 import 'package:bottogram/units/virt_bot.dart';
@@ -43,6 +44,14 @@ class AttentionBots extends Cubit<List<VirtBot>> implements BotsCubit {
 
   @override
   final AttentionRuntime runtime = AttentionRuntime();
+  int retries = 0;
+
+  @override
+  Future<void> retryBot(VirtBot bot) async {
+    retries++;
+    bot.telegramConnectionIssue = null;
+    update();
+  }
 
   @override
   void update() => emit(List.of(state));
@@ -352,6 +361,29 @@ void main() {
     expect(find.byType(BotPage), findsOneWidget);
     expect(find.byType(PluginFailureNotice), findsNothing);
     expect(pagePosition(tester).pixels, 0);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('connection badge opens the warning and its retry action', (
+    tester,
+  ) async {
+    bot.runtimeError = null;
+    bot.telegramConnectionIssue = TelegramConnectionIssue.unavailable;
+    await showCard(tester, disableAnimations: true);
+    final badge = find.widgetWithText(TextButton, 'Telegram offline');
+    expect(
+      find.descendant(of: badge, matching: find.byIcon(Icons.cloud_off_outlined)),
+      findsOneWidget,
+    );
+    await tester.tap(badge);
+    await tester.pumpAndSettle();
+
+    final warning = find.text('Telegram unavailable. Check your connection.');
+    expectVisible(tester, warning);
+    await tester.tap(find.byTooltip('Retry bot'));
+    await tester.pumpAndSettle();
+    expect(bots.retries, 1);
+    expect(warning, findsNothing);
     expect(tester.takeException(), isNull);
   });
 

@@ -20,6 +20,7 @@ void main() {
       await Future<void>.delayed(const Duration(seconds: 2));
       await platform.startService(0, 3);
       await platform.updateService(1, 3);
+      await platform.updateConnectionWarning(1);
       expect((await platform.readState()).serviceRunning, isTrue);
       var ticks = 0;
       final timer = Timer.periodic(
@@ -37,8 +38,13 @@ void main() {
         // during this interval. No debug-only production bridge is introduced.
         await platform.stopService();
         expect((await platform.readState()).serviceRunning, isFalse);
+        debugPrint('BACKGROUND_WARNING_AFTER_SERVICE_STOP');
+        await Future<void>.delayed(const Duration(seconds: 3));
+        await platform.updateConnectionWarning(0);
+        debugPrint('BACKGROUND_WARNING_CLEARED');
       } finally {
         timer.cancel();
+        await platform.updateConnectionWarning(0);
         await platform.stopService();
         platform.dispose();
       }

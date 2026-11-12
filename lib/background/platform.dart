@@ -72,6 +72,8 @@ class DesktopBackgroundPlatform extends BackgroundPlatform {
   @override
   Future<void> updateService(int active, int total) async {}
   @override
+  Future<void> updateConnectionWarning(int affected) async {}
+  @override
   Future<void> stopService() async {}
 }
 
@@ -130,6 +132,9 @@ class AndroidBackgroundPlatform extends BackgroundPlatform {
   @override
   Future<void> updateService(int active, int total) => _channel
       .invokeMethod<void>('updateService', {'active': active, 'total': total});
+  @override
+  Future<void> updateConnectionWarning(int affected) => _channel
+      .invokeMethod<void>('updateConnectionWarning', {'affected': affected});
   @override
   Future<void> stopService() => _channel.invokeMethod<void>('stopService');
   @override

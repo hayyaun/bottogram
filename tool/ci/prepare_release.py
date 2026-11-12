@@ -151,19 +151,20 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
     run_url = f"{source}/actions/runs/{run['id']}"
     return f"""Bottogram {version} runs Telegram bots on your own device.
 
-On Android, the foreground notification shows active and total bots. Reopening
-Bottogram after a process kill or device restart resumes the bots left enabled.
-After upgrading, start each bot once to enable automatic resume. Use **Stop bots**
-to keep them stopped on the next launch. Android 14 and later let you
-[dismiss the ongoing notification](https://developer.android.com/about/versions/14/behavior-changes-all#non-dismissable-notifications).
+### What’s new
 
-Plugin bots can transfer their settings and credentials by QR code between
-devices with the exact plugin package installed. Treat the QR code as a
-credential. Approved plugin updates restart bots that were already running.
-The Create bot form includes illustrated help for the Telegram token and admin IDs.
+- Bottogram follows your device language by default. Persian includes a
+  right-to-left interface. You can also choose English or Persian in **Settings → Language**.
+- Bot cards on narrow screens are more compact and keep their controls visible.
+- WebP images save about 15 MiB in bundled assets. The illustrated setup guides
+  retain their original image quality.
+- Android’s foreground notification shows the active bot count as text.
 
-Bottogram includes Telegram Mini Apps, per-bot SQLite storage, bot templates, and
-the Persian Inshopa storefront plugin.
+### Android auto-resume
+
+Reopening Bottogram after a process kill or device restart resumes the bots left
+enabled. If upgrading from a version without auto-resume, start each bot once.
+Use **Stop bots** to keep them stopped on the next launch.
 
 ### Downloads
 

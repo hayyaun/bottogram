@@ -668,6 +668,7 @@ void main() {
     (tester) async {
       cleanup(tester);
       await loadFonts(tester);
+      pluginBot.name = 'حامی رایانه';
       await pumpPage(tester, const HomePage(title: 'Bottogram'));
       await tester.runAsync(
         () => precacheImage(
@@ -678,9 +679,11 @@ void main() {
       await tester.pumpAndSettle();
       final cards = find.byType(BotCard);
       expect(cards, findsNWidgets(2));
+      final height = tester.getSize(cards.first).height;
+      expect(height, inInclusiveRange(118, 140));
       for (var index = 0; index < 2; index++) {
         final card = cards.at(index);
-        expect(tester.getSize(card).height, lessThan(112));
+        expect(tester.getSize(card).height, height);
         final settings = find.descendant(
           of: card,
           matching: find.byTooltip('Bot settings'),

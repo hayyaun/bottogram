@@ -110,16 +110,16 @@ class _BotCardState extends State<BotCard> {
     final theme = Theme.of(context).textTheme;
     final colors = BColors.of(context);
     final icon = Container(
-      width: compact ? 36 : 44,
-      height: compact ? 36 : 44,
+      width: 44,
+      height: 44,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: colors.subtle,
-        borderRadius: BorderRadius.all(Radius.circular(compact ? 10 : 12)),
+        borderRadius: const BorderRadius.all(Radius.circular(12)),
       ),
       child: Icon(
         plugin ? Icons.extension_outlined : Icons.smart_toy_outlined,
-        size: compact ? 20 : 24,
+        size: compact ? 22 : 24,
         color: colors.ink,
       ),
     );
@@ -128,9 +128,9 @@ class _BotCardState extends State<BotCard> {
       excludeFromSemantics: true,
       child: Text(
         bot.name,
-        maxLines: 2,
+        maxLines: compact ? 1 : 2,
         overflow: TextOverflow.ellipsis,
-        style: compact ? theme.titleSmall : theme.headlineSmall,
+        style: compact ? theme.titleMedium : theme.headlineSmall,
       ),
     );
     final kind = plugin ? setup!.pluginName ?? 'Plugin bot' : 'Manual bot';
@@ -154,8 +154,9 @@ class _BotCardState extends State<BotCard> {
       IconButton(
         tooltip: 'Bot settings',
         onPressed: _settings,
-        icon: Icon(Icons.settings_outlined, size: compact ? 20 : 24),
+        icon: Icon(Icons.settings_outlined, size: compact ? 22 : 24),
       ),
+      if (compact) const SizedBox(width: 4),
       IconButton.outlined(
         tooltip: setupOnly
             ? 'Configure plugin'
@@ -183,56 +184,67 @@ class _BotCardState extends State<BotCard> {
                     : bot.resumeOnLaunch
                     ? Icons.stop_circle_outlined
                     : Icons.play_arrow_rounded,
-                size: compact ? 20 : 24,
+                size: compact ? 22 : 24,
               ),
       ),
     ];
 
     if (compact) {
+      final textScaler = MediaQuery.textScalerOf(context);
+      // Fallback fonts can round line heights differently for the same style.
+      final headerHeight =
+          (textScaler.scale(theme.titleMedium!.fontSize!) +
+                  textScaler.scale(theme.bodySmall!.fontSize!)) *
+              1.5 +
+          4;
       return BPanel(
         onTap: _open,
-        padding: const EdgeInsetsDirectional.fromSTEB(12, 8, 8, 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            ConstrainedBox(
+              constraints: BoxConstraints(minHeight: headerHeight),
+              child: Row(
+                children: [
+                  icon,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        title,
+                        const SizedBox(height: 2),
+                        Text(
+                          plugin ? kind : summary,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 6),
             Row(
               children: [
-                icon,
-                const SizedBox(width: 10),
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      title,
-                      const SizedBox(height: 3),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          status,
-                          Text(
-                            plugin ? kind : summary,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: BottogramDesign.text(
-                              13,
-                              color: colors.muted,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+                  child: Align(
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Wrap(
+                      spacing: 10,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        status,
+                        if (updateButton != null) updateButton,
+                      ],
+                    ),
                   ),
                 ),
                 ...controls,
               ],
             ),
-            if (updateButton != null)
-              Padding(
-                padding: const EdgeInsetsDirectional.only(start: 46),
-                child: updateButton,
-              ),
           ],
         ),
       );

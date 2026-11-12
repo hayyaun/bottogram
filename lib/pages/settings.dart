@@ -9,6 +9,8 @@ import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/ui/design.dart';
 import 'package:bottogram/ui/language_preferences.dart';
 import 'package:bottogram/ui/theme_preferences.dart';
+import 'package:bottogram/updates/app_updates.dart';
+import 'package:bottogram/updates/update_notice.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -103,6 +105,7 @@ class _SettingsPageState extends State<SettingsPage> {
     final background = context.watch<BackgroundController?>();
     final appearance = context.watch<ThemePreferences?>();
     final language = context.watch<LanguagePreferences?>();
+    final updates = context.watch<AppUpdates?>();
     return SingleChildScrollView(
       child: BContent(
         maxWidth: 840,
@@ -343,6 +346,13 @@ class _SettingsPageState extends State<SettingsPage> {
                     padding: EdgeInsets.zero,
                     child: Column(
                       children: [
+                        if (updates != null) ...[
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: AppUpdateSettings(updates: updates),
+                          ),
+                          const Divider(),
+                        ],
                         _SettingsRow(
                           icon: Icons.info_outline,
                           title: context.strings.aboutBottogram,
@@ -351,6 +361,7 @@ class _SettingsPageState extends State<SettingsPage> {
                           onTap: () => showAboutDialog(
                             context: context,
                             applicationName: 'Bottogram',
+                            applicationVersion: updates?.installedVersion,
                             applicationIcon: Image.asset(
                               'assets/icon/foreground.png',
                               width: 40,

@@ -13,6 +13,7 @@ import 'package:bottogram/units/virt_event.dart';
 import 'package:bottogram/units/virt_rmu.dart';
 import 'package:bottogram/ui/design.dart';
 import 'package:bottogram/ui/theme_preferences.dart';
+import 'package:bottogram/updates/app_updates.dart';
 import 'background/platform.dart';
 import 'background/controller.dart';
 import 'background/guide.dart';
@@ -43,7 +44,13 @@ void main() async {
   await preferences.ready;
   final language = LanguagePreferences();
   await language.ready;
-  runApp(MyApp(preferences: preferences, language: language));
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AppUpdates()..start(),
+      lazy: false,
+      child: MyApp(preferences: preferences, language: language),
+    ),
+  );
 }
 
 class MyApp extends StatefulWidget {

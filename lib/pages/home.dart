@@ -13,6 +13,8 @@ import 'package:bottogram/plugins/repository.dart';
 import 'package:bottogram/store/bots.dart';
 import 'package:bottogram/units/virt_bot.dart';
 import 'package:bottogram/ui/design.dart';
+import 'package:bottogram/updates/app_updates.dart';
+import 'package:bottogram/updates/update_notice.dart';
 import 'package:bottogram/widgets/bot_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -399,6 +401,7 @@ class _HomePageState extends State<HomePage> {
       return BlocBuilder<BotsCubit, List<VirtBot>>(
         builder: (context, allBots) {
           final store = context.read<BotsCubit>();
+          final release = context.watch<AppUpdates?>()?.available;
           final query = _search.text.trim().toLowerCase();
           final bots = allBots
               .where((bot) => bot.name.toLowerCase().contains(query))
@@ -451,6 +454,10 @@ class _HomePageState extends State<HomePage> {
                           ],
                         ),
                         SizedBox(height: compact ? 16 : 24),
+                        if (release != null) ...[
+                          AppUpdateNotice(release: release),
+                          SizedBox(height: compact ? 16 : 24),
+                        ],
                         if (store.lastError != null) ...[
                           BNotice(
                             message: store.lastError!,

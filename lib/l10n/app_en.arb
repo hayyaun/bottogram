@@ -645,6 +645,20 @@
   "checkBatteryBackgroundActivityAndNotification": "Check battery, background activity, and notification permissions.",
   "keepBottogramRunningAndThisDevice": "Keep Bottogram running and this device connected to the internet while bots are started. Reopen the app and start bots again after a device restart.",
   "about": "About",
+  "checkForAppUpdates": "Check for updates",
+  "checkingForAppUpdates": "Checking for updates…",
+  "appUpdateAvailable": "Bottogram {version} is available",
+  "@appUpdateAvailable": {
+    "placeholders": {
+      "version": {
+        "type": "String"
+      }
+    }
+  },
+  "downloadAppUpdate": "Download update",
+  "appUpToDate": "Bottogram is up to date.",
+  "appUpdateCheckFailed": "Couldn’t check for updates. Try again in a moment.",
+  "appUpdateLinkFailed": "Couldn’t open the GitHub release page.",
   "aboutBottogram": "About Bottogram",
   "botConfigurationsAndRetainedConversationsAre": "Bot configurations and retained conversations are stored on this device. Plugin credentials use platform secure storage. Configuration exports contain tokens and do not include plugin setups or conversation history.",
   "openSourceLicenses": "Open-source licenses",

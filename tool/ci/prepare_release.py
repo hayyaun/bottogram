@@ -154,14 +154,10 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
 
 ### What’s new
 
-- Run a Bottogram plugin bot on a Linux server with the new headless CLI.
-  The CLI validates bot configuration and runs one live plugin bot per process
-  using Telegram long polling.
-- The Docker Compose example mounts tokens and API keys as secrets and keeps
-  automation progress across container updates. Follow the
-  [Linux server setup guide]({source}/blob/{sha}/docs/HEADLESS.md).
-- The project docs now include [plugin ideas]({source}/blob/{sha}/docs/PLUGIN_IDEAS.md)
-  for building new bots.
+- The Home import button uses a folded-page icon with a plus sign.
+- In **Share bots**, plugin bots have a QR button that opens the private
+  sharing flow directly. You can return to your selected manual bots after
+  viewing the QR code.
 
 ### Android auto-resume
 

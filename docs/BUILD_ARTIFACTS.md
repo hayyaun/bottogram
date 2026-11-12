@@ -39,6 +39,11 @@ Outputs, retained for 14 days in the workflow run's **Artifacts** section:
   runtime requires FUSE. Test desktop integration and keyring access on a clean
   distribution before treating the package as ready for users.
 
+- Headless Linux x86_64: `bottogram-cli-linux-x86_64.tar.gz` contains the CLI
+  executable and its native libraries, plus a separate checksum in the CI
+  artifact. The Linux job validates the example bot config using the packaged
+  executable. See the [server setup guide](HEADLESS.md).
+
 The build workflow uses read-only repository permissions and private Android
 signing secrets only in the trusted build step. It does not publish packages to
 GitHub Releases or app stores. “Release” in Flutter build commands means optimized
@@ -65,28 +70,29 @@ are scoped to that job: `actions: read` for downloading build artifacts and
 [prepare_release.py](../tool/ci/prepare_release.py) looks up a successful
 `build.yml` run triggered by a push to `main` whose commit SHA exactly equals the
 tagged commit. It does not use the latest unrelated build or a PR artifact. All
-five artifact names must be present in that one run:
+six artifact names must be present in that one run:
 
 - `bottogram-android-release`
 - `bottogram-windows-x64`
 - `bottogram-windows-x64-installer`
 - `bottogram-macos-universal`
 - `bottogram-linux-x86_64`
+- `bottogram-cli-linux-x86_64`
 
 The script downloads each artifact by its selected run ID, validates its expected
 files and existing SHA-256 checksum, and prepares one flat release folder. For
 Linux it validates the executable AppImage and checksum inside the tarball
 without extracting arbitrary archive paths. The published Linux asset remains
 the tarball so its executable permission survives download. The combined release
-`SHA256SUMS.txt` covers the APK, Windows installer, both ZIP files, and the Linux
-tarball itself.
+`SHA256SUMS.txt` covers the APK, Windows installer, both ZIP files, and both Linux
+tarballs.
 
-Only after all checks pass does `gh release create --verify-tag` publish the five
+Only after all checks pass does `gh release create --verify-tag` publish the six
 packages and combined checksum. Release notes link to the exact successful build
 and source commit. Publication stops if there is no successful exact-commit build,
 or if an artifact is missing or expired, a version differs, or a checksum fails. If a
 workflow attempt fails before creating the release, fix the stated cause and
-rerun that failed release workflow after all five artifacts are available. It
+rerun that failed release workflow after all six artifacts are available. It
 does not replace an existing release or overwrite its assets.
 
 Download a release's `SHA256SUMS.txt` beside its packages and verify them, for

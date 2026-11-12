@@ -69,13 +69,18 @@ class ReleasePreparationTests(unittest.TestCase):
             set(release.PACKAGES.values()) | {'SHA256SUMS.txt'},
         )
         checksums = (self.output / 'SHA256SUMS.txt').read_text().splitlines()
-        self.assertEqual(len(checksums), 5)
+        self.assertEqual(len(checksums), len(release.PACKAGES))
         for line in checksums:
             digest, filename = line.split('  ')
             self.assertEqual(digest, hashlib.sha256((self.output / filename).read_bytes()).hexdigest())
 
     def test_tampered_android_payload_is_rejected(self):
         (self.downloads / 'bottogram-android-release' / 'bottogram-android-release.apk').write_bytes(b'tampered')
+        self.reject()
+
+    def test_tampered_cli_bundle_is_rejected(self):
+        bundle = self.downloads / 'bottogram-cli-linux-x86_64' / release.PACKAGES['bottogram-cli-linux-x86_64']
+        bundle.write_bytes(b'tampered')
         self.reject()
 
     def test_missing_installer_is_rejected(self):

@@ -292,3 +292,22 @@ jobs:
           path: dist/bottogram-linux-x86_64.AppImage.tar.gz
           if-no-files-found: error
           retention-days: 14
+      - name: Build and verify headless Linux CLI
+        run: |
+          dart build cli --target bin/bottogram.dart --output build/headless
+          mkdir -p dist-cli
+          tar -C build/headless -czf dist-cli/bottogram-cli-linux-x86_64.tar.gz bundle
+          smoke="$(mktemp -d)"
+          trap 'rm -rf -- "$smoke"' EXIT
+          tar -xzf dist-cli/bottogram-cli-linux-x86_64.tar.gz -C "$smoke"
+          cp examples/headless/config/hello.bottogram-plugin.json "$smoke/"
+          jq '.tokenFile = "bot_token"' examples/headless/config/bot.json > "$smoke/bot.json"
+          printf '%s\n' '99:release_fixture' > "$smoke/bot_token"
+          "$smoke/bundle/bin/bottogram" validate --config "$smoke/bot.json"
+          (cd dist-cli && sha256sum bottogram-cli-linux-x86_64.tar.gz > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: bottogram-cli-linux-x86_64
+          path: dist-cli/*
+          if-no-files-found: error
+          retention-days: 14

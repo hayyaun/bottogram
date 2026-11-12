@@ -71,15 +71,27 @@ connection and flush progress.
 
 ## Run the executable directly
 
-Build from the repository root with the same Flutter SDK the desktop app uses.
+Download `bottogram-cli-linux-x86_64.tar.gz` from the
+[GitHub release](https://github.com/hayyaun/bottogram/releases/latest) and check
+it against the release's `SHA256SUMS.txt`. Extract it on an x86_64 Linux host
+compatible with Ubuntu 22.04. Set `tokenFile` in your bot config to a local
+token file.
+
+```sh
+tar -xzf bottogram-cli-linux-x86_64.tar.gz
+bundle/bin/bottogram validate --config /path/to/bot.json
+bundle/bin/bottogram run --config /path/to/bot.json --data-dir /path/to/data
+```
+
+To build from source, run these commands from the repository root with the
+same Flutter SDK the desktop app uses.
 
 ```sh
 flutter pub get --enforce-lockfile
 dart build cli --target bin/bottogram.dart --output build/headless
-build/headless/bundle/bin/bottogram validate --config /path/to/bot.json
-build/headless/bundle/bin/bottogram run --config /path/to/bot.json --data-dir /path/to/data
 ```
 
-Keep the complete `bundle` directory when moving it to a compatible Linux host.
+The executable is at `build/headless/bundle/bin/bottogram`. Keep the complete
+`bundle` directory when moving it to a compatible Linux host.
 The worker supports live plugin packages. Desktop manual bots and inbox
 management use the desktop app.

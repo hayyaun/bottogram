@@ -27,7 +27,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Select exact successful build and verify all five packages
+      - name: Select exact successful build and verify all six packages
         run: |
           python3 tool/ci/prepare_release.py \
             --tag "$RELEASE_TAG" --sha "$GITHUB_SHA" --repo "$GH_REPO" \
@@ -43,4 +43,5 @@ jobs:
             build/release/assets/bottogram-windows-x64-setup.exe \
             build/release/assets/bottogram-macos-universal.zip \
             build/release/assets/bottogram-linux-x86_64.AppImage.tar.gz \
+            build/release/assets/bottogram-cli-linux-x86_64.tar.gz \
             build/release/assets/SHA256SUMS.txt

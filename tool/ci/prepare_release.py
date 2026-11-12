@@ -18,6 +18,7 @@ PACKAGES = {
     "bottogram-windows-x64-installer": "bottogram-windows-x64-setup.exe",
     "bottogram-macos-universal": "bottogram-macos-universal.zip",
     "bottogram-linux-x86_64": "bottogram-linux-x86_64.AppImage.tar.gz",
+    "bottogram-cli-linux-x86_64": "bottogram-cli-linux-x86_64.tar.gz",
 }
 LINUX_IMAGE = "bottogram-linux-x86_64.AppImage"
 STABLE_VERSION = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
@@ -153,10 +154,14 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
 
 ### What’s new
 
-- Bottogram checks GitHub for a newer stable release at launch and periodically
-  while the app is running. The Home notice opens the new release’s downloads.
-- **Settings → About** shows the installed version and lets you check for updates
-  and see the result immediately.
+- Run a Bottogram plugin bot on a Linux server with the new headless CLI.
+  The CLI validates bot configuration and runs one live plugin bot per process
+  using Telegram long polling.
+- The Docker Compose example mounts tokens and API keys as secrets and keeps
+  automation progress across container updates. Follow the
+  [Linux server setup guide]({source}/blob/{sha}/docs/HEADLESS.md).
+- The project docs now include [plugin ideas]({source}/blob/{sha}/docs/PLUGIN_IDEAS.md)
+  for building new bots.
 
 ### Android auto-resume
 
@@ -171,6 +176,7 @@ Use **Stop bots** to keep them stopped on the next launch.
 - Windows installer: run `bottogram-windows-x64-setup.exe` for a per-user installation with a Start menu shortcut and uninstaller. A desktop shortcut is optional. Uninstalling preserves saved bot data.
 - macOS Intel and Apple silicon: extract `bottogram-macos-universal.zip`. The app is ad-hoc signed, without Developer ID signing or Apple notarization; macOS may block opening it.
 - Linux x86_64: extract `bottogram-linux-x86_64.AppImage.tar.gz` and run the AppImage. A desktop keyring and FUSE are required; Ubuntu 22.04 or newer is the build target.
+- Linux CLI x86_64: extract `bottogram-cli-linux-x86_64.tar.gz` and run `bundle/bin/bottogram`.
 
 Check each downloaded package against the attached `SHA256SUMS.txt`. Both Windows
 packages include the required Visual C++ runtime DLLs. The Windows installer and
@@ -179,7 +185,7 @@ installer. Clean-machine compatibility is not established by CI.
 
 ### Build verification
 
-All five packages come from the same [successful main build]({run_url})
+All six packages come from the same [successful main build]({run_url})
 (attempt {run['run_attempt']}) for [commit `{sha}`]({source}/commit/{sha}).
 Analysis, automated tests, native SQLite/template integration, Android service
 continuity, macOS credential storage, and released native-library probes passed
@@ -233,7 +239,7 @@ def main() -> None:
     (args.work_dir / "build-run.json").write_text(
         json.dumps(run, indent=2) + "\n", encoding="utf-8",
     )
-    print("Verified five platform packages and wrote combined SHA256SUMS.txt.")
+    print("Verified six packages and wrote combined SHA256SUMS.txt.")
 
 
 if __name__ == "__main__":

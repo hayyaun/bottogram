@@ -154,12 +154,11 @@ def release_notes(version: str, repo: str, sha: str, run: dict) -> str:
 
 ### What’s new
 
-- The Home import button uses a folded-page icon with a plus sign.
-- In **Share bots**, plugin bots have a QR button that opens the private
-  sharing flow directly. You can return to your selected manual bots after
-  viewing the QR code.
-- **Settings → Support** links to GitHub Issues for problem reports. The
-  Settings footer links to the source repository.
+- Bot cards show a cloud-off warning when a bot cannot reach Telegram.
+  Running bots retry automatically, and the warning clears when Telegram
+  responds again. If a bot stops, its details offer a retry button.
+- Android shows a warning notification with the number of affected bots.
+  The warning stays visible even if the last bot stops.
 
 ### Android auto-resume
 

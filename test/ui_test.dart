@@ -542,13 +542,13 @@ void main() {
       'Help with the Telegram bot token',
       'Get a Telegram bot token',
       '/newbot',
-      'assets/help/telegram_bot_token.png',
+      'assets/help/telegram_bot_token.webp',
     );
     await openHelp(
       'Help with admin IDs',
       'Find your Telegram user ID',
       'Telegram account that will administer the bot',
-      'assets/help/telegram_admin_id.png',
+      'assets/help/telegram_admin_id.webp',
     );
     expect(tester.takeException(), isNull);
   });

@@ -88,7 +88,7 @@ class _TemplateCard extends StatelessWidget {
             child: AspectRatio(
               aspectRatio: 16 / 9,
               child: Image.asset(
-                'assets/templates/${template.id}.png',
+                'assets/templates/${template.id}.webp',
                 fit: BoxFit.cover,
                 cacheWidth: 960,
                 filterQuality: FilterQuality.medium,

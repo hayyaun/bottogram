@@ -157,7 +157,7 @@ class _CreateBotPageState extends State<CreateBotPage> {
                                   .strings
                                   .openBotFatherInTelegramAndSend,
                               illustration:
-                                  'assets/help/telegram_bot_token.png',
+                                  'assets/help/telegram_bot_token.webp',
                               illustrationLabel:
                                   context.strings.botfatherSFinalReplyWithThe,
                             ),
@@ -182,7 +182,8 @@ class _CreateBotPageState extends State<CreateBotPage> {
                               description: context
                                   .strings
                                   .openUserinfobotFromTheTelegramAccount,
-                              illustration: 'assets/help/telegram_admin_id.png',
+                              illustration:
+                                  'assets/help/telegram_admin_id.webp',
                               illustrationLabel: context
                                   .strings
                                   .exampleReplyShowingANumericTelegram,
